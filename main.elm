@@ -54,10 +54,22 @@ testModel =
       {name = "add"
       , args =
         empty
-        |> insert {name = "x", type_ = TInt}
-        |> insert {name = "y", type_ = TInt}
-      , type_ = TInt
+        |> insert {name = "x"}
+        |> insert {name = "y"}
+      , type_ = TApp TInt (TApp TInt TInt)
       , value = EInt 100
+      }
+    |> insert
+      { name = "test"
+      , args = empty
+      , type_ = TInt
+      , value = EApp (EApp (ERef 1) (ERef 0)) (ERef 0)
+      }
+    |> insert
+      { name = "error"
+      , args = empty
+      , type_ = TInt
+      , value = EApp (ERef 111) (ERef 0)
       }
   }
 
@@ -88,7 +100,7 @@ view address model =
       []
       [ Html.text "Add Object" ]
     , Html.div [] [ Html.text <| toString model ]
-    , Html.pre [] [ Html.text <| String.join "\n" <| List.map printFunction <| Dict.values model.defs.things ]
+    , Html.pre [] [ Html.text <| String.join "\n" <| List.map (printFunction model) <| Dict.values model.defs.things ]
     ]
 
 
@@ -104,19 +116,22 @@ type alias Object =
 
 type Type
   = TInt
+  | TBool
   | TApp Type Type
 
 
 type Expr
-  = EInt Int
-  | EApp FunctionRef Expr
+  = ERef ExprRef
+  | EInt Int
+  | EBool Bool
+  | EApp Expr Expr
 
+type alias ExprRef = Int
 
 type alias ArgRef = Int
 
 type alias Arg =
   { name : String
-  , type_ : Type
   }
 
 
@@ -126,7 +141,6 @@ type alias Bag number v =
   }
 
 
--- Maybe just use global (per-file) nextRef?
 empty : Bag number v
 empty =
   { things = Dict.empty
@@ -159,8 +173,36 @@ type alias Function =
 
 printArg : Arg -> String
 printArg a =
-  a.name ++ " :: " ++ (toString a.type_)
+  a.name
 
-printFunction : Function -> String
-printFunction f =
-  f.name ++ " :: {" ++ (f.args.things |> Dict.values |> List.map printArg |> String.join ", ") ++ "} -> " ++ (toString f.type_)
+
+printType : Type -> String
+printType t =
+  case t of
+    TInt -> "Int"
+    TBool -> "Bool"
+    TApp t1 t2 -> "(" ++ (printType t1) ++ " -> " ++ (printType t2) ++ ")"
+
+
+printExpr : Model -> Expr -> String
+printExpr model e =
+  case e of
+    ERef r ->
+      Dict.get r model.defs.things
+      |> Maybe.map (\x -> x.name)
+      |> Maybe.withDefault "<<<ERROR>>>"
+
+    EInt v ->
+      toString v
+
+    EBool v ->
+      toString v
+
+    EApp e1 e2 ->
+      "(" ++ (printExpr model e1) ++ " " ++ (printExpr model e2) ++ ")"
+
+
+printFunction : Model -> Function -> String
+printFunction model f =
+  f.name ++ " : " ++ (printType f.type_)
+  ++ "\n" ++ f.name ++ " " ++ (f.args.things |> Dict.values |> List.map printArg |> String.join " ") ++ " = " ++ (printExpr model f.value)
