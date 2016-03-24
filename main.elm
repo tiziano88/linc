@@ -46,51 +46,51 @@ testModel =
     [ { name = "test.elm"
       , nextRef = 888
       , defs =
-        [ { ref = 0
-          , name = "num"
+        [ (0,
+          { name = "num"
           , args = []
           , type_ = TInt
           , value = EInt 42
-          }
-        , { ref = 1
-          , name = "add"
+          })
+        , (1,
+          { name = "add"
           , args =
             [ { ref = 11, name = "x" }
             , { ref = 12, name = "y" }
             ]
           , type_ = TApp TInt (TApp TInt TInt)
           , value = EInt 100
-          }
-        , { ref = 2
-          , name = "test"
+          })
+        , (2,
+          { name = "test"
           , args = []
           , type_ = TInt
           , value = EApp (EApp (ERef 1) (ERef 0)) (ERef 0)
-          }
-        , { ref = 3
-          , name = "error"
+          })
+        , (3,
+          { name = "error"
           , args = []
           , type_ = TInt
           , value = EApp (ERef 111) (ERef 0)
-          }
-        , { ref = 4
-          , name = "st"
+          })
+        , (4,
+          { name = "st"
           , args = []
           , type_ = TString
           , value = EString "test"
-          }
-        , { ref = 5
-          , name = "list"
+          })
+        , (5,
+          { name = "list"
           , args = []
           , type_ = TList TInt
           , value = EList [(ERef 0), (ERef 1)]
-          }
-        , { ref = 6
-          , name = "cond"
+          })
+        , (6,
+          { name = "cond"
           , args = []
           , type_ = TApp TBool TInt
           , value = EIf (ERef 0) (EInt 100) (EInt 200)
-          }
+          })
         ]
       }
     ]
@@ -128,7 +128,7 @@ view address model =
 
 printFile : Model -> File -> String
 printFile model file =
-  file.defs |> List.map (printFunction model) |> String.join "\n\n\n"
+  file.defs |> List.map snd |> List.map (printFunction model) |> String.join "\n\n\n"
 
 
 type alias Model =
@@ -139,7 +139,7 @@ type alias Model =
 type alias File =
   { name : String
   , nextRef : ExprRef
-  , defs : List Function
+  , defs : List (WithRef Function)
   }
 
 
@@ -169,6 +169,9 @@ type Def
 type alias ExprRef = Int
 
 
+type alias WithRef a = (ExprRef, a)
+
+
 getFunctionRef : Model -> ExprRef -> Maybe Function
 getFunctionRef model ref =
   model.files |> List.map (\x -> getFileFunctionRef x ref) |> Maybe.oneOf
@@ -176,8 +179,7 @@ getFunctionRef model ref =
 
 getFileFunctionRef : File -> ExprRef -> Maybe Function
 getFileFunctionRef file ref =
-  file.defs |> List.filter (\x -> x.ref == ref) |> List.head
-
+  file.defs |> List.filter (\(r, _) -> r == ref) |> List.map snd |> List.head
 
 
 type alias Arg =
@@ -191,9 +193,6 @@ type alias Bag number v =
   , nextRef : number
   }
 
-
-type HasRef
-  = HR
 
 
 empty : Bag number v
@@ -216,8 +215,7 @@ insert v bag =
 
 
 type alias Function =
-  { ref : ExprRef
-  , name : String
+  { name : String
   , type_ : Type
   , args : List Arg
   , value : Expr
