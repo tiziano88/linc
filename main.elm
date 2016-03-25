@@ -55,11 +55,11 @@ testModel =
         , (1,
           { name = "add"
           , args =
-            [ { ref = 11, name = "x" }
-            , { ref = 12, name = "y" }
+            [ (11, { name = "x" })
+            , (12, { name = "y" })
             ]
           , type_ = TApp TInt (TApp TInt TInt)
-          , value = EInt 100
+          , value = EApp (ERef 11) (EInt 100)
           })
         , (2,
           { name = "test"
@@ -179,12 +179,14 @@ getFunctionRef model ref =
 
 getFileFunctionRef : File -> ExprRef -> Maybe Function
 getFileFunctionRef file ref =
-  file.defs |> List.filter (\(r, _) -> r == ref) |> List.map snd |> List.head
+  let
+    r1 = file.defs |> List.filter (\(r, _) -> r == ref) |> List.map snd |> List.head
+  in
+    r1
 
 
 type alias Arg =
-  { ref : ExprRef
-  , name : String
+  { name : String
   }
 
 
@@ -217,7 +219,7 @@ insert v bag =
 type alias Function =
   { name : String
   , type_ : Type
-  , args : List Arg
+  , args : List (WithRef Arg)
   , value : Expr
   }
 
@@ -274,4 +276,4 @@ printExpr model e =
 printFunction : Model -> Function -> String
 printFunction model f =
   f.name ++ " : " ++ (printType f.type_)
-  ++ "\n" ++ f.name ++ " " ++ (f.args |> List.map printArg |> String.join " ") ++ " = " ++ (printExpr model f.value)
+  ++ "\n" ++ f.name ++ " " ++ (f.args |> List.map snd |> List.map printArg |> String.join " ") ++ " = " ++ (printExpr model f.value)
