@@ -244,31 +244,6 @@ getFileFunctionRef file ref =
     lookupContext d1 ref
 
 
-type alias Bag number v =
-  { things : Dict.Dict number v
-  , nextRef : number
-  }
-
-
-empty : Bag number v
-empty =
-  { things = Dict.empty
-  , nextRef = 0
-  }
-
-
-insert : v -> Bag number v -> Bag number v
-insert v bag =
-  { things = Dict.insert bag.nextRef v bag.things
-  , nextRef = bag.nextRef + 1
-  }
-
-
---get : number -> Bag number v -> Maybe v
---get ref bag =
-  --Dict.get ref (bag.things)
-
-
 printArg : Variable -> String
 printArg a =
   a.name
