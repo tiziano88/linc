@@ -46,48 +46,58 @@ testModel =
     [ { name = "test.elm"
       , nextRef = 888
       , defs =
+        Context
         [ (0,
           { name = "num"
-          , args = []
+          , args = emptyContext
           , type_ = TInt
           , value = EInt 42
           })
         , (1,
           { name = "add"
           , args =
-            [ (11, { name = "x" })
-            , (12, { name = "y" })
+            Context
+            [ (11,
+              { name = "x"
+              , args = emptyContext
+              , type_ = TEmpty
+              , value = EEmpty })
+            , (12,
+              { name = "y"
+              , args = emptyContext
+              , type_ = TEmpty
+              , value = EEmpty })
             ]
           , type_ = TApp TInt (TApp TInt TInt)
           , value = EApp (ERef 11) (EInt 100)
           })
         , (2,
           { name = "test"
-          , args = []
+          , args = emptyContext
           , type_ = TInt
           , value = EApp (EApp (ERef 1) (ERef 0)) (ERef 0)
           })
         , (3,
           { name = "error"
-          , args = []
+          , args = emptyContext
           , type_ = TInt
           , value = EApp (ERef 111) (ERef 0)
           })
         , (4,
           { name = "st"
-          , args = []
+          , args = emptyContext
           , type_ = TString
           , value = EString "test"
           })
         , (5,
           { name = "list"
-          , args = []
+          , args = emptyContext
           , type_ = TList TInt
           , value = EList [(ERef 0), (ERef 1)]
           })
         , (6,
           { name = "cond"
-          , args = []
+          , args = emptyContext
           , type_ = TApp TBool TInt
           , value = EIf (ERef 0) (EInt 100) (EInt 200)
           })
@@ -128,7 +138,7 @@ view address model =
 
 printFile : Model -> File -> String
 printFile model file =
-  file.defs |> List.map snd |> List.map (printFunction model) |> String.join "\n\n\n"
+  file.defs |> mapContext |> List.map (printFunction model) |> String.join "\n\n\n"
 
 
 type alias Model =
@@ -136,15 +146,60 @@ type alias Model =
   }
 
 
+type Context = Context (List (WithRef Variable))
+
+emptyContext : Context
+emptyContext = Context []
+
+
+mapContext : Context -> List Variable
+mapContext (Context cs) =
+  List.map snd cs
+
+
+mergeContext : Context -> Context -> Context
+mergeContext (Context cs1) (Context cs2) =
+  Context (List.append cs1 cs2)
+
+
+lookupContext : Context -> ExprRef -> Maybe Variable
+lookupContext (Context cs) ref =
+  cs
+    |> List.filter (\(r, _) -> r == ref)
+    |> List.head
+    |> Maybe.map snd
+
+
+
 type alias File =
   { name : String
   , nextRef : ExprRef
-  , defs : List (WithRef Function)
+  , defs : Context
+  }
+
+
+type alias Variable =
+  { name : String
+  , type_ : Type
+  , args : Context
+  , value : Expr
+  }
+
+
+type alias TypeVariable =
+  { name : String
+  , kind : String -- ?
+  }
+
+
+type alias TypeConstructor =
+  { name : String
   }
 
 
 type Type
-  = TInt
+  = TEmpty -- Args.
+  | TInt
   | TBool
   | TString
   | TList Type
@@ -152,7 +207,8 @@ type Type
 
 
 type Expr
-  = ERef ExprRef
+  = EEmpty -- Args.
+  | ERef ExprRef
   | EInt Int
   | EBool Bool
   | EList (List Expr)
@@ -161,9 +217,10 @@ type Expr
   | EApp Expr Expr
 
 
-type Def
-  = DFun Function
-  | DArg Arg
+type Symbol
+  = SVar Variable
+  | STyVar TypeVariable
+  | STyCon TypeConstructor
 
 
 type alias ExprRef = Int
@@ -172,29 +229,25 @@ type alias ExprRef = Int
 type alias WithRef a = (ExprRef, a)
 
 
-getFunctionRef : Model -> ExprRef -> Maybe Function
+getFunctionRef : Model -> ExprRef -> Maybe Variable
 getFunctionRef model ref =
   model.files |> List.map (\x -> getFileFunctionRef x ref) |> Maybe.oneOf
 
 
-getFileFunctionRef : File -> ExprRef -> Maybe Function
+getFileFunctionRef : File -> ExprRef -> Maybe Variable
 getFileFunctionRef file ref =
   let
-    r1 = file.defs |> List.filter (\(r, _) -> r == ref) |> List.map snd |> List.head
+    d1 = file.defs
+    --d2 = file.defs |> mapContext |> List.concatMap (\x -> x.args)
+    --d = List.append d1 d2
   in
-    r1
-
-
-type alias Arg =
-  { name : String
-  }
+    lookupContext d1 ref
 
 
 type alias Bag number v =
   { things : Dict.Dict number v
   , nextRef : number
   }
-
 
 
 empty : Bag number v
@@ -216,15 +269,7 @@ insert v bag =
   --Dict.get ref (bag.things)
 
 
-type alias Function =
-  { name : String
-  , type_ : Type
-  , args : List (WithRef Arg)
-  , value : Expr
-  }
-
-
-printArg : Arg -> String
+printArg : Variable -> String
 printArg a =
   a.name
 
@@ -232,6 +277,7 @@ printArg a =
 printType : Type -> String
 printType t =
   case t of
+    TEmpty -> "<<<EMPTY>>>"
     TInt -> "Int"
     TBool -> "Bool"
     TString -> "String"
@@ -242,6 +288,9 @@ printType t =
 printExpr : Model -> Expr -> String
 printExpr model e =
   case e of
+    EEmpty ->
+      "<<<EMPTY>>>"
+
     ERef r ->
       let
         mf = getFunctionRef model r
@@ -268,12 +317,11 @@ printExpr model e =
     EIf cond eTrue eFalse ->
       String.join " " <| ["if", printExpr model cond, "then", printExpr model eTrue, "else", printExpr model eFalse]
 
-
     EApp e1 e2 ->
       "(" ++ (printExpr model e1) ++ " " ++ (printExpr model e2) ++ ")"
 
 
-printFunction : Model -> Function -> String
+printFunction : Model -> Variable -> String
 printFunction model f =
   f.name ++ " : " ++ (printType f.type_)
-  ++ "\n" ++ f.name ++ " " ++ (f.args |> List.map snd |> List.map printArg |> String.join " ") ++ " = " ++ (printExpr model f.value)
+  ++ "\n" ++ f.name ++ " " ++ (f.args |> mapContext |> List.map printArg |> String.join " ") ++ " = " ++ (printExpr model f.value)
