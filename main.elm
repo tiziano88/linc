@@ -216,7 +216,7 @@ type Expr
   | EApp Expr Expr
 
 
-type Symbol
+type Symbol -- Unused.
   = SVar Variable
   | STyVar TypeVariable
   | STyCon TypeConstructor
@@ -230,7 +230,9 @@ type alias WithRef a = (ExprRef, a)
 
 getVariable : Model -> ExprRef -> Maybe Variable
 getVariable model ref =
-  model.files |> List.map (\x -> getFileFunctionRef x ref) |> Maybe.oneOf
+  model.files
+    |> List.map (\x -> getFileFunctionRef x ref)
+    |> Maybe.oneOf
 
 
 getFileFunctionRef : File -> ExprRef -> Maybe Variable
@@ -241,7 +243,7 @@ getFileFunctionRef file ref =
       file.context
         |> mapContext
         |> List.map (\x -> x.context)
-        |> List.foldr mergeContext emptyContext
+        |> List.foldl mergeContext emptyContext
     c = mergeContext c1 c2
   in
     lookupContext c ref
@@ -288,12 +290,15 @@ printExpr model e =
 
     EList ls ->
       let
-        s = ls |> List.map (printExpr model) |> String.join ", "
+        s =
+          ls
+            |> List.map (printExpr model)
+            |> String.join ", "
       in
         "[" ++ s ++ "]"
 
     EIf cond eTrue eFalse ->
-      String.join " " <|
+      String.join " "
         [ "if"
         , printExpr model cond
         , "then"
@@ -303,11 +308,16 @@ printExpr model e =
         ]
 
     EApp e1 e2 ->
-      "(" ++ (printExpr model e1) ++ " " ++ (printExpr model e2) ++ ")"
+      String.join " "
+        [ "(" ++ printExpr model e1
+        , printExpr model e2 ++ ")"
+        ]
+
 
 printFunctionSignature : Model -> Variable -> String
 printFunctionSignature model f =
   f.name ++ " : " ++ (printType f.type_)
+
 
 printFunctionBody : Model -> Variable -> String
 printFunctionBody model f =
@@ -320,6 +330,7 @@ printFunctionBody model f =
     , "="
     , printExpr model f.value
     ]
+
 
 printFunction : Model -> Variable -> String
 printFunction model f =
