@@ -45,26 +45,26 @@ testModel =
   { files =
     [ { name = "test.elm"
       , nextRef = 888
-      , defs =
+      , context =
         Context
         [ (0,
           { name = "num"
-          , args = emptyContext
+          , context = emptyContext
           , type_ = TInt
           , value = EInt 42
           })
         , (1,
           { name = "add"
-          , args =
+          , context =
             Context
             [ (11,
               { name = "x"
-              , args = emptyContext
+              , context = emptyContext
               , type_ = TEmpty
               , value = EEmpty })
             , (12,
               { name = "y"
-              , args = emptyContext
+              , context = emptyContext
               , type_ = TEmpty
               , value = EEmpty })
             ]
@@ -73,31 +73,31 @@ testModel =
           })
         , (2,
           { name = "test"
-          , args = emptyContext
+          , context = emptyContext
           , type_ = TInt
           , value = EApp (EApp (ERef 1) (ERef 0)) (ERef 0)
           })
         , (3,
           { name = "error"
-          , args = emptyContext
+          , context = emptyContext
           , type_ = TInt
           , value = EApp (ERef 111) (ERef 0)
           })
         , (4,
           { name = "st"
-          , args = emptyContext
+          , context = emptyContext
           , type_ = TString
           , value = EString "test"
           })
         , (5,
           { name = "list"
-          , args = emptyContext
+          , context = emptyContext
           , type_ = TList TInt
           , value = EList [(ERef 0), (ERef 1)]
           })
         , (6,
           { name = "cond"
-          , args = emptyContext
+          , context = emptyContext
           , type_ = TApp TBool TInt
           , value = EIf (ERef 0) (EInt 100) (EInt 200)
           })
@@ -138,7 +138,7 @@ view address model =
 
 printFile : Model -> File -> String
 printFile model file =
-  file.defs |> mapContext |> List.map (printFunction model) |> String.join "\n\n\n"
+  file.context |> mapContext |> List.map (printFunction model) |> String.join "\n\n\n"
 
 
 type alias Model =
@@ -170,18 +170,17 @@ lookupContext (Context cs) ref =
     |> Maybe.map snd
 
 
-
 type alias File =
   { name : String
   , nextRef : ExprRef
-  , defs : Context
+  , context : Context
   }
 
 
 type alias Variable =
   { name : String
   , type_ : Type
-  , args : Context
+  , context : Context
   , value : Expr
   }
 
@@ -229,19 +228,23 @@ type alias ExprRef = Int
 type alias WithRef a = (ExprRef, a)
 
 
-getFunctionRef : Model -> ExprRef -> Maybe Variable
-getFunctionRef model ref =
+getVariable : Model -> ExprRef -> Maybe Variable
+getVariable model ref =
   model.files |> List.map (\x -> getFileFunctionRef x ref) |> Maybe.oneOf
 
 
 getFileFunctionRef : File -> ExprRef -> Maybe Variable
 getFileFunctionRef file ref =
   let
-    d1 = file.defs
-    --d2 = file.defs |> mapContext |> List.concatMap (\x -> x.args)
-    --d = List.append d1 d2
+    c1 = file.context
+    c2 =
+      file.context
+        |> mapContext
+        |> List.map (\x -> x.context)
+        |> List.foldr mergeContext emptyContext
+    c = mergeContext c1 c2
   in
-    lookupContext d1 ref
+    lookupContext c ref
 
 
 printArg : Variable -> String
@@ -268,7 +271,7 @@ printExpr model e =
 
     ERef r ->
       let
-        mf = getFunctionRef model r
+        mf = getVariable model r
       in
        case mf of
          Just f -> f.name
@@ -290,13 +293,37 @@ printExpr model e =
         "[" ++ s ++ "]"
 
     EIf cond eTrue eFalse ->
-      String.join " " <| ["if", printExpr model cond, "then", printExpr model eTrue, "else", printExpr model eFalse]
+      String.join " " <|
+        [ "if"
+        , printExpr model cond
+        , "then"
+        , printExpr model eTrue
+        , "else"
+        , printExpr model eFalse
+        ]
 
     EApp e1 e2 ->
       "(" ++ (printExpr model e1) ++ " " ++ (printExpr model e2) ++ ")"
 
+printFunctionSignature : Model -> Variable -> String
+printFunctionSignature model f =
+  f.name ++ " : " ++ (printType f.type_)
+
+printFunctionBody : Model -> Variable -> String
+printFunctionBody model f =
+  String.join " "
+    [ f.name
+    , f.context
+      |> mapContext
+      |> List.map printArg
+      |> String.join " "
+    , "="
+    , printExpr model f.value
+    ]
 
 printFunction : Model -> Variable -> String
 printFunction model f =
-  f.name ++ " : " ++ (printType f.type_)
-  ++ "\n" ++ f.name ++ " " ++ (f.args |> mapContext |> List.map printArg |> String.join " ") ++ " = " ++ (printExpr model f.value)
+  String.join "\n"
+    [ (printFunctionSignature model f)
+    , (printFunctionBody model f)
+    ]
