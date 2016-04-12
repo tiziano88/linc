@@ -37,6 +37,7 @@ init =
 initialModel : Model
 initialModel =
   { files = []
+  , currentRef = Nothing
   }
 
 
@@ -104,6 +105,7 @@ testModel =
         ]
       }
     ]
+  , currentRef = Just 0
   }
 
 
@@ -132,21 +134,34 @@ view address model =
       []
       [ Html.text "Add Object" ]
     , Html.div [] [ Html.text <| toString model ]
-    , Html.pre [] (model.files |> List.map (printFile model)|> List.map Html.text)
+    , Html.pre [] (model.files |> List.map (htmlFile model))
     ]
 
 
 printFile : Model -> File -> String
 printFile model file =
-  file.context |> mapContext |> List.map (printFunction model) |> String.join "\n\n\n"
+  file.context
+    |> mapContext
+    |> List.map (printFunction model)
+    |> String.join "\n\n\n"
+
+
+htmlFile : Model -> File -> Html
+htmlFile model file =
+  let xs = file.context
+    |> mapContext
+    |> List.map (htmlFunction model)
+  in Html.div [] xs
 
 
 type alias Model =
   { files : List File
+  , currentRef : Maybe ExprRef
   }
 
 
 type Context = Context (List (WithRef Variable))
+
 
 emptyContext : Context
 emptyContext = Context []
@@ -314,9 +329,74 @@ printExpr model e =
         ]
 
 
+htmlExpr : Model -> Expr -> Html
+htmlExpr model e =
+  case e of
+    EEmpty ->
+      span "<<<EMPTY>>>"
+
+    ERef r ->
+      let
+        mf = getVariable model r
+      in
+       case mf of
+         Just f -> span f.name
+         Nothing -> span "<<<ERROR>>>"
+
+    EInt v ->
+      span <| toString v
+
+    EBool v ->
+      span <| toString v
+
+    EString v ->
+      span <| "\"" ++ v ++ "\""
+
+    EList ls ->
+      Html.span []
+        ([ span "[" ] ++ (List.map (htmlExpr model) ls) ++ [ span "]" ])
+
+    EIf cond eTrue eFalse ->
+      Html.span []
+        [ span "if"
+        , htmlExpr model cond
+        , span "then"
+        , htmlExpr model eTrue
+        , span "else"
+        , htmlExpr model eFalse
+        ]
+
+    EApp e1 e2 ->
+      Html.span []
+        [ span <| "(" ++ printExpr model e1
+        , span <| printExpr model e2 ++ ")"
+        ]
+
+
 printFunctionSignature : Model -> Variable -> String
 printFunctionSignature model f =
   f.name ++ " : " ++ (printType f.type_)
+
+(=>) : String -> String -> (String, String)
+(=>) = (,)
+
+span : String -> Html
+span t =
+  Html.span
+    [ style
+      [ "margin" =>  "5px"
+      ]
+    ]
+    [ Html.text t ]
+
+
+htmlFunctionSignature : Model -> Variable -> Html
+htmlFunctionSignature model f =
+  Html.div []
+    [ span f.name
+    , span " : "
+    , span <| (printType f.type_) ]
+
 
 
 printFunctionBody : Model -> Variable -> String
@@ -332,9 +412,30 @@ printFunctionBody model f =
     ]
 
 
+htmlFunctionBody : Model -> Variable -> Html
+htmlFunctionBody model f =
+  Html.div []
+    [ span f.name
+    , f.context
+      |> mapContext
+      |> List.map printArg
+      |> String.join " "
+      |> span
+    , span "="
+    , htmlExpr model f.value
+    ]
+
+
 printFunction : Model -> Variable -> String
 printFunction model f =
   String.join "\n"
     [ (printFunctionSignature model f)
     , (printFunctionBody model f)
+    ]
+
+htmlFunction : Model -> Variable -> Html
+htmlFunction model f =
+  Html.div []
+    [ htmlFunctionSignature model f
+    , htmlFunctionBody model f 
     ]
