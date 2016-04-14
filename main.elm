@@ -51,57 +51,145 @@ testModel =
         Context
         [ (0,
           { name = "num"
+          , ref = 0
           , context = emptyContext
           , type_ = TInt
           , value = EInt 42
           })
         , (1,
           { name = "add"
+          , ref = 1
           , context =
             Context
             [ (11,
               { name = "x"
+              , ref = 11
               , context = emptyContext
               , type_ = TEmpty
               , value = EEmpty })
             , (12,
               { name = "y"
+              , ref = 12
               , context = emptyContext
               , type_ = TEmpty
               , value = EEmpty })
             ]
           , type_ = TApp TInt (TApp TInt TInt)
-          , value = EApp (ERef 11) (EInt 100)
+          , value = EApp
+              { name = ""
+              , ref = 111
+              , context = emptyContext
+              , type_ = TEmpty
+              , value = ERef 11
+              }
+              { name = ""
+              , ref = 112
+              , context = emptyContext
+              , type_ = TEmpty
+              , value = ERef 100
+              }
           })
         , (2,
           { name = "test"
+          , ref = 2
           , context = emptyContext
           , type_ = TInt
-          , value = EApp (EApp (ERef 1) (ERef 0)) (ERef 0)
+          , value = EApp
+              { name = ""
+              , ref = 21
+              , context = emptyContext
+              , type_ = TEmpty
+              , value = EApp
+                { name = ""
+                , ref = 211
+                , context = emptyContext
+                , type_ = TEmpty
+                , value = ERef 1
+                }
+                { name = ""
+                , ref = 212
+                , context = emptyContext
+                , type_ = TEmpty
+                , value = ERef 0
+                }
+              }
+              { name = ""
+              , ref = 22
+              , context = emptyContext
+              , type_ = TEmpty
+              , value = ERef 0
+              }
           })
         , (3,
           { name = "error"
+          , ref = 3
           , context = emptyContext
           , type_ = TInt
-          , value = EApp (ERef 111) (ERef 0)
+          , value = EApp
+            { name = ""
+            , ref = 31
+            , context = emptyContext
+            , type_ = TEmpty
+            , value = ERef 111
+            }
+            { name = ""
+            , ref = 32
+            , context = emptyContext
+            , type_ = TEmpty
+            , value = ERef 0
+            }
           })
         , (4,
           { name = "st"
+          , ref = 4
           , context = emptyContext
           , type_ = TString
           , value = EString "test"
           })
         , (5,
           { name = "list"
+          , ref = 5
           , context = emptyContext
           , type_ = TList TInt
-          , value = EList [(ERef 0), (ERef 1)]
+          , value = EList
+            [ { name = ""
+              , ref = 51
+              , context = emptyContext
+              , type_ = TEmpty
+              , value = ERef 0
+              }
+            , { name = ""
+              , ref = 52
+              , context = emptyContext
+              , type_ = TEmpty
+              , value = ERef 1
+              }
+            ]
           })
         , (6,
           { name = "cond"
+          , ref = 6
           , context = emptyContext
           , type_ = TApp TBool TInt
-          , value = EIf (ERef 0) (EInt 100) (EInt 200)
+          , value = EIf
+            { name = ""
+            , ref = 61
+            , context = emptyContext
+            , type_ = TEmpty
+            , value = ERef 0
+            }
+            { name = ""
+            , ref = 62
+            , context = emptyContext
+            , type_ = TEmpty
+            , value = EInt 100
+            }
+            { name = ""
+            , ref = 63
+            , context = emptyContext
+            , type_ = TEmpty
+            , value = EInt 200
+            }
           })
         ]
       }
@@ -202,6 +290,7 @@ type alias File =
 
 type alias Variable =
   { name : String
+  , ref : ExprRef
   , type_ : Type
   , context : Context
   , value : Expr
@@ -239,10 +328,10 @@ type Expr
   | ERef ExprRef
   | EInt Int
   | EBool Bool
-  | EList (List Expr)
+  | EList (List Variable)
   | EString String
-  | EIf Expr Expr Expr
-  | EApp Expr Expr
+  | EIf Variable Variable Variable
+  | EApp Variable Variable
 
 
 type Symbol -- Unused.
@@ -294,9 +383,9 @@ printType t =
     TApp t1 t2 -> "(" ++ (printType t1) ++ " -> " ++ (printType t2) ++ ")"
 
 
-printExpr : Model -> Expr -> String
-printExpr model e =
-  case e of
+printExpr : Model -> Variable -> String
+printExpr model v =
+  case v.value of
     EEmpty ->
       "<<<EMPTY>>>"
 
@@ -343,51 +432,60 @@ printExpr model e =
         ]
 
 
-htmlExpr : Address -> Model -> Expr -> Html
-htmlExpr address model e =
-  case e of
+htmlExpr : Address -> Model -> Variable -> Html
+htmlExpr address model v =
+  let content = case v.value of
     EEmpty ->
-      span "<<<EMPTY>>>"
+      [ Html.text "<<<EMPTY>>>" ]
 
     ERef r ->
       let
         mf = getVariable model r
       in
        case mf of
-         Just f -> span f.name
-         Nothing -> span "<<<ERROR>>>"
+         Just f -> [ Html.text f.name ]
+         Nothing -> [ Html.text "<<<ERROR>>>" ]
 
     EInt v ->
-      span <| toString v
+      [ Html.text <| toString v ]
 
     EBool v ->
-      span <| toString v
+      [ Html.text <| toString v ]
 
     EString v ->
-      span <| "\"" ++ v ++ "\""
+      [ Html.text <| "\"" ++ v ++ "\"" ]
 
     EList ls ->
-      Html.span []
-        ([ span "[" ] ++ (List.map (htmlExpr address model) ls) ++ [ span "]" ])
+      ([ Html.text "[" ] ++ (List.map (htmlExpr address model) ls) ++ [ Html.text "]" ])
 
     EIf cond eTrue eFalse ->
-      Html.span
-        [ onMouseEnter address (SetCurrentRef 11) ]
-        [ span "if"
-        , htmlExpr address model cond
-        , span "then"
-        , htmlExpr address model eTrue
-        , span "else"
-        , htmlExpr address model eFalse
-        ]
+      [ Html.text "if"
+      , htmlExpr address model cond
+      , Html.text "then"
+      , htmlExpr address model eTrue
+      , Html.text "else"
+      , htmlExpr address model eFalse
+      ]
 
     EApp e1 e2 ->
-      Html.span []
-        [ span "("
-        , span <| printExpr model e1
-        , span <| printExpr model e2
-        , span ")"
-        ]
+      [ Html.text "("
+      , htmlExpr address model e1
+      , htmlExpr address model e2
+      , Html.text ")"
+      ]
+
+  in
+    Html.span
+      [ onMouseEnter address (SetCurrentRef v.ref)
+      , style <| [ "margin" => "5px"] ++
+        (if
+          (model.currentRef == Just v.ref)
+        then
+          [ "color" => "red" ]
+        else
+          [])
+      ]
+      content
 
 
 printFunctionSignature : Model -> Variable -> String
@@ -399,22 +497,12 @@ printFunctionSignature model f =
 (=>) = (,)
 
 
-span : String -> Html
-span t =
-  Html.span
-    [ style
-      [ "margin" => "5px"
-      ]
-    ]
-    [ Html.text t ]
-
-
 htmlFunctionSignature : Address -> Model -> Variable -> Html
 htmlFunctionSignature address model f =
   Html.div []
-    [ span f.name
-    , span " : "
-    , span <| (printType f.type_)
+    [ Html.text f.name
+    , Html.text " : "
+    , Html.text <| (printType f.type_)
     ]
 
 
@@ -428,21 +516,21 @@ printFunctionBody model f =
       |> List.map printArg
       |> String.join " "
     , "="
-    , printExpr model f.value
+    , printExpr model f
     ]
 
 
 htmlFunctionBody : Address -> Model -> Variable -> Html
 htmlFunctionBody address model f =
   Html.div []
-    [ span f.name
+    [ Html.text f.name
     , f.context
       |> mapContext
       |> List.map printArg
       |> String.join " "
-      |> span
-    , span "="
-    , htmlExpr address model f.value
+      |> Html.text
+    , Html.text "="
+    , htmlExpr address model f
     ]
 
 
