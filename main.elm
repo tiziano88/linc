@@ -4,6 +4,7 @@ import Effects exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Signal
 import StartApp
 import String
 import Task
@@ -116,6 +117,11 @@ noEffects m =
 
 type Action
   = Nop
+  | SetCurrentRef ExprRef
+
+
+type alias Address
+  = Signal.Address Action
 
 
 update : Action -> Model -> (Model, Effects Action)
@@ -126,6 +132,8 @@ update action model =
 
     Nop -> noEffects model
 
+    SetCurrentRef ref -> noEffects { model | currentRef = Just ref }
+
 
 view address model =
   Html.div []
@@ -134,7 +142,7 @@ view address model =
       []
       [ Html.text "Add Object" ]
     , Html.div [] [ Html.text <| toString model ]
-    , Html.pre [] (model.files |> List.map (htmlFile model))
+    , Html.pre [] (model.files |> List.map (htmlFile address model))
     ]
 
 
@@ -146,11 +154,11 @@ printFile model file =
     |> String.join "\n\n\n"
 
 
-htmlFile : Model -> File -> Html
-htmlFile model file =
+htmlFile : Address -> Model -> File -> Html
+htmlFile address model file =
   let xs = file.context
     |> mapContext
-    |> List.map (htmlFunction model)
+    |> List.map (htmlFunction address model)
   in Html.div [] xs
 
 
@@ -196,6 +204,12 @@ type alias Variable =
   { name : String
   , type_ : Type
   , context : Context
+  , value : Expr
+  }
+
+
+type alias Node =
+  { ref : ExprRef
   , value : Expr
   }
 
@@ -329,8 +343,8 @@ printExpr model e =
         ]
 
 
-htmlExpr : Model -> Expr -> Html
-htmlExpr model e =
+htmlExpr : Address -> Model -> Expr -> Html
+htmlExpr address model e =
   case e of
     EEmpty ->
       span "<<<EMPTY>>>"
@@ -354,22 +368,25 @@ htmlExpr model e =
 
     EList ls ->
       Html.span []
-        ([ span "[" ] ++ (List.map (htmlExpr model) ls) ++ [ span "]" ])
+        ([ span "[" ] ++ (List.map (htmlExpr address model) ls) ++ [ span "]" ])
 
     EIf cond eTrue eFalse ->
-      Html.span []
+      Html.span
+        [ onMouseEnter address (SetCurrentRef 11) ]
         [ span "if"
-        , htmlExpr model cond
+        , htmlExpr address model cond
         , span "then"
-        , htmlExpr model eTrue
+        , htmlExpr address model eTrue
         , span "else"
-        , htmlExpr model eFalse
+        , htmlExpr address model eFalse
         ]
 
     EApp e1 e2 ->
       Html.span []
-        [ span <| "(" ++ printExpr model e1
-        , span <| printExpr model e2 ++ ")"
+        [ span "("
+        , span <| printExpr model e1
+        , span <| printExpr model e2
+        , span ")"
         ]
 
 
@@ -377,25 +394,28 @@ printFunctionSignature : Model -> Variable -> String
 printFunctionSignature model f =
   f.name ++ " : " ++ (printType f.type_)
 
+
 (=>) : String -> String -> (String, String)
 (=>) = (,)
+
 
 span : String -> Html
 span t =
   Html.span
     [ style
-      [ "margin" =>  "5px"
+      [ "margin" => "5px"
       ]
     ]
     [ Html.text t ]
 
 
-htmlFunctionSignature : Model -> Variable -> Html
-htmlFunctionSignature model f =
+htmlFunctionSignature : Address -> Model -> Variable -> Html
+htmlFunctionSignature address model f =
   Html.div []
     [ span f.name
     , span " : "
-    , span <| (printType f.type_) ]
+    , span <| (printType f.type_)
+    ]
 
 
 
@@ -412,8 +432,8 @@ printFunctionBody model f =
     ]
 
 
-htmlFunctionBody : Model -> Variable -> Html
-htmlFunctionBody model f =
+htmlFunctionBody : Address -> Model -> Variable -> Html
+htmlFunctionBody address model f =
   Html.div []
     [ span f.name
     , f.context
@@ -422,7 +442,7 @@ htmlFunctionBody model f =
       |> String.join " "
       |> span
     , span "="
-    , htmlExpr model f.value
+    , htmlExpr address model f.value
     ]
 
 
@@ -433,9 +453,9 @@ printFunction model f =
     , (printFunctionBody model f)
     ]
 
-htmlFunction : Model -> Variable -> Html
-htmlFunction model f =
+htmlFunction : Address -> Model -> Variable -> Html
+htmlFunction address model f =
   Html.div []
-    [ htmlFunctionSignature model f
-    , htmlFunctionBody model f 
+    [ htmlFunctionSignature address model f
+    , htmlFunctionBody address model f
     ]
