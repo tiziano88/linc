@@ -39,6 +39,7 @@ initialModel : Model
 initialModel =
   { files = []
   , currentRef = Nothing
+  , currentExpr = EEmpty
   }
 
 
@@ -75,69 +76,21 @@ testModel =
               , value = EEmpty })
             ]
           , type_ = TApp TInt (TApp TInt TInt)
-          , value = EApp
-              { name = ""
-              , ref = 111
-              , context = emptyContext
-              , type_ = TEmpty
-              , value = ERef 11
-              }
-              { name = ""
-              , ref = 112
-              , context = emptyContext
-              , type_ = TEmpty
-              , value = ERef 100
-              }
+          , value = EApp (ERef 11) (ERef 100)
           })
         , (2,
           { name = "test"
           , ref = 2
           , context = emptyContext
           , type_ = TInt
-          , value = EApp
-              { name = ""
-              , ref = 21
-              , context = emptyContext
-              , type_ = TEmpty
-              , value = EApp
-                { name = ""
-                , ref = 211
-                , context = emptyContext
-                , type_ = TEmpty
-                , value = ERef 1
-                }
-                { name = ""
-                , ref = 212
-                , context = emptyContext
-                , type_ = TEmpty
-                , value = ERef 0
-                }
-              }
-              { name = ""
-              , ref = 22
-              , context = emptyContext
-              , type_ = TEmpty
-              , value = ERef 0
-              }
+          , value = EApp (EApp (ERef 1) (ERef 0)) (ERef 0)
           })
         , (3,
           { name = "error"
           , ref = 3
           , context = emptyContext
           , type_ = TInt
-          , value = EApp
-            { name = ""
-            , ref = 31
-            , context = emptyContext
-            , type_ = TEmpty
-            , value = ERef 111
-            }
-            { name = ""
-            , ref = 32
-            , context = emptyContext
-            , type_ = TEmpty
-            , value = ERef 0
-            }
+          , value = EApp (ERef 111) (ERef 0)
           })
         , (4,
           { name = "st"
@@ -151,50 +104,20 @@ testModel =
           , ref = 5
           , context = emptyContext
           , type_ = TList TInt
-          , value = EList
-            [ { name = ""
-              , ref = 51
-              , context = emptyContext
-              , type_ = TEmpty
-              , value = ERef 0
-              }
-            , { name = ""
-              , ref = 52
-              , context = emptyContext
-              , type_ = TEmpty
-              , value = ERef 1
-              }
-            ]
+          , value = EList [(ERef 0), (ERef 1)]
           })
         , (6,
           { name = "cond"
           , ref = 6
           , context = emptyContext
           , type_ = TApp TBool TInt
-          , value = EIf
-            { name = ""
-            , ref = 61
-            , context = emptyContext
-            , type_ = TEmpty
-            , value = ERef 0
-            }
-            { name = ""
-            , ref = 62
-            , context = emptyContext
-            , type_ = TEmpty
-            , value = EInt 100
-            }
-            { name = ""
-            , ref = 63
-            , context = emptyContext
-            , type_ = TEmpty
-            , value = EInt 200
-            }
+          , value = EIf (ERef 0) (EInt 100) (EInt 200)
           })
         ]
       }
     ]
   , currentRef = Just 0
+  , currentExpr = EEmpty
   }
 
 
@@ -206,10 +129,7 @@ noEffects m =
 type Action
   = Nop
   | SetCurrentRef ExprRef
-
-
-type alias Address
-  = Signal.Address Action
+  | SetCurrentExpr Expr
 
 
 update : Action -> Model -> (Model, Effects Action)
@@ -221,6 +141,8 @@ update action model =
     Nop -> noEffects model
 
     SetCurrentRef ref -> noEffects { model | currentRef = Just ref }
+
+    SetCurrentExpr e -> noEffects { model | currentExpr = e }
 
 
 view address model =
@@ -242,17 +164,18 @@ printFile model file =
     |> String.join "\n\n\n"
 
 
-htmlFile : Address -> Model -> File -> Html
+htmlFile : Signal.Address Action -> Model -> File -> Html
 htmlFile address model file =
   let xs = file.context
     |> mapContext
-    |> List.map (htmlFunction address model)
+    |> List.map (htmlFunction address (Signal.forwardTo address SetCurrentExpr) model)
   in Html.div [] xs
 
 
 type alias Model =
   { files : List File
   , currentRef : Maybe ExprRef
+  , currentExpr : Expr
   }
 
 
@@ -296,6 +219,11 @@ type alias Variable =
   , value : Expr
   }
 
+type alias Definition =
+  { variable : Variable
+  , value : Expr
+  }
+
 
 type alias Node =
   { ref : ExprRef
@@ -328,10 +256,10 @@ type Expr
   | ERef ExprRef
   | EInt Int
   | EBool Bool
-  | EList (List Variable)
+  | EList (List Expr)
   | EString String
-  | EIf Variable Variable Variable
-  | EApp Variable Variable
+  | EIf Expr Expr Expr
+  | EApp Expr Expr
 
 
 type Symbol -- Unused.
@@ -383,9 +311,9 @@ printType t =
     TApp t1 t2 -> "(" ++ (printType t1) ++ " -> " ++ (printType t2) ++ ")"
 
 
-printExpr : Model -> Variable -> String
-printExpr model v =
-  case v.value of
+printExpr : Model -> Expr -> String
+printExpr model e =
+  case e of
     EEmpty ->
       "<<<EMPTY>>>"
 
@@ -432,60 +360,69 @@ printExpr model v =
         ]
 
 
-htmlExpr : Address -> Model -> Variable -> Html
-htmlExpr address model v =
-  let content = case v.value of
-    EEmpty ->
-      [ Html.text "<<<EMPTY>>>" ]
+htmlExpr : Signal.Address Action -> Signal.Address Expr -> Model -> Expr -> Html
+htmlExpr address aexpr model e =
+  let
+    content = case e of
+      EEmpty ->
+        [ Html.text "<<<EMPTY>>>" ]
 
-    ERef r ->
-      let
-        mf = getVariable model r
-      in
-       case mf of
-         Just f -> [ Html.text f.name ]
-         Nothing -> [ Html.text "<<<ERROR>>>" ]
+      ERef r ->
+        let
+          mf = getVariable model r
+        in
+         case mf of
+           Just f -> [ Html.text f.name ]
+           Nothing -> [ Html.text "<<<ERROR>>>" ]
 
-    EInt v ->
-      [ Html.text <| toString v ]
+      EInt v ->
+        [ Html.text <| toString v ]
 
-    EBool v ->
-      [ Html.text <| toString v ]
+      EBool v ->
+        [ Html.text <| toString v ]
 
-    EString v ->
-      [ Html.text <| "\"" ++ v ++ "\"" ]
+      EString v ->
+        [ Html.text <| "\"" ++ v ++ "\"" ]
 
-    EList ls ->
-      ([ Html.text "[" ] ++ (List.map (htmlExpr address model) ls) ++ [ Html.text "]" ])
+      EList ls ->
+        ([ Html.text "[" ] ++ (List.map (htmlExpr address aexpr model) ls) ++ [ Html.text "]" ])
 
-    EIf cond eTrue eFalse ->
-      [ Html.text "if"
-      , htmlExpr address model cond
-      , Html.text "then"
-      , htmlExpr address model eTrue
-      , Html.text "else"
-      , htmlExpr address model eFalse
-      ]
+      EIf cond eTrue eFalse ->
+        [ Html.text "if"
+        , htmlExpr address (Signal.forwardTo aexpr (\x -> EIf x eTrue eFalse)) model cond
+        , Html.text "then"
+        , htmlExpr address (Signal.forwardTo aexpr (\x -> EIf cond x eFalse)) model eTrue
+        , Html.text "else"
+        , htmlExpr address (Signal.forwardTo aexpr (\x -> EIf cond eTrue x)) model eFalse
+        ]
 
-    EApp e1 e2 ->
-      [ Html.text "("
-      , htmlExpr address model e1
-      , htmlExpr address model e2
-      , Html.text ")"
-      ]
+      EApp e1 e2 ->
+        [ Html.text "("
+        , htmlExpr address (Signal.forwardTo aexpr (\x -> EApp x e2)) model e1
+        , htmlExpr address (Signal.forwardTo aexpr (\x -> EApp e1 x)) model e2
+        , Html.text ")"
+        ]
+
+    ref = (case e of
+      ERef r -> (model.currentRef == Just r)
+      _ -> False)
 
   in
     Html.span
-      [ onMouseEnter address (SetCurrentRef v.ref)
-      , style <| [ "margin" => "5px"] ++
+      [ style <| [ "margin" => "5px"] ++
         (if
-          (model.currentRef == Just v.ref)
+          ref
         then
-          [ "color" => "red" ]
+          [ "color" => "blue" ]
         else
           [])
       ]
-      content
+      (content ++
+      [ Html.span
+        [ onClick aexpr EEmpty ]
+        [ Html.text "x"
+        ]
+      ])
 
 
 printFunctionSignature : Model -> Variable -> String
@@ -497,7 +434,7 @@ printFunctionSignature model f =
 (=>) = (,)
 
 
-htmlFunctionSignature : Address -> Model -> Variable -> Html
+htmlFunctionSignature : Signal.Address Action -> Model -> Variable -> Html
 htmlFunctionSignature address model f =
   Html.div []
     [ Html.text f.name
@@ -516,12 +453,12 @@ printFunctionBody model f =
       |> List.map printArg
       |> String.join " "
     , "="
-    , printExpr model f
+    , printExpr model f.value
     ]
 
 
-htmlFunctionBody : Address -> Model -> Variable -> Html
-htmlFunctionBody address model f =
+htmlFunctionBody : Signal.Address Action -> Signal.Address Expr -> Model -> Variable -> Html
+htmlFunctionBody address aexpr model f =
   Html.div []
     [ Html.text f.name
     , f.context
@@ -530,7 +467,7 @@ htmlFunctionBody address model f =
       |> String.join " "
       |> Html.text
     , Html.text "="
-    , htmlExpr address model f
+    , htmlExpr address aexpr model f.value
     ]
 
 
@@ -541,9 +478,9 @@ printFunction model f =
     , (printFunctionBody model f)
     ]
 
-htmlFunction : Address -> Model -> Variable -> Html
-htmlFunction address model f =
+htmlFunction : Signal.Address Action -> Signal.Address Expr -> Model -> Variable -> Html
+htmlFunction address aexpr model v =
   Html.div []
-    [ htmlFunctionSignature address model f
-    , htmlFunctionBody address model f
+    [ htmlFunctionSignature address model v
+    , htmlFunctionBody address aexpr model v
     ]
