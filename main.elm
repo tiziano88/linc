@@ -50,69 +50,60 @@ testModel =
       , nextRef = 888
       , context =
         Context <| Array.fromList
-        [ (0,
-          { name = "num"
+        [ { name = "num"
           , ref = 0
           , context = emptyContext
           , type_ = TInt
           , value = EInt 42
-          })
-        , (1,
-          { name = "add"
+          }
+        , { name = "add"
           , ref = 1
           , context =
             Context <| Array.fromList
-            [ (11,
-              { name = "x"
+            [ { name = "x"
               , ref = 11
               , context = emptyContext
               , type_ = TEmpty
-              , value = EEmpty })
-            , (12,
-              { name = "y"
+              , value = EEmpty }
+            , { name = "y"
               , ref = 12
               , context = emptyContext
               , type_ = TEmpty
-              , value = EEmpty })
+              , value = EEmpty }
             ]
           , type_ = TApp TInt (TApp TInt TInt)
           , value = EApp (ERef 11) (ERef 100)
-          })
-        , (2,
-          { name = "test"
+          }
+        , { name = "test"
           , ref = 2
           , context = emptyContext
           , type_ = TInt
           , value = EApp (EApp (ERef 1) (ERef 0)) (ERef 0)
-          })
-        , (3,
-          { name = "error"
+          }
+        , { name = "error"
           , ref = 3
           , context = emptyContext
           , type_ = TInt
           , value = EApp (ERef 111) (ERef 0)
-          })
-        , (4,
-          { name = "st"
+          }
+        , { name = "st"
           , ref = 4
           , context = emptyContext
           , type_ = TString
           , value = EString "test"
-          })
-        , (5,
-          { name = "list"
+          }
+        , { name = "list"
           , ref = 5
           , context = emptyContext
           , type_ = TList TInt
           , value = EList (Array.fromList [(ERef 0), (ERef 1)])
-          })
-        , (6,
-          { name = "cond"
+          }
+        , { name = "cond"
           , ref = 6
           , context = emptyContext
           , type_ = TApp TBool TInt
           , value = EIf (ERef 0) (EInt 100) (EInt 200)
-          })
+          }
         ]
       }
     ]
@@ -129,7 +120,7 @@ noEffects m =
 type Action
   = Nop
   | SetCurrentRef ExprRef
-  | SetCurrentExpr Expr
+  | SetExpr ExprRef Expr
 
 
 update : Action -> Model -> (Model, Effects Action)
@@ -142,7 +133,7 @@ update action model =
 
     SetCurrentRef ref -> noEffects { model | currentRef = Just ref }
 
-    SetCurrentExpr e -> noEffects { model | currentExpr = e }
+    SetExpr ref e -> noEffects { model | currentRef = Just ref, currentExpr = e }
 
 
 view address model =
@@ -167,8 +158,8 @@ printFile model file =
 htmlFile : Signal.Address Action -> Model -> File -> Html
 htmlFile address model file =
   let xs = file.context
-    |> mapContext
-    |> List.map (htmlFunction address (Signal.forwardTo address SetCurrentExpr) model)
+    |> mapContextIndexed
+    |> List.map (\(i, e) -> (htmlFunction address (Signal.forwardTo address <| SetExpr e.ref) model e))
   in Html.div [] xs
 
 
@@ -179,16 +170,21 @@ type alias Model =
   }
 
 
-type Context = Context (Array.Array (WithRef Variable))
+type Context = Context (Array.Array Variable)
 
 
 emptyContext : Context
 emptyContext = Context Array.empty
 
 
+mapContextIndexed : Context -> List (Int, Variable)
+mapContextIndexed (Context cs) =
+  Array.toIndexedList cs
+
+
 mapContext : Context -> List Variable
 mapContext (Context cs) =
-  Array.map snd cs |> Array.toList
+  Array.toList cs
 
 
 mergeContext : Context -> Context -> Context
@@ -199,9 +195,15 @@ mergeContext (Context cs1) (Context cs2) =
 lookupContext : Context -> ExprRef -> Maybe Variable
 lookupContext (Context cs) ref =
   cs
-    |> Array.filter (\(r, _) -> r == ref)
+    |> Array.filter (\v -> v.ref == ref)
     |> Array.get 0
-    |> Maybe.map snd
+
+
+--updateContext : Context -> ExprRef -> Expr -> Context
+--updateContext (Context cs) ref e =
+  --cs
+    --|> Array.map (\v -> if v.ref == ref then (1, {v | value = e }) else (1, e))
+    --|> Context
 
 
 type alias File =
@@ -269,9 +271,6 @@ type Symbol -- Unused.
 
 
 type alias ExprRef = Int
-
-
-type alias WithRef a = (ExprRef, a)
 
 
 getVariable : Model -> ExprRef -> Maybe Variable
@@ -420,6 +419,9 @@ htmlExpr address aexpr model e =
       ]
       (content ++
       [ Html.a
+        [ onClick address Nop ]
+        [ Html.text " [nop] " ]
+      , Html.a
         [ onClick aexpr <| EIf EEmpty EEmpty EEmpty ]
         [ Html.text " [if] " ]
       , Html.a
