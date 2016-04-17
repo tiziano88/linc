@@ -49,7 +49,7 @@ testModel =
     [ { name = "test.elm"
       , nextRef = 888
       , context =
-        Context
+        Context <| Array.fromList
         [ (0,
           { name = "num"
           , ref = 0
@@ -61,7 +61,7 @@ testModel =
           { name = "add"
           , ref = 1
           , context =
-            Context
+            Context <| Array.fromList
             [ (11,
               { name = "x"
               , ref = 11
@@ -104,7 +104,7 @@ testModel =
           , ref = 5
           , context = emptyContext
           , type_ = TList TInt
-          , value = EList [(ERef 0), (ERef 1)]
+          , value = EList (Array.fromList [(ERef 0), (ERef 1)])
           })
         , (6,
           { name = "cond"
@@ -179,28 +179,28 @@ type alias Model =
   }
 
 
-type Context = Context (List (WithRef Variable))
+type Context = Context (Array.Array (WithRef Variable))
 
 
 emptyContext : Context
-emptyContext = Context []
+emptyContext = Context Array.empty
 
 
 mapContext : Context -> List Variable
 mapContext (Context cs) =
-  List.map snd cs
+  Array.map snd cs |> Array.toList
 
 
 mergeContext : Context -> Context -> Context
 mergeContext (Context cs1) (Context cs2) =
-  Context (List.append cs1 cs2)
+  Context (Array.append cs1 cs2)
 
 
 lookupContext : Context -> ExprRef -> Maybe Variable
 lookupContext (Context cs) ref =
   cs
-    |> List.filter (\(r, _) -> r == ref)
-    |> List.head
+    |> Array.filter (\(r, _) -> r == ref)
+    |> Array.get 0
     |> Maybe.map snd
 
 
@@ -256,7 +256,7 @@ type Expr
   | ERef ExprRef
   | EInt Int
   | EBool Bool
-  | EList (List Expr)
+  | EList (Array.Array Expr)
   | EString String
   | EIf Expr Expr Expr
   | EApp Expr Expr
@@ -338,7 +338,8 @@ printExpr model e =
       let
         s =
           ls
-            |> List.map (printExpr model)
+            |> Array.map (printExpr model)
+            |> Array.toList
             |> String.join ", "
       in
         "[" ++ s ++ "]"
@@ -385,7 +386,7 @@ htmlExpr address aexpr model e =
         [ Html.text <| "\"" ++ v ++ "\"" ]
 
       EList ls ->
-        ([ Html.text "[" ] ++ (List.map (htmlExpr address aexpr model) ls) ++ [ Html.text "]" ])
+        ([ Html.text "[" ] ++ (Array.map (htmlExpr address aexpr model) ls |> Array.toList) ++ [ Html.text "]" ])
 
       EIf cond eTrue eFalse ->
         [ Html.text "if"
@@ -418,10 +419,12 @@ htmlExpr address aexpr model e =
           [])
       ]
       (content ++
-      [ Html.span
+      [ Html.a
+        [ onClick aexpr <| EIf EEmpty EEmpty EEmpty ]
+        [ Html.text " [if] " ]
+      , Html.a
         [ onClick aexpr EEmpty ]
-        [ Html.text "x"
-        ]
+        [ Html.text " [x] " ]
       ])
 
 
