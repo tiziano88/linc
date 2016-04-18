@@ -38,6 +38,7 @@ init =
 initialModel : Model
 initialModel =
   { files = []
+  , parent = Dict.empty
   , currentRef = Nothing
   , currentExpr = EEmpty
   }
@@ -107,6 +108,7 @@ testModel =
         ]
       }
     ]
+  , parent = Dict.empty
   , currentRef = Just 0
   , currentExpr = EEmpty
   }
@@ -144,7 +146,8 @@ update action model =
 
 view address model =
   Html.div []
-    [ Html.button
+    [ selectComponent ["aaa", "bbb", "ccc"]
+    , Html.button
       --[ onClick address <| AddObject { name = "test" } ]
       []
       [ Html.text "Add Object" ]
@@ -164,13 +167,14 @@ printFile model file =
 htmlFile : Signal.Address Action -> Model -> File -> Html
 htmlFile address model file =
   let xs = file.context
-    |> mapContextIndexed
-    |> List.map (\(i, e) -> (htmlFunction address (Signal.forwardTo address <| SetExpr e.ref) model e))
+    |> mapContext
+    |> List.map (\e -> (htmlFunction address (Signal.forwardTo address <| SetExpr e.ref) model e))
   in Html.div [] xs
 
 
 type alias Model =
   { files : List File
+  , parent : Dict.Dict ExprRef ExprRef
   , currentRef : Maybe ExprRef
   , currentExpr : Expr
   }
@@ -181,11 +185,6 @@ type Context = Context (Array.Array Variable)
 
 emptyContext : Context
 emptyContext = Context Array.empty
-
-
-mapContextIndexed : Context -> List (Int, Variable)
-mapContextIndexed (Context cs) =
-  Array.toIndexedList cs
 
 
 mapContext : Context -> List Variable
@@ -226,6 +225,7 @@ type alias Variable =
   , context : Context
   , value : Expr
   }
+
 
 type alias Definition =
   { variable : Variable
@@ -494,4 +494,49 @@ htmlFunction address aexpr model v =
   Html.div []
     [ htmlFunctionSignature address model v
     , htmlFunctionBody address aexpr model v
+    ]
+
+
+-- http://ethanschoonover.com/solarized
+colorscheme =
+  { background = "#fdf6e3"
+  , foreground = "#657b83"
+  , yellow = "#b58900"
+  , orange = "#cb4b16"
+  , red = "#dc322f"
+  , magenta = "#d33682"
+  , violet = "#6c71c4"
+  , blue = "#268bd2"
+  , cyan = "#2aa198"
+  , green = "#859900"
+  }
+
+
+selectComponent : List String -> Html
+selectComponent es =
+  Html.div
+    [ style
+      [ "border-color" => colorscheme.foreground
+      , "border-style" => "solid"
+      , "width" => "10em"
+      , "max-height" => "10em"
+      , "overflow" => "auto"
+      ]
+    ]
+    [ selectElement "x"
+    , selectElement "if"
+    , selectElement "->"
+    , selectElement "[]"
+    ]
+
+selectElement : String -> Html
+selectElement e =
+  Html.div
+    [ style
+      [ "background-color" => colorscheme.background
+      , "color" => colorscheme.foreground
+      , "padding" => "2px"
+      ]
+    ]
+    [ Html.text e
     ]
