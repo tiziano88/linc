@@ -133,7 +133,13 @@ update action model =
 
     SetCurrentRef ref -> noEffects { model | currentRef = Just ref }
 
-    SetExpr ref e -> noEffects { model | currentRef = Just ref, currentExpr = e }
+    SetExpr ref e -> noEffects
+      { model
+      | files =
+        List.map (\f -> { f | context = updateContext f.context ref e }) model.files
+      , currentRef = Just ref
+      , currentExpr = e
+      }
 
 
 view address model =
@@ -199,11 +205,11 @@ lookupContext (Context cs) ref =
     |> Array.get 0
 
 
---updateContext : Context -> ExprRef -> Expr -> Context
---updateContext (Context cs) ref e =
-  --cs
-    --|> Array.map (\v -> if v.ref == ref then (1, {v | value = e }) else (1, e))
-    --|> Context
+updateContext : Context -> ExprRef -> Expr -> Context
+updateContext (Context cs) ref e =
+  cs
+    |> Array.map (\v -> if v.ref == ref then {v | value = e } else v)
+    |> Context
 
 
 type alias File =
