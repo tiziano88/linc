@@ -94,7 +94,7 @@ testModel =
           , ref = 6
           , context = emptyContext
           , type_ = TApp TBool TInt
-          , value = EIf (ERef 0) (EInt 100) (ESel (EInt 200))
+          , value = EIf (ERef 0) (EInt 100) (EInt 200)
           }
         ]
       }
@@ -114,8 +114,6 @@ type Msg
   = Nop
   | SetCurrentRef ExprRef
   | SetExpr ExprRef Expr
-  | ClearSel
-  | ModifySel (Expr -> Expr)
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -136,29 +134,14 @@ update action model =
       , currentExpr = e
       }
 
-    ClearSel -> noEffects
-      { model
-      | files =
-        model.files
-          |> List.map (\f -> { f | context = f.context |> mapContext |> List.map (\x -> { x | value = clearSel x.value}) |> Array.fromList |> Context })
-      }
-
-    ModifySel m -> noEffects
-      { model
-      | files =
-        model.files
-          |> List.map (\f -> { f | context = f.context |> mapContext |> List.map (\x -> { x | value = mapSel m x.value}) |> Array.fromList |> Context })
-      }
-
-
 view model =
   Html.div []
     [ selectComponent ["aaa", "bbb", "ccc"]
     , Html.button
-      [ onClick ClearSel ]
+      []
       [ Html.text "Add Object" ]
     , Html.button
-      [ onClick (ModifySel (always (EBool False))) ]
+      []
       [ Html.text "Add Object" ]
     , Html.div [] [ Html.text <| toString model ]
     , Html.pre [] (model.files |> List.map (htmlFile model))
@@ -277,7 +260,6 @@ type Expr
   | EString String
   | EIf Expr Expr Expr
   | EApp Expr Expr
-  | ESel Expr -- Current selection
 
 
 type Symbol -- Unused.
@@ -287,25 +269,6 @@ type Symbol -- Unused.
 
 
 type alias ExprRef = Int
-
-
-clearSel : Expr -> Expr
-clearSel e =
-  case e of
-    ESel e1 -> clearSel e1
-    EList a -> EList (Array.map clearSel a)
-    EIf e1 e2 e3 -> EIf (clearSel e1) (clearSel e2) (clearSel e3)
-    EApp e1 e2 -> EApp (clearSel e1) (clearSel e2)
-    x -> x
-
-mapSel : (Expr -> Expr) -> Expr -> Expr
-mapSel f e =
-  case e of
-    ESel e1 -> ESel (f e1)
-    EList a -> EList (Array.map (mapSel f) a)
-    EIf e1 e2 e3 -> EIf (mapSel f e1) (mapSel f e2) (mapSel f e3)
-    EApp e1 e2 -> EApp (mapSel f e1) (mapSel f e2)
-    x -> x
 
 
 getVariable : Model -> ExprRef -> Maybe Variable
@@ -394,8 +357,6 @@ printExpr model e =
         , printExpr model e2 ++ ")"
         ]
 
-    ESel e -> printExpr model e
-
 
 htmlExpr : Model -> Expr -> Html Expr
 htmlExpr model e =
@@ -439,13 +400,6 @@ htmlExpr model e =
         , Html.map (\x -> EApp e1 x) <| htmlExpr model e2
         , Html.text ")"
         ]
-
-      ESel e ->
-        [ Html.text "->"
-        , htmlExpr model e
-        , Html.text "<-"
-        ]
-
 
     ref = (case e of
       ERef r -> (model.currentRef == Just r)
