@@ -31,6 +31,7 @@ initialModel =
   , parent = Dict.empty
   , currentRef = Nothing
   , currentExpr = EEmpty
+  , currentOp = identity
   }
 
 
@@ -102,6 +103,7 @@ testModel =
   , parent = Dict.empty
   , currentRef = Just 0
   , currentExpr = EEmpty
+  , currentOp = identity
   }
 
 
@@ -114,6 +116,7 @@ type Msg
   = Nop
   | SetCurrentRef ExprRef
   | SetExpr ExprRef Expr
+  | SetCurrentOp (Expr -> Expr)
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -134,15 +137,20 @@ update action model =
       , currentExpr = e
       }
 
+    SetCurrentOp f -> noEffects { model | currentOp = f }
+
 view model =
   Html.div []
     [ selectComponent ["aaa", "bbb", "ccc"]
     , Html.button
-      []
-      [ Html.text "Add Object" ]
+      [ onClick <| SetCurrentOp (always (EInt 123)) ]
+      [ Html.text "123" ]
     , Html.button
-      []
-      [ Html.text "Add Object" ]
+      [ onClick <| SetCurrentOp (always (EBool True)) ]
+      [ Html.text "True" ]
+    , Html.button
+      [ onClick <| SetCurrentOp (always (EList Array.empty)) ]
+      [ Html.text "[]" ]
     , Html.div [] [ Html.text <| toString model ]
     , Html.pre [] (model.files |> List.map (htmlFile model))
     ]
@@ -169,6 +177,7 @@ type alias Model =
   , parent : Dict.Dict ExprRef ExprRef
   , currentRef : Maybe ExprRef
   , currentExpr : Expr
+  , currentOp : Expr -> Expr
   }
 
 
@@ -418,7 +427,7 @@ htmlExpr model e =
           [ "color" => "blue" ]
         else
           [])
-      , onClick' <| EInt 123
+      , onClick' <| model.currentOp e
       ]
       content
       --(content ++
