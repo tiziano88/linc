@@ -9,6 +9,9 @@ import String
 import Task
 import Time
 
+import Print exposing (..)
+import Types exposing (..)
+
 
 main : Program Never
 main =
@@ -112,13 +115,6 @@ noEffects m =
   (m, Cmd.none)
 
 
-type Msg
-  = Nop
-  | SetCurrentRef ExprRef
-  | SetExpr ExprRef Expr
-  | SetCurrentOp (Expr -> Expr)
-
-
 update : Msg -> Model -> (Model, Cmd Msg)
 update action model =
   case action of
@@ -156,13 +152,6 @@ view model =
     ]
 
 
-printFile : Model -> File -> String
-printFile model file =
-  file.context
-    |> mapContext
-    |> List.map (printFunction model)
-    |> String.join "\n\n\n"
-
 
 htmlFile : Model -> File -> Html Msg
 htmlFile model file =
@@ -170,201 +159,6 @@ htmlFile model file =
     |> mapContext
     |> List.map (\e -> Html.map (SetExpr e.ref) <| htmlFunction model e)
   in Html.div [] xs
-
-
-type alias Model =
-  { files : List File
-  , parent : Dict.Dict ExprRef ExprRef
-  , currentRef : Maybe ExprRef
-  , currentExpr : Expr
-  , currentOp : Expr -> Expr
-  }
-
-
-type Context = Context (Array.Array Variable)
-
-
-emptyContext : Context
-emptyContext = Context Array.empty
-
-
-mapContext : Context -> List Variable
-mapContext (Context cs) =
-  Array.toList cs
-
-
-mergeContext : Context -> Context -> Context
-mergeContext (Context cs1) (Context cs2) =
-  Context (Array.append cs1 cs2)
-
-
-lookupContext : Context -> ExprRef -> Maybe Variable
-lookupContext (Context cs) ref =
-  cs
-    |> Array.filter (\v -> v.ref == ref)
-    |> Array.get 0
-
-
-updateContext : Context -> ExprRef -> Expr -> Context
-updateContext (Context cs) ref e =
-  cs
-    |> Array.map (\v -> if v.ref == ref then {v | value = e } else v)
-    |> Context
-
-
-type alias File =
-  { name : String
-  , nextRef : ExprRef
-  , context : Context
-  }
-
-
-type alias Variable =
-  { name : String
-  , ref : ExprRef
-  , type_ : Type
-  , context : Context
-  , value : Expr
-  }
-
-
-type alias Definition =
-  { variable : Variable
-  , value : Expr
-  }
-
-
-type alias Node =
-  { ref : ExprRef
-  , value : Expr
-  }
-
-
-type alias TypeVariable =
-  { name : String
-  , kind : String -- ?
-  }
-
-
-type alias TypeConstructor =
-  { name : String
-  }
-
-
-type Type
-  = TEmpty -- Args.
-  | TInt
-  | TBool
-  | TString
-  | TList Type
-  | TApp Type Type
-
-
-type Expr
-  = EEmpty -- Args.
-  | ERef ExprRef
-  | EInt Int
-  | EBool Bool
-  | EList (Array.Array Expr)
-  | EString String
-  | EIf Expr Expr Expr
-  | EApp Expr Expr
-
-
-type Symbol -- Unused.
-  = SVar Variable
-  | STyVar TypeVariable
-  | STyCon TypeConstructor
-
-
-type alias ExprRef = Int
-
-
-getVariable : Model -> ExprRef -> Maybe Variable
-getVariable model ref =
-  model.files
-    |> List.map (\x -> getFileFunctionRef x ref)
-    |> Maybe.oneOf
-
-
-getFileFunctionRef : File -> ExprRef -> Maybe Variable
-getFileFunctionRef file ref =
-  let
-    c1 = file.context
-    c2 =
-      file.context
-        |> mapContext
-        |> List.map (\x -> x.context)
-        |> List.foldl mergeContext emptyContext
-    c = mergeContext c1 c2
-  in
-    lookupContext c ref
-
-
-printArg : Variable -> String
-printArg a =
-  a.name
-
-
-printType : Type -> String
-printType t =
-  case t of
-    TEmpty -> "<<<EMPTY>>>"
-    TInt -> "Int"
-    TBool -> "Bool"
-    TString -> "String"
-    TList t -> "List " ++ (printType t)
-    TApp t1 t2 -> "(" ++ (printType t1) ++ " -> " ++ (printType t2) ++ ")"
-
-
-printExpr : Model -> Expr -> String
-printExpr model e =
-  case e of
-    EEmpty ->
-      "<<<EMPTY>>>"
-
-    ERef r ->
-      let
-        mf = getVariable model r
-      in
-       case mf of
-         Just f -> f.name
-         Nothing -> "<<<ERROR>>>"
-
-    EInt v ->
-      toString v
-
-    EBool v ->
-      toString v
-
-    EString v ->
-      "\"" ++ v ++ "\""
-
-    EList ls ->
-      let
-        s =
-          ls
-            |> Array.map (printExpr model)
-            |> Array.toList
-            |> String.join ", "
-      in
-        "[" ++ s ++ "]"
-
-    EIf cond eTrue eFalse ->
-      String.join " "
-        [ "if"
-        , printExpr model cond
-        , "then"
-        , printExpr model eTrue
-        , "else"
-        , printExpr model eFalse
-        ]
-
-    EApp e1 e2 ->
-      String.join " "
-        [ "(" ++ printExpr model e1
-        , printExpr model e2 ++ ")"
-        ]
 
 
 htmlExpr : Model -> Expr -> Html Expr
@@ -452,11 +246,6 @@ htmlExpr model e =
       --])
 
 
-printFunctionSignature : Model -> Variable -> String
-printFunctionSignature model f =
-  f.name ++ " : " ++ (printType f.type_)
-
-
 (=>) : String -> String -> (String, String)
 (=>) = (,)
 
@@ -467,19 +256,6 @@ htmlFunctionSignature model f =
     [ Html.text f.name
     , Html.text " : "
     , Html.text <| (printType f.type_)
-    ]
-
-
-printFunctionBody : Model -> Variable -> String
-printFunctionBody model f =
-  String.join " "
-    [ f.name
-    , f.context
-      |> mapContext
-      |> List.map printArg
-      |> String.join " "
-    , "="
-    , printExpr model f.value
     ]
 
 
@@ -496,13 +272,6 @@ htmlFunctionBody model f =
     , htmlExpr model f.value
     ]
 
-
-printFunction : Model -> Variable -> String
-printFunction model f =
-  String.join "\n"
-    [ (printFunctionSignature model f)
-    , (printFunctionBody model f)
-    ]
 
 
 htmlFunction : Model -> Variable -> Html Expr
