@@ -1,36 +1,25 @@
 import Array
 import Dict
-import Effects exposing (Effects)
+import Html.App as Html
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Signal
-import StartApp
 import String
 import Task
 import Time
 
 
-main : Signal Html
+main : Program Never
 main =
-  app.html
-
-
-port tasks : Signal (Task.Task Effects.Never ())
-port tasks =
-  app.tasks
-
-
-app =
-  StartApp.start
+  Html.program
     { init = init
     , view = view
     , update = update
-    , inputs = []
+    , subscriptions = always Sub.none
     }
 
 
-init : (Model, Effects Action)
+init : (Model, Cmd Msg)
 init =
   noEffects testModel
 
@@ -61,17 +50,18 @@ testModel =
           , ref = 1
           , context =
             Context <| Array.fromList
-            [ { name = "x"
-              , ref = 11
-              , context = emptyContext
-              , type_ = TEmpty
-              , value = EEmpty }
-            , { name = "y"
-              , ref = 12
-              , context = emptyContext
-              , type_ = TEmpty
-              , value = EEmpty }
-            ]
+            []
+            --[ { name = "x"
+              --, ref = 11
+              --, context = emptyContext
+              --, type_ = TEmpty
+              --, value = EEmpty }
+            --, { name = "y"
+              --, ref = 12
+              --, context = emptyContext
+              --, type_ = TEmpty
+              --, value = EEmpty }
+            --]
           , type_ = TApp TInt (TApp TInt TInt)
           , value = EApp (ERef 11) (ERef 100)
           }
@@ -103,7 +93,7 @@ testModel =
           , ref = 6
           , context = emptyContext
           , type_ = TApp TBool TInt
-          , value = EIf (ERef 0) (EInt 100) (EInt 200)
+          , value = EIf (ERef 0) (EInt 100) (ESel (EInt 200))
           }
         ]
       }
@@ -114,18 +104,19 @@ testModel =
   }
 
 
-noEffects : a -> (a, Effects b)
+noEffects : a -> (a, Cmd b)
 noEffects m =
-  (m, Effects.none)
+  (m, Cmd.none)
 
 
-type Action
+type Msg
   = Nop
   | SetCurrentRef ExprRef
   | SetExpr ExprRef Expr
+  | ClearSel
 
 
-update : Action -> Model -> (Model, Effects Action)
+update : Msg -> Model -> (Model, Cmd Msg)
 update action model =
   case action of
     --AddObject o ->
@@ -143,16 +134,19 @@ update action model =
       , currentExpr = e
       }
 
+    ClearSel ->
+      noEffects model
 
-view address model =
+
+view model =
   Html.div []
     [ selectComponent ["aaa", "bbb", "ccc"]
     , Html.button
-      --[ onClick address <| AddObject { name = "test" } ]
-      []
+      --[ onClick <| AddObject { name = "test" } ]
+      [ onClick ClearSel ]
       [ Html.text "Add Object" ]
     , Html.div [] [ Html.text <| toString model ]
-    , Html.pre [] (model.files |> List.map (htmlFile address model))
+    , Html.pre [] (model.files |> List.map (htmlFile model))
     ]
 
 
@@ -164,11 +158,11 @@ printFile model file =
     |> String.join "\n\n\n"
 
 
-htmlFile : Signal.Address Action -> Model -> File -> Html
-htmlFile address model file =
+htmlFile : Model -> File -> Html Msg
+htmlFile model file =
   let xs = file.context
     |> mapContext
-    |> List.map (\e -> (htmlFunction address (Signal.forwardTo address <| SetExpr e.ref) model e))
+    |> List.map (\e -> Html.map (SetExpr e.ref) <| htmlFunction model e)
   in Html.div [] xs
 
 
@@ -268,6 +262,7 @@ type Expr
   | EString String
   | EIf Expr Expr Expr
   | EApp Expr Expr
+  | ESel Expr -- Current selection
 
 
 type Symbol -- Unused.
@@ -277,6 +272,20 @@ type Symbol -- Unused.
 
 
 type alias ExprRef = Int
+
+
+clearSel : Expr -> Expr
+clearSel e =
+  case e of
+    ESel e1 -> e1
+    x -> x
+
+
+mapSel : (Expr -> Expr) -> Expr -> Expr
+mapSel f e =
+  case e of
+    ESel e1 -> f e1
+    x -> x
 
 
 getVariable : Model -> ExprRef -> Maybe Variable
@@ -365,9 +374,11 @@ printExpr model e =
         , printExpr model e2 ++ ")"
         ]
 
+    ESel e -> printExpr model e
 
-htmlExpr : Signal.Address Action -> Signal.Address Expr -> Model -> Expr -> Html
-htmlExpr address aexpr model e =
+
+htmlExpr : Model -> Expr -> Html Expr
+htmlExpr model e =
   let
     content = case e of
       EEmpty ->
@@ -391,23 +402,30 @@ htmlExpr address aexpr model e =
         [ Html.text <| "\"" ++ v ++ "\"" ]
 
       EList ls ->
-        ([ Html.text "[" ] ++ (Array.map (htmlExpr address aexpr model) ls |> Array.toList) ++ [ Html.text "]" ])
+        ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList) ++ [ Html.text "]" ])
 
       EIf cond eTrue eFalse ->
         [ Html.text "if"
-        , htmlExpr address (Signal.forwardTo aexpr (\x -> EIf x eTrue eFalse)) model cond
+        , Html.map (\x -> EIf x eTrue eFalse) <| htmlExpr model cond
         , Html.text "then"
-        , htmlExpr address (Signal.forwardTo aexpr (\x -> EIf cond x eFalse)) model eTrue
+        , Html.map (\x -> EIf cond x eFalse) <| htmlExpr model eTrue
         , Html.text "else"
-        , htmlExpr address (Signal.forwardTo aexpr (\x -> EIf cond eTrue x)) model eFalse
+        , Html.map (\x -> EIf cond eTrue x) <| htmlExpr model eFalse
         ]
 
       EApp e1 e2 ->
         [ Html.text "("
-        , htmlExpr address (Signal.forwardTo aexpr (\x -> EApp x e2)) model e1
-        , htmlExpr address (Signal.forwardTo aexpr (\x -> EApp e1 x)) model e2
+        , Html.map (\x -> EApp x e2) <| htmlExpr model e1
+        , Html.map (\x -> EApp e1 x) <| htmlExpr model e2
         , Html.text ")"
         ]
+
+      ESel e ->
+        [ Html.text "->"
+        , htmlExpr model e
+        , Html.text "<-"
+        ]
+
 
     ref = (case e of
       ERef r -> (model.currentRef == Just r)
@@ -425,13 +443,22 @@ htmlExpr address aexpr model e =
       ]
       (content ++
       [ Html.a
-        [ onClick address Nop ]
-        [ Html.text " [nop] " ]
-      , Html.a
-        [ onClick aexpr <| EIf EEmpty EEmpty EEmpty ]
+        [ onClick <| EIf EEmpty EEmpty EEmpty ]
         [ Html.text " [if] " ]
       , Html.a
-        [ onClick aexpr EEmpty ]
+        [ onClick <| EBool True ]
+        [ Html.text " [True] " ]
+      , Html.a
+        [ onClick <| EBool False ]
+        [ Html.text " [False] " ]
+      , Html.a
+        [ onClick <| EInt 0 ]
+        [ Html.text " [0] " ]
+      , Html.a
+        [ onClick <| EInt 1 ]
+        [ Html.text " [1] " ]
+      , Html.a
+        [ onClick EEmpty ]
         [ Html.text " [x] " ]
       ])
 
@@ -445,14 +472,13 @@ printFunctionSignature model f =
 (=>) = (,)
 
 
-htmlFunctionSignature : Signal.Address Action -> Model -> Variable -> Html
-htmlFunctionSignature address model f =
+htmlFunctionSignature : Model -> Variable -> Html Expr
+htmlFunctionSignature model f =
   Html.div []
     [ Html.text f.name
     , Html.text " : "
     , Html.text <| (printType f.type_)
     ]
-
 
 
 printFunctionBody : Model -> Variable -> String
@@ -468,8 +494,8 @@ printFunctionBody model f =
     ]
 
 
-htmlFunctionBody : Signal.Address Action -> Signal.Address Expr -> Model -> Variable -> Html
-htmlFunctionBody address aexpr model f =
+htmlFunctionBody : Model -> Variable -> Html Expr
+htmlFunctionBody model f =
   Html.div []
     [ Html.text f.name
     , f.context
@@ -478,7 +504,7 @@ htmlFunctionBody address aexpr model f =
       |> String.join " "
       |> Html.text
     , Html.text "="
-    , htmlExpr address aexpr model f.value
+    , htmlExpr model f.value
     ]
 
 
@@ -489,11 +515,12 @@ printFunction model f =
     , (printFunctionBody model f)
     ]
 
-htmlFunction : Signal.Address Action -> Signal.Address Expr -> Model -> Variable -> Html
-htmlFunction address aexpr model v =
+
+htmlFunction : Model -> Variable -> Html Expr
+htmlFunction model v =
   Html.div []
-    [ htmlFunctionSignature address model v
-    , htmlFunctionBody address aexpr model v
+    [ htmlFunctionSignature model v
+    , htmlFunctionBody model v
     ]
 
 
@@ -512,7 +539,7 @@ colorscheme =
   }
 
 
-selectComponent : List String -> Html
+selectComponent : List String -> Html a
 selectComponent es =
   Html.div
     [ style
@@ -529,7 +556,8 @@ selectComponent es =
     , selectElement "[]"
     ]
 
-selectElement : String -> Html
+
+selectElement : String -> Html a
 selectElement e =
   Html.div
     [ style
