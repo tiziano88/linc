@@ -4,6 +4,7 @@ import Html.App as Html
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Json.Decode
 import String
 import Task
 import Time
@@ -114,6 +115,7 @@ type Msg
   | SetCurrentRef ExprRef
   | SetExpr ExprRef Expr
   | ClearSel
+  | ModifySel (Expr -> Expr)
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -134,16 +136,29 @@ update action model =
       , currentExpr = e
       }
 
-    ClearSel ->
-      noEffects model
+    ClearSel -> noEffects
+      { model
+      | files =
+        model.files
+          |> List.map (\f -> { f | context = f.context |> mapContext |> List.map (\x -> { x | value = clearSel x.value}) |> Array.fromList |> Context })
+      }
+
+    ModifySel m -> noEffects
+      { model
+      | files =
+        model.files
+          |> List.map (\f -> { f | context = f.context |> mapContext |> List.map (\x -> { x | value = mapSel m x.value}) |> Array.fromList |> Context })
+      }
 
 
 view model =
   Html.div []
     [ selectComponent ["aaa", "bbb", "ccc"]
     , Html.button
-      --[ onClick <| AddObject { name = "test" } ]
       [ onClick ClearSel ]
+      [ Html.text "Add Object" ]
+    , Html.button
+      [ onClick (ModifySel (always (EBool False))) ]
       [ Html.text "Add Object" ]
     , Html.div [] [ Html.text <| toString model ]
     , Html.pre [] (model.files |> List.map (htmlFile model))
@@ -277,14 +292,19 @@ type alias ExprRef = Int
 clearSel : Expr -> Expr
 clearSel e =
   case e of
-    ESel e1 -> e1
+    ESel e1 -> clearSel e1
+    EList a -> EList (Array.map clearSel a)
+    EIf e1 e2 e3 -> EIf (clearSel e1) (clearSel e2) (clearSel e3)
+    EApp e1 e2 -> EApp (clearSel e1) (clearSel e2)
     x -> x
-
 
 mapSel : (Expr -> Expr) -> Expr -> Expr
 mapSel f e =
   case e of
-    ESel e1 -> f e1
+    ESel e1 -> ESel (f e1)
+    EList a -> EList (Array.map (mapSel f) a)
+    EIf e1 e2 e3 -> EIf (mapSel f e1) (mapSel f e2) (mapSel f e3)
+    EApp e1 e2 -> EApp (mapSel f e1) (mapSel f e2)
     x -> x
 
 
@@ -433,34 +453,40 @@ htmlExpr model e =
 
   in
     Html.span
-      [ style <| [ "margin" => "5px"] ++
+      [ style <|
+        [ "border" => "solid"
+        , "margin" => "5px"
+        , "display" => "inline-block"
+        ] ++
         (if
           ref
         then
           [ "color" => "blue" ]
         else
           [])
+      , onClick' <| EInt 123
       ]
-      (content ++
-      [ Html.a
-        [ onClick <| EIf EEmpty EEmpty EEmpty ]
-        [ Html.text " [if] " ]
-      , Html.a
-        [ onClick <| EBool True ]
-        [ Html.text " [True] " ]
-      , Html.a
-        [ onClick <| EBool False ]
-        [ Html.text " [False] " ]
-      , Html.a
-        [ onClick <| EInt 0 ]
-        [ Html.text " [0] " ]
-      , Html.a
-        [ onClick <| EInt 1 ]
-        [ Html.text " [1] " ]
-      , Html.a
-        [ onClick EEmpty ]
-        [ Html.text " [x] " ]
-      ])
+      content
+      --(content ++
+      --[ Html.a
+        --[ onClick <| EIf EEmpty EEmpty EEmpty ]
+        --[ Html.text " [if] " ]
+      --, Html.a
+        --[ onClick <| EBool True ]
+        --[ Html.text " [True] " ]
+      --, Html.a
+        --[ onClick <| EBool False ]
+        --[ Html.text " [False] " ]
+      --, Html.a
+        --[ onClick <| EInt 0 ]
+        --[ Html.text " [0] " ]
+      --, Html.a
+        --[ onClick <| EInt 1 ]
+        --[ Html.text " [1] " ]
+      --, Html.a
+        --[ onClick EEmpty ]
+        --[ Html.text " [x] " ]
+      --])
 
 
 printFunctionSignature : Model -> Variable -> String
@@ -568,3 +594,10 @@ selectElement e =
     ]
     [ Html.text e
     ]
+
+
+onClick' a =
+  onWithOptions
+    "click"
+    { defaultOptions | stopPropagation = True}
+    (Json.Decode.succeed a)
