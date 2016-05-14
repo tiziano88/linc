@@ -147,6 +147,9 @@ view model =
     , Html.button
       [ onClick <| SetCurrentOp (always (EList Array.empty)) ]
       [ Html.text "[]" ]
+    , Html.button
+      [ onClick <| SetCurrentOp (\e -> (EApp e EEmpty)) ]
+      [ Html.text "->" ]
     , Html.div [] [ Html.text <| toString model ]
     , Html.pre [] (model.files |> List.map (htmlFile model))
     ]
