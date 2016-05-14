@@ -68,19 +68,31 @@ testModel =
               --, value = EEmpty }
             --]
           , type_ = TApp TInt (TApp TInt TInt)
-          , value = EApp (ERef 11) (ERef 100)
+          , value = EApp 11 100
+          }
+        , { name = ""
+          , ref = 11
+          , context = emptyContext
+          , type_ = TApp TInt (TApp TInt TInt)
+          , value = EBool True
+          }
+        , { name = ""
+          , ref = 100
+          , context = emptyContext
+          , type_ = TApp TInt (TApp TInt TInt)
+          , value = EInt 123
           }
         , { name = "test"
           , ref = 2
           , context = emptyContext
           , type_ = TInt
-          , value = EApp (EApp (ERef 1) (ERef 0)) (ERef 0)
+          , value = EApp 3 4
           }
         , { name = "error"
           , ref = 3
           , context = emptyContext
           , type_ = TInt
-          , value = EApp (ERef 111) (ERef 0)
+          , value = EApp (111) (0)
           }
         , { name = "st"
           , ref = 4
@@ -92,13 +104,13 @@ testModel =
           , ref = 5
           , context = emptyContext
           , type_ = TList TInt
-          , value = EList (Array.fromList [(ERef 0), (ERef 1)])
+          , value = EList (Array.fromList [0, 1])
           }
         , { name = "cond"
           , ref = 6
           , context = emptyContext
           , type_ = TApp TBool TInt
-          , value = EIf (ERef 0) (EInt 100) (EInt 200)
+          , value = EIf 0 100 200
           }
         ]
       }
@@ -147,9 +159,9 @@ view model =
     , Html.button
       [ onClick <| SetCurrentOp (always (EList Array.empty)) ]
       [ Html.text "[]" ]
-    , Html.button
-      [ onClick <| SetCurrentOp (\e -> (EApp e EEmpty)) ]
-      [ Html.text "->" ]
+    --, Html.button
+      --[ onClick <| SetCurrentOp (\e -> (EApp e (-1))) ]
+      --[ Html.text "->" ]
     , Html.div [] [ Html.text <| toString model ]
     , Html.pre [] (model.files |> List.map (htmlFile model))
     ]
@@ -160,128 +172,139 @@ htmlFile : Model -> File -> Html Msg
 htmlFile model file =
   let xs = file.context
     |> mapContext
-    |> List.map (\e -> Html.map (SetExpr e.ref) <| htmlFunction model e)
+    |> List.map (\e -> Html.map (SetExpr e.ref) <| htmlFunction model e.ref)
   in Html.div [] xs
 
 
-htmlExpr : Model -> Expr -> Html Expr
-htmlExpr model e =
-  let
-    content = case e of
-      EEmpty ->
-        [ Html.text "<<<EMPTY>>>" ]
+htmlExpr : Model -> ExprRef -> Html Expr
+htmlExpr model ref =
+  case (getVariable model ref) of
+    Nothing ->
+      Html.text "<<<ERROR>>>"
 
-      ERef r ->
-        let
-          mf = getVariable model r
-        in
-         case mf of
-           Just f -> [ Html.text f.name ]
-           Nothing -> [ Html.text "<<<ERROR>>>" ]
+    Just var ->
+      let
+        content = case var.value of
+          EEmpty ->
+            [ Html.text "<<<EMPTY>>>" ]
 
-      EInt v ->
-        [ Html.text <| toString v ]
+          ERef r ->
+            let
+              mf = getVariable model r
+            in
+             case mf of
+               Just f -> [ Html.text f.name ]
+               Nothing -> [ Html.text "<<<ERROR>>>" ]
 
-      EBool v ->
-        [ Html.text <| toString v ]
+          EInt v ->
+            [ Html.text <| toString v ]
 
-      EString v ->
-        [ Html.text <| "\"" ++ v ++ "\"" ]
+          EBool v ->
+            [ Html.text <| toString v ]
 
-      EList ls ->
-        ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList) ++ [ Html.text "]" ])
+          EString v ->
+            [ Html.text <| "\"" ++ v ++ "\"" ]
 
-      EIf cond eTrue eFalse ->
-        [ Html.text "if"
-        , Html.map (\x -> EIf x eTrue eFalse) <| htmlExpr model cond
-        , Html.text "then"
-        , Html.map (\x -> EIf cond x eFalse) <| htmlExpr model eTrue
-        , Html.text "else"
-        , Html.map (\x -> EIf cond eTrue x) <| htmlExpr model eFalse
+          EList ls ->
+            ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList) ++ [ Html.text "]" ])
+
+          EIf cond eTrue eFalse ->
+            [ Html.text "if"
+            , htmlExpr model cond
+            , Html.text "then"
+            , htmlExpr model eTrue
+            , Html.text "else"
+            , htmlExpr model eFalse
+            ]
+
+          EApp e1 e2 ->
+            [ Html.text "("
+            , htmlExpr model e1
+            , htmlExpr model e2
+            , Html.text ")"
+            ]
+
+    in
+      Html.span
+        [ style <|
+          [ "border" => "solid"
+          , "margin" => "5px"
+          , "display" => "inline-block"
+          ]
+          --(if
+            --ref
+          --then
+            --[ "color" => "blue" ]
+          --else
+            --[])
+        --, onClick' <| model.currentOp e
         ]
-
-      EApp e1 e2 ->
-        [ Html.text "("
-        , Html.map (\x -> EApp x e2) <| htmlExpr model e1
-        , Html.map (\x -> EApp e1 x) <| htmlExpr model e2
-        , Html.text ")"
-        ]
-
-    ref = (case e of
-      ERef r -> (model.currentRef == Just r)
-      _ -> False)
-
-  in
-    Html.span
-      [ style <|
-        [ "border" => "solid"
-        , "margin" => "5px"
-        , "display" => "inline-block"
-        ] ++
-        (if
-          ref
-        then
-          [ "color" => "blue" ]
-        else
-          [])
-      , onClick' <| model.currentOp e
-      ]
-      content
-      --(content ++
-      --[ Html.a
-        --[ onClick <| EIf EEmpty EEmpty EEmpty ]
-        --[ Html.text " [if] " ]
-      --, Html.a
-        --[ onClick <| EBool True ]
-        --[ Html.text " [True] " ]
-      --, Html.a
-        --[ onClick <| EBool False ]
-        --[ Html.text " [False] " ]
-      --, Html.a
-        --[ onClick <| EInt 0 ]
-        --[ Html.text " [0] " ]
-      --, Html.a
-        --[ onClick <| EInt 1 ]
-        --[ Html.text " [1] " ]
-      --, Html.a
-        --[ onClick EEmpty ]
-        --[ Html.text " [x] " ]
-      --])
+        content
+        --(content ++
+        --[ Html.a
+          --[ onClick <| EIf EEmpty EEmpty EEmpty ]
+          --[ Html.text " [if] " ]
+        --, Html.a
+          --[ onClick <| EBool True ]
+          --[ Html.text " [True] " ]
+        --, Html.a
+          --[ onClick <| EBool False ]
+          --[ Html.text " [False] " ]
+        --, Html.a
+          --[ onClick <| EInt 0 ]
+          --[ Html.text " [0] " ]
+        --, Html.a
+          --[ onClick <| EInt 1 ]
+          --[ Html.text " [1] " ]
+        --, Html.a
+          --[ onClick EEmpty ]
+          --[ Html.text " [x] " ]
+        --])
 
 
 (=>) : String -> String -> (String, String)
 (=>) = (,)
 
 
-htmlFunctionSignature : Model -> Variable -> Html Expr
-htmlFunctionSignature model f =
+htmlFunctionSignature : Model -> ExprRef -> Html Expr
+htmlFunctionSignature model ref =
+  case (getVariable model ref) of
+    Nothing ->
+      Html.text "<<<ERROR>>>"
+
+    Just v ->
+      Html.div []
+        [ Html.text v.name
+        , Html.text " : "
+        , Html.text <| (printType v.type_)
+        ]
+
+
+htmlFunctionBody : Model -> ExprRef -> Html Expr
+htmlFunctionBody model ref =
+  case (getVariable model ref) of
+    Nothing ->
+      Html.text "<<<ERROR>>>"
+
+    Just v ->
+      Html.div []
+        [ Html.text v.name
+        , v.context
+          |> mapContext
+          |> List.map printArg
+          |> String.join " "
+          |> Html.text
+        , Html.text "="
+        , htmlExpr model ref
+        ]
+
+
+
+htmlFunction : Model -> ExprRef -> Html Expr
+htmlFunction model ref =
   Html.div []
-    [ Html.text f.name
-    , Html.text " : "
-    , Html.text <| (printType f.type_)
-    ]
-
-
-htmlFunctionBody : Model -> Variable -> Html Expr
-htmlFunctionBody model f =
-  Html.div []
-    [ Html.text f.name
-    , f.context
-      |> mapContext
-      |> List.map printArg
-      |> String.join " "
-      |> Html.text
-    , Html.text "="
-    , htmlExpr model f.value
-    ]
-
-
-
-htmlFunction : Model -> Variable -> Html Expr
-htmlFunction model v =
-  Html.div []
-    [ htmlFunctionSignature model v
-    , htmlFunctionBody model v
+    [ htmlFunctionSignature model ref
+    , htmlFunctionBody model ref
     ]
 
 

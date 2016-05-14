@@ -6,29 +6,39 @@ import String
 import Types exposing (..)
 
 
-printFunctionSignature : Model -> Variable -> String
-printFunctionSignature model f =
-  f.name ++ " : " ++ (printType f.type_)
+printFunctionSignature : Model -> ExprRef -> String
+printFunctionSignature model ref =
+  case (getVariable model ref) of
+    Nothing ->
+      "<<<ERROR>>>"
+
+    Just v ->
+      v.name ++ " : " ++ (printType v.type_)
 
 
-printFunctionBody : Model -> Variable -> String
-printFunctionBody model f =
-  String.join " "
-    [ f.name
-    , f.context
-      |> mapContext
-      |> List.map printArg
-      |> String.join " "
-    , "="
-    , printExpr model f.value
-    ]
+printFunctionBody : Model -> ExprRef -> String
+printFunctionBody model ref =
+  case (getVariable model ref) of
+    Nothing ->
+      "<<<ERROR>>>"
+
+    Just v ->
+      String.join " "
+        [ v.name
+        , v.context
+          |> mapContext
+          |> List.map printArg
+          |> String.join " "
+        , "="
+        , printExpr model ref
+        ]
 
 
-printFunction : Model -> Variable -> String
-printFunction model f =
+printFunction : Model -> ExprRef -> String
+printFunction model ref =
   String.join "\n"
-    [ (printFunctionSignature model f)
-    , (printFunctionBody model f)
+    [ (printFunctionSignature model ref)
+    , (printFunctionBody model ref)
     ]
 
 
@@ -36,6 +46,7 @@ printFile : Model -> File -> String
 printFile model file =
   file.context
     |> mapContext
+    |> List.map (\v -> v.ref)
     |> List.map (printFunction model)
     |> String.join "\n\n\n"
 
@@ -56,54 +67,59 @@ printType t =
     TApp t1 t2 -> "(" ++ (printType t1) ++ " -> " ++ (printType t2) ++ ")"
 
 
-printExpr : Model -> Expr -> String
-printExpr model e =
-  case e of
-    EEmpty ->
-      "<<<EMPTY>>>"
+printExpr : Model -> ExprRef -> String
+printExpr model ref =
+  case (getVariable model ref) of
+    Nothing ->
+      "<<<ERROR>>>"
 
-    ERef r ->
-      let
-        mf = getVariable model r
-      in
-       case mf of
-         Just f -> f.name
-         Nothing -> "<<<ERROR>>>"
+    Just var ->
+      case var.value of
+        EEmpty ->
+          "<<<EMPTY>>>"
 
-    EInt v ->
-      toString v
+        ERef r ->
+          let
+            mf = getVariable model r
+          in
+           case mf of
+             Just f -> f.name
+             Nothing -> "<<<ERROR>>>"
 
-    EBool v ->
-      toString v
+        EInt v ->
+          toString v
 
-    EString v ->
-      "\"" ++ v ++ "\""
+        EBool v ->
+          toString v
 
-    EList ls ->
-      let
-        s =
-          ls
-            |> Array.map (printExpr model)
-            |> Array.toList
-            |> String.join ", "
-      in
-        "[" ++ s ++ "]"
+        EString v ->
+          "\"" ++ v ++ "\""
 
-    EIf cond eTrue eFalse ->
-      String.join " "
-        [ "if"
-        , printExpr model cond
-        , "then"
-        , printExpr model eTrue
-        , "else"
-        , printExpr model eFalse
-        ]
+        EList ls ->
+          let
+            s =
+              ls
+                |> Array.map (printExpr model)
+                |> Array.toList
+                |> String.join ", "
+          in
+            "[" ++ s ++ "]"
 
-    EApp e1 e2 ->
-      String.join " "
-        [ "(" ++ printExpr model e1
-        , printExpr model e2 ++ ")"
-        ]
+        EIf cond eTrue eFalse ->
+          String.join " "
+            [ "if"
+            , printExpr model cond
+            , "then"
+            , printExpr model eTrue
+            , "else"
+            , printExpr model eFalse
+            ]
+
+        EApp e1 e2 ->
+          String.join " "
+            [ "(" ++ printExpr model e1
+            , printExpr model e2 ++ ")"
+            ]
 
 
 getVariable : Model -> ExprRef -> Maybe Variable

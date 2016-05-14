@@ -73,10 +73,10 @@ type Expr
   | ERef ExprRef
   | EInt Int
   | EBool Bool
-  | EList (Array.Array Expr)
+  | EList (Array.Array ExprRef)
   | EString String
-  | EIf Expr Expr Expr
-  | EApp Expr Expr
+  | EIf ExprRef ExprRef ExprRef
+  | EApp ExprRef ExprRef
 
 
 type Symbol -- Unused.
