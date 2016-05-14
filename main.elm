@@ -42,7 +42,6 @@ testModel =
     [ { name = "test.elm"
       , nextRef = 888
       , context =
-        Context <| Array.fromList
         [ { name = "num"
           , ref = 0
           , context = emptyContext
@@ -129,7 +128,7 @@ update action model =
 
 mapFile : ExprRef -> (Variable -> Variable) -> File -> File
 mapFile ref f file =
-  { file | context = file.context |> mapContext |> List.map (\v -> (if v.ref == ref then f v else v)) |> Array.fromList |> Context }
+  { file | context = file.context |> List.map (\v -> (if v.ref == ref then f v else v)) }
 
 
 view model =
@@ -156,7 +155,6 @@ view model =
 htmlFile : Model -> File -> Html Msg
 htmlFile model file =
   let xs = file.context
-    |> mapContext
     |> List.map (\e -> htmlFunction model e.ref)
   in Html.div [] xs
 

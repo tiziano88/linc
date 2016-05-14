@@ -21,7 +21,7 @@ type alias Model =
 type alias File =
   { name : String
   , nextRef : ExprRef
-  , context : Context
+  , context : List Variable
   }
 
 

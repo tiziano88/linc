@@ -45,7 +45,6 @@ printFunction model ref =
 printFile : Model -> File -> String
 printFile model file =
   file.context
-    |> mapContext
     |> List.map (\v -> v.ref)
     |> List.map (printFunction model)
     |> String.join "\n\n\n"
@@ -133,13 +132,10 @@ getFileFunctionRef : File -> ExprRef -> Maybe Variable
 getFileFunctionRef file ref =
   let
     c1 = file.context
-    c2 =
-      file.context
-        |> mapContext
-        |> List.map (\x -> x.context)
-        |> List.foldl mergeContext emptyContext
-    c = mergeContext c1 c2
+    --c2 =
+      --file.context
+        --|> List.concatMap (\x -> x.context)
+    --c = c1 ++ c2
   in
-    lookupContext c ref
-
+    List.filter (\v -> v.ref == ref) c1 |> List.head
 
