@@ -7,16 +7,12 @@ import Dict
 type Msg
   = Nop
   | SetCurrentRef ExprRef
-  | SetExpr ExprRef Expr
-  | SetCurrentOp (Expr -> Expr)
 
 
 type alias Model =
   { files : List File
   , parent : Dict.Dict ExprRef ExprRef
   , currentRef : Maybe ExprRef
-  , currentExpr : Expr
-  , currentOp : Expr -> Expr
   }
 
 

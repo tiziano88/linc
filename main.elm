@@ -33,8 +33,6 @@ initialModel =
   { files = []
   , parent = Dict.empty
   , currentRef = Nothing
-  , currentExpr = EEmpty
-  , currentOp = identity
   }
 
 
@@ -53,20 +51,7 @@ testModel =
           }
         , { name = "add"
           , ref = 1
-          , context =
-            Context <| Array.fromList
-            []
-            --[ { name = "x"
-              --, ref = 11
-              --, context = emptyContext
-              --, type_ = TEmpty
-              --, value = EEmpty }
-            --, { name = "y"
-              --, ref = 12
-              --, context = emptyContext
-              --, type_ = TEmpty
-              --, value = EEmpty }
-            --]
+          , context = emptyContext
           , type_ = TApp TInt (TApp TInt TInt)
           , value = EApp 11 100
           }
@@ -116,9 +101,7 @@ testModel =
       }
     ]
   , parent = Dict.empty
-  , currentRef = Just 0
-  , currentExpr = EEmpty
-  , currentOp = identity
+  , currentRef = Nothing
   }
 
 
@@ -137,28 +120,19 @@ update action model =
 
     SetCurrentRef ref -> noEffects { model | currentRef = Just ref }
 
-    SetExpr ref e -> noEffects
-      { model
-      | files =
-        List.map (\f -> { f | context = updateContext f.context ref e }) model.files
-      , currentRef = Just ref
-      , currentExpr = e
-      }
-
-    SetCurrentOp f -> noEffects { model | currentOp = f }
 
 view model =
   Html.div []
     [ selectComponent ["aaa", "bbb", "ccc"]
-    , Html.button
-      [ onClick <| SetCurrentOp (always (EInt 123)) ]
-      [ Html.text "123" ]
-    , Html.button
-      [ onClick <| SetCurrentOp (always (EBool True)) ]
-      [ Html.text "True" ]
-    , Html.button
-      [ onClick <| SetCurrentOp (always (EList Array.empty)) ]
-      [ Html.text "[]" ]
+    --, Html.button
+      --[ onClick <| SetCurrentOp (always (EInt 123)) ]
+      --[ Html.text "123" ]
+    --, Html.button
+      --[ onClick <| SetCurrentOp (always (EBool True)) ]
+      --[ Html.text "True" ]
+    --, Html.button
+      --[ onClick <| SetCurrentOp (always (EList Array.empty)) ]
+      --[ Html.text "[]" ]
     --, Html.button
       --[ onClick <| SetCurrentOp (\e -> (EApp e (-1))) ]
       --[ Html.text "->" ]
@@ -172,101 +146,86 @@ htmlFile : Model -> File -> Html Msg
 htmlFile model file =
   let xs = file.context
     |> mapContext
-    |> List.map (\e -> Html.map (SetExpr e.ref) <| htmlFunction model e.ref)
+    |> List.map (\e -> htmlFunction model e.ref)
   in Html.div [] xs
 
 
-htmlExpr : Model -> ExprRef -> Html Expr
+htmlExpr : Model -> ExprRef -> Html Msg
 htmlExpr model ref =
   case (getVariable model ref) of
     Nothing ->
       Html.text "<<<ERROR>>>"
 
     Just var ->
-      let
-        content = case var.value of
-          EEmpty ->
-            [ Html.text "<<<EMPTY>>>" ]
+      --if
+        --var.name /= ""
+      --then
+        --Html.text var.name
+      --else
+        let
+          content = case var.value of
+            EEmpty ->
+              [ Html.text "<<<EMPTY>>>" ]
 
-          ERef r ->
-            let
-              mf = getVariable model r
-            in
-             case mf of
-               Just f -> [ Html.text f.name ]
-               Nothing -> [ Html.text "<<<ERROR>>>" ]
+            ERef r ->
+              let
+                mf = getVariable model r
+              in
+               case mf of
+                 Just f -> [ Html.text f.name ]
+                 Nothing -> [ Html.text "<<<ERROR>>>" ]
 
-          EInt v ->
-            [ Html.text <| toString v ]
+            EInt v ->
+              [ Html.text <| toString v ]
 
-          EBool v ->
-            [ Html.text <| toString v ]
+            EBool v ->
+              [ Html.text <| toString v ]
 
-          EString v ->
-            [ Html.text <| "\"" ++ v ++ "\"" ]
+            EString v ->
+              [ Html.text <| "\"" ++ v ++ "\"" ]
 
-          EList ls ->
-            ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList) ++ [ Html.text "]" ])
+            EList ls ->
+              ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList) ++ [ Html.text "]" ])
 
-          EIf cond eTrue eFalse ->
-            [ Html.text "if"
-            , htmlExpr model cond
-            , Html.text "then"
-            , htmlExpr model eTrue
-            , Html.text "else"
-            , htmlExpr model eFalse
-            ]
+            EIf cond eTrue eFalse ->
+              [ Html.text "if"
+              , htmlExpr model cond
+              , Html.text "then"
+              , htmlExpr model eTrue
+              , Html.text "else"
+              , htmlExpr model eFalse
+              ]
 
-          EApp e1 e2 ->
-            [ Html.text "("
-            , htmlExpr model e1
-            , htmlExpr model e2
-            , Html.text ")"
-            ]
+            EApp e1 e2 ->
+              [ Html.text "("
+              , htmlExpr model e1
+              , htmlExpr model e2
+              , Html.text ")"
+              ]
 
-    in
-      Html.span
-        [ style <|
-          [ "border" => "solid"
-          , "margin" => "5px"
-          , "display" => "inline-block"
+      in
+        Html.span
+          [ style <|
+            [ "border" => "solid"
+            , "margin" => "5px"
+            , "display" => "inline-block"
+            ] ++
+            (if
+              Just ref == model.currentRef
+            then
+              [ "color" => "red" ]
+            else
+              [])
+          , onClick' (SetCurrentRef ref)
           ]
-          --(if
-            --ref
-          --then
-            --[ "color" => "blue" ]
-          --else
-            --[])
-        --, onClick' <| model.currentOp e
-        ]
-        content
-        --(content ++
-        --[ Html.a
-          --[ onClick <| EIf EEmpty EEmpty EEmpty ]
-          --[ Html.text " [if] " ]
-        --, Html.a
-          --[ onClick <| EBool True ]
-          --[ Html.text " [True] " ]
-        --, Html.a
-          --[ onClick <| EBool False ]
-          --[ Html.text " [False] " ]
-        --, Html.a
-          --[ onClick <| EInt 0 ]
-          --[ Html.text " [0] " ]
-        --, Html.a
-          --[ onClick <| EInt 1 ]
-          --[ Html.text " [1] " ]
-        --, Html.a
-          --[ onClick EEmpty ]
-          --[ Html.text " [x] " ]
-        --])
+          content
 
 
 (=>) : String -> String -> (String, String)
 (=>) = (,)
 
 
-htmlFunctionSignature : Model -> ExprRef -> Html Expr
+htmlFunctionSignature : Model -> ExprRef -> Html Msg
 htmlFunctionSignature model ref =
   case (getVariable model ref) of
     Nothing ->
@@ -280,7 +239,7 @@ htmlFunctionSignature model ref =
         ]
 
 
-htmlFunctionBody : Model -> ExprRef -> Html Expr
+htmlFunctionBody : Model -> ExprRef -> Html Msg
 htmlFunctionBody model ref =
   case (getVariable model ref) of
     Nothing ->
@@ -300,7 +259,7 @@ htmlFunctionBody model ref =
 
 
 
-htmlFunction : Model -> ExprRef -> Html Expr
+htmlFunction : Model -> ExprRef -> Html Msg
 htmlFunction model ref =
   Html.div []
     [ htmlFunctionSignature model ref
