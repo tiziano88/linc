@@ -44,55 +44,55 @@ testModel =
       , context =
         [ { name = "num"
           , ref = 0
-          , context = emptyContext
+          , context = []
           , type_ = TInt
           , value = EInt 42
           }
         , { name = "add"
           , ref = 1
-          , context = emptyContext
+          , context = []
           , type_ = TApp TInt (TApp TInt TInt)
           , value = EApp 11 100
           }
         , { name = ""
           , ref = 11
-          , context = emptyContext
+          , context = []
           , type_ = TApp TInt (TApp TInt TInt)
           , value = EBool True
           }
         , { name = ""
           , ref = 100
-          , context = emptyContext
+          , context = []
           , type_ = TApp TInt (TApp TInt TInt)
           , value = EInt 123
           }
         , { name = "test"
           , ref = 2
-          , context = emptyContext
+          , context = []
           , type_ = TInt
           , value = EApp 3 4
           }
         , { name = "error"
           , ref = 3
-          , context = emptyContext
+          , context = []
           , type_ = TInt
           , value = EApp (111) (0)
           }
         , { name = "st"
           , ref = 4
-          , context = emptyContext
+          , context = []
           , type_ = TString
           , value = EString "test"
           }
         , { name = "list"
           , ref = 5
-          , context = emptyContext
+          , context = []
           , type_ = TList TInt
           , value = EList (Array.fromList [0, 1])
           }
         , { name = "cond"
           , ref = 6
-          , context = emptyContext
+          , context = []
           , type_ = TApp TBool TInt
           , value = EIf 0 100 200
           }
@@ -258,8 +258,7 @@ htmlFunctionBody model ref =
       Html.div []
         [ Html.text v.name
         , v.context
-          |> mapContext
-          |> List.map printArg
+          |> List.map (printArg model)
           |> String.join " "
           |> Html.text
         , Html.text "="

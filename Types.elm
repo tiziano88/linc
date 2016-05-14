@@ -29,7 +29,7 @@ type alias Variable =
   { name : String
   , ref : ExprRef
   , type_ : Type
-  , context : Context
+  , context : List ExprRef
   , value : Expr
   }
 
@@ -84,35 +84,3 @@ type Symbol -- Unused.
 
 
 type alias ExprRef = Int
-
-type Context = Context (Array.Array Variable)
-
-emptyContext : Context
-emptyContext = Context Array.empty
-
-
-mapContext : Context -> List Variable
-mapContext (Context cs) =
-  Array.toList cs
-
-
-mergeContext : Context -> Context -> Context
-mergeContext (Context cs1) (Context cs2) =
-  Context (Array.append cs1 cs2)
-
-
-lookupContext : Context -> ExprRef -> Maybe Variable
-lookupContext (Context cs) ref =
-  cs
-    |> Array.filter (\v -> v.ref == ref)
-    |> Array.get 0
-
-
-updateContext : Context -> ExprRef -> Expr -> Context
-updateContext (Context cs) ref e =
-  cs
-    |> Array.map (\v -> if v.ref == ref then {v | value = e } else v)
-    |> Context
-
-
-

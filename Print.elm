@@ -26,8 +26,7 @@ printFunctionBody model ref =
       String.join " "
         [ v.name
         , v.context
-          |> mapContext
-          |> List.map printArg
+          |> List.map (printArg model)
           |> String.join " "
         , "="
         , printExpr model ref
@@ -50,9 +49,13 @@ printFile model file =
     |> String.join "\n\n\n"
 
 
-printArg : Variable -> String
-printArg a =
-  a.name
+printArg : Model -> ExprRef -> String
+printArg model ref =
+  case (getVariable model ref) of
+    Nothing ->
+      "<<<ERROR>>>"
+    Just v ->
+      v.name
 
 
 printType : Type -> String
