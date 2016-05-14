@@ -7,6 +7,8 @@ import Dict
 type Msg
   = Nop
   | SetCurrentRef ExprRef
+  | MapExpr (Variable -> Variable)
+
 
 
 type alias Model =

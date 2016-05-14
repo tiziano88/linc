@@ -120,22 +120,33 @@ update action model =
 
     SetCurrentRef ref -> noEffects { model | currentRef = Just ref }
 
+    MapExpr f ->
+      case model.currentRef of
+        Nothing -> noEffects model
+        Just ref -> noEffects { model | files = model.files
+          |> List.map (mapFile ref f)
+          }
+
+mapFile : ExprRef -> (Variable -> Variable) -> File -> File
+mapFile ref f file =
+  { file | context = file.context |> mapContext |> List.map (\v -> (if v.ref == ref then f v else v)) |> Array.fromList |> Context }
+
 
 view model =
   Html.div []
     [ selectComponent ["aaa", "bbb", "ccc"]
-    --, Html.button
-      --[ onClick <| SetCurrentOp (always (EInt 123)) ]
-      --[ Html.text "123" ]
-    --, Html.button
-      --[ onClick <| SetCurrentOp (always (EBool True)) ]
-      --[ Html.text "True" ]
-    --, Html.button
-      --[ onClick <| SetCurrentOp (always (EList Array.empty)) ]
-      --[ Html.text "[]" ]
-    --, Html.button
-      --[ onClick <| SetCurrentOp (\e -> (EApp e (-1))) ]
-      --[ Html.text "->" ]
+    , Html.button
+      [ onClick <| MapExpr (\v -> { v | value = EInt 123 }) ]
+      [ Html.text "123" ]
+    , Html.button
+      [ onClick <| MapExpr (\v -> { v | value = EBool True }) ]
+      [ Html.text "True" ]
+    , Html.button
+      [ onClick <| MapExpr (\v -> { v | value = EList Array.empty }) ]
+      [ Html.text "[]" ]
+    , Html.button
+      [ onClick <| MapExpr (\v -> { v | value = EApp -1 -1 }) ]
+      [ Html.text "->" ]
     , Html.div [] [ Html.text <| toString model ]
     , Html.pre [] (model.files |> List.map (htmlFile model))
     ]
