@@ -80,14 +80,6 @@ printExpr model ref =
         EEmpty ->
           "<<<EMPTY>>>"
 
-        ERef r ->
-          let
-            mf = getVariable model r
-          in
-           case mf of
-             Just f -> f.name
-             Nothing -> "<<<ERROR>>>"
-
         EInt v ->
           toString v
 

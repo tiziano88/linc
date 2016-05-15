@@ -7,7 +7,7 @@ import Dict
 type Msg
   = Nop
   | SetCurrentRef ExprRef
-  | MapExpr (Variable -> Variable)
+  | MapExpr (Variable -> List Variable)
 
 
 
@@ -68,7 +68,6 @@ type Type
 
 type Expr
   = EEmpty -- Args.
-  | ERef ExprRef
   | EInt Int
   | EBool Bool
   | EList (Array.Array ExprRef)

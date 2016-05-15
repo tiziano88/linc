@@ -126,30 +126,55 @@ update action model =
           |> List.map (mapFile ref f)
           }
 
-mapFile : ExprRef -> (Variable -> Variable) -> File -> File
+mapFile : ExprRef -> (Variable -> List Variable) -> File -> File
 mapFile ref f file =
-  { file | context = file.context |> List.map (\v -> (if v.ref == ref then f v else v)) }
+  { file | context = file.context |> List.concatMap (\v -> (if v.ref == ref then f v else [v])) }
 
 
 view model =
   Html.div []
     [ selectComponent ["aaa", "bbb", "ccc"]
     , Html.button
-      [ onClick <| MapExpr (\v -> { v | value = EInt 123 }) ]
+      [ onClick <| MapExpr (\v -> [{ v | value = EInt 123 }]) ]
       [ Html.text "123" ]
     , Html.button
-      [ onClick <| MapExpr (\v -> { v | value = EBool True }) ]
+      [ onClick <| MapExpr (\v -> [{ v | value = EBool True }]) ]
       [ Html.text "True" ]
     , Html.button
-      [ onClick <| MapExpr (\v -> { v | value = EList Array.empty }) ]
+      [ onClick <| MapExpr (\v -> [{ v | value = EList Array.empty }]) ]
       [ Html.text "[]" ]
     , Html.button
-      [ onClick <| MapExpr (\v -> { v | value = EApp -1 -1 }) ]
+      [ onClick <| MapExpr (\v ->
+        [ { v | value = EIf 222 333 444 }
+        , { newVariable | ref = 222, value = v.value }
+        ])
+      ]
+      [ Html.text "if" ]
+    , Html.button
+      [ onClick <| MapExpr (\v ->
+        [ { v | value = EApp 222 333 }
+        , { newVariable | ref = 222, value = v.value }
+        ])
+      ]
       [ Html.text "->" ]
+    , Html.button
+      [ onClick <| MapExpr (\v -> []) ]
+      [ Html.text "x" ]
+    , Html.button
+      [ onClick <| MapExpr (\v -> []) ]
+      [ Html.text "+1" ]
     , Html.div [] [ Html.text <| toString model ]
     , Html.pre [] (model.files |> List.map (htmlFile model))
     ]
 
+newVariable : Variable
+newVariable =
+  { name = ""
+  , ref = 1
+  , type_ = TEmpty
+  , context = []
+  , value = EEmpty
+  }
 
 
 htmlFile : Model -> File -> Html Msg
@@ -161,73 +186,60 @@ htmlFile model file =
 
 htmlExpr : Model -> ExprRef -> Html Msg
 htmlExpr model ref =
-  case (getVariable model ref) of
-    Nothing ->
-      Html.text "<<<ERROR>>>"
+  let
+    content = case (getVariable model ref) of
+      Nothing ->
+        [ Html.text "<<<ERROR>>>" ]
 
-    Just var ->
-      --if
-        --var.name /= ""
-      --then
-        --Html.text var.name
-      --else
-        let
-          content = case var.value of
-            EEmpty ->
-              [ Html.text "<<<EMPTY>>>" ]
+      Just var ->
+        case var.value of
+          EEmpty ->
+            [ Html.text "<<<EMPTY>>>" ]
 
-            ERef r ->
-              let
-                mf = getVariable model r
-              in
-               case mf of
-                 Just f -> [ Html.text f.name ]
-                 Nothing -> [ Html.text "<<<ERROR>>>" ]
+          EInt v ->
+            [ Html.text <| toString v ]
 
-            EInt v ->
-              [ Html.text <| toString v ]
+          EBool v ->
+            [ Html.text <| toString v ]
 
-            EBool v ->
-              [ Html.text <| toString v ]
+          EString v ->
+            [ Html.text <| "\"" ++ v ++ "\"" ]
 
-            EString v ->
-              [ Html.text <| "\"" ++ v ++ "\"" ]
+          EList ls ->
+            ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList) ++ [ Html.text "]" ])
 
-            EList ls ->
-              ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList) ++ [ Html.text "]" ])
+          EIf cond eTrue eFalse ->
+            [ Html.text "if"
+            , htmlExpr model cond
+            , Html.text "then"
+            , htmlExpr model eTrue
+            , Html.text "else"
+            , htmlExpr model eFalse
+            ]
 
-            EIf cond eTrue eFalse ->
-              [ Html.text "if"
-              , htmlExpr model cond
-              , Html.text "then"
-              , htmlExpr model eTrue
-              , Html.text "else"
-              , htmlExpr model eFalse
-              ]
+          EApp e1 e2 ->
+            [ Html.text "("
+            , htmlExpr model e1
+            , htmlExpr model e2
+            , Html.text ")"
+            ]
 
-            EApp e1 e2 ->
-              [ Html.text "("
-              , htmlExpr model e1
-              , htmlExpr model e2
-              , Html.text ")"
-              ]
-
-      in
-        Html.span
-          [ style <|
-            [ "border" => "solid"
-            , "margin" => "5px"
-            , "display" => "inline-block"
-            ] ++
-            (if
-              Just ref == model.currentRef
-            then
-              [ "color" => "red" ]
-            else
-              [])
-          , onClick' (SetCurrentRef ref)
-          ]
-          content
+  in
+    Html.span
+      [ style <|
+        [ "border" => "solid"
+        , "margin" => "5px"
+        , "display" => "inline-block"
+        ] ++
+        (if
+          Just ref == model.currentRef
+        then
+          [ "color" => "red" ]
+        else
+          [])
+      , onClick' (SetCurrentRef ref)
+      ]
+      content
 
 
 (=>) : String -> String -> (String, String)
