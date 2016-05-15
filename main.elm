@@ -31,6 +31,7 @@ init =
 initialModel : Model
 initialModel =
   { files = []
+  , currentFileName = ""
   , parent = Dict.empty
   , currentRef = Nothing
   }
@@ -99,6 +100,7 @@ testModel =
         ]
       }
     ]
+  , currentFileName = "test.elm"
   , parent = Dict.empty
   , currentRef = Nothing
   }
@@ -112,23 +114,37 @@ noEffects m =
 update : Msg -> Model -> (Model, Cmd Msg)
 update action model =
   case action of
-    --AddObject o ->
-      --noEffects { model | objects = Dict.insert model.nextObjRef o model.objects, nextObjRef = model.nextObjRef + 1 }
-
     Nop -> noEffects model
 
-    SetCurrentRef ref -> noEffects { model | currentRef = Just ref }
+    SetCurrentRef ref -> noEffects
+      { model
+      | currentRef = Just ref
+      }
 
     MapExpr f ->
       case model.currentRef of
         Nothing -> noEffects model
-        Just ref -> noEffects { model | files = model.files
-          |> List.map (mapFile ref f)
+        Just ref -> noEffects
+          { model
+          | files =
+            model.files
+              |> List.map (\file ->
+                if
+                  (file.name == model.currentFileName)
+                then
+                  (mapFile ref f file)
+                else
+                  file
+                )
           }
 
 mapFile : ExprRef -> (Variable -> List Variable) -> File -> File
 mapFile ref f file =
-  { file | context = file.context |> List.concatMap (\v -> (if v.ref == ref then f v else [v])) }
+  { file
+  | context =
+    file.context
+      |> List.concatMap (\v -> (if v.ref == ref then f v else [v]))
+  }
 
 
 view model =
@@ -163,6 +179,7 @@ view model =
     , Html.button
       [ onClick <| MapExpr (\v -> []) ]
       [ Html.text "+1" ]
+    , Html.div [] [ Html.text <| "current file: " ++ model.currentFileName ]
     , Html.div [] [ Html.text <| toString model ]
     , Html.pre [] (model.files |> List.map (htmlFile model))
     ]

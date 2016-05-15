@@ -13,6 +13,7 @@ type Msg
 
 type alias Model =
   { files : List File
+  , currentFileName : String
   , parent : Dict.Dict ExprRef ExprRef
   , currentRef : Maybe ExprRef
   }
