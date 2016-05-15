@@ -124,19 +124,22 @@ update action model =
     MapExpr f ->
       case model.currentRef of
         Nothing -> noEffects model
-        Just ref -> noEffects
-          { model
-          | files =
-            model.files
-              |> List.map (\file ->
-                if
-                  (file.name == model.currentFileName)
-                then
-                  (mapFile ref f file)
-                else
-                  file
-                )
-          }
+        Just ref ->
+          case getCurrentVariable model of
+            Nothing -> noEffects model
+            Just v -> noEffects
+              { model
+              | files =
+                model.files
+                  |> List.map (\file ->
+                    if
+                      (file.name == model.currentFileName)
+                    then
+                      (mapFile ref f file)
+                    else
+                      file
+                    )
+              }
 
 mapFile : ExprRef -> (Variable -> List Variable) -> File -> File
 mapFile ref f file =
