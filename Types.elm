@@ -7,7 +7,7 @@ import Dict
 type Msg
   = Nop
   | SetCurrentRef ExprRef
-  | MapExpr (Variable -> Variable)
+  | MapExpr (Variable -> Variable) Int
 
 
 
