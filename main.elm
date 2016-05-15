@@ -42,7 +42,7 @@ testModel =
   { files =
     [ { name = "test.elm"
       , nextRef = 888
-      , context =
+      , context = buildContext
         [ { name = "num"
           , ref = 0
           , context = []
@@ -106,6 +106,11 @@ testModel =
   }
 
 
+buildContext : List Variable -> Dict.Dict ExprRef Variable
+buildContext vs =
+  List.foldr (\v -> Dict.insert v.ref v) Dict.empty vs
+
+
 noEffects : a -> (a, Cmd b)
 noEffects m =
   (m, Cmd.none)
@@ -146,7 +151,9 @@ mapFile ref f file =
   { file
   | context =
     file.context
+      |> Dict.values
       |> List.concatMap (\v -> (if v.ref == ref then f v else [v]))
+      |> buildContext
   }
 
 
@@ -165,9 +172,7 @@ getCurrentVariable model =
       case getCurrentFile model of
         Nothing -> Nothing
         Just file ->
-          file.context
-            |> List.filter (\v -> v.ref == ref)
-            |> List.head
+          Dict.get ref file.context
 
 
 view model =
@@ -242,6 +247,7 @@ newVariable =
 htmlFile : Model -> File -> Html Msg
 htmlFile model file =
   let xs = file.context
+    |> Dict.values
     |> List.map (\e -> htmlFunction model e.ref)
   in Html.div [] xs
 

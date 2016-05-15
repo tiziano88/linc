@@ -22,7 +22,7 @@ type alias Model =
 type alias File =
   { name : String
   , nextRef : ExprRef
-  , context : List Variable
+  , context : Dict.Dict ExprRef Variable
   }
 
 

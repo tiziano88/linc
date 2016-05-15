@@ -1,6 +1,7 @@
 module Print exposing (..)
 
 import Array
+import Dict
 import String
 
 import Types exposing (..)
@@ -44,6 +45,7 @@ printFunction model ref =
 printFile : Model -> File -> String
 printFile model file =
   file.context
+    |> Dict.values
     |> List.map (\v -> v.ref)
     |> List.map (printFunction model)
     |> String.join "\n\n\n"
@@ -132,5 +134,5 @@ getFileFunctionRef file ref =
         --|> List.concatMap (\x -> x.context)
     --c = c1 ++ c2
   in
-    List.filter (\v -> v.ref == ref) c1 |> List.head
+    Dict.get ref c1
 
