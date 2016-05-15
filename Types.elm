@@ -7,12 +7,12 @@ import Dict
 type Msg
   = Nop
   | SetCurrentRef ExprRef
-  | MapExpr (Variable -> List Variable)
+  | MapExpr (Variable -> Variable)
 
 
 
 type alias Model =
-  { files : List File
+  { files : Dict.Dict String File
   , currentFileName : String
   , parent : Dict.Dict ExprRef ExprRef
   , currentRef : Maybe ExprRef

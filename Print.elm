@@ -120,19 +120,11 @@ printExpr model ref =
 
 getVariable : Model -> ExprRef -> Maybe Variable
 getVariable model ref =
-  model.files
-    |> List.map (\x -> getFileFunctionRef x ref)
-    |> Maybe.oneOf
+  (Dict.get model.currentFileName model.files)
+    `Maybe.andThen` (\x -> getFileFunctionRef x ref)
 
 
 getFileFunctionRef : File -> ExprRef -> Maybe Variable
 getFileFunctionRef file ref =
-  let
-    c1 = file.context
-    --c2 =
-      --file.context
-        --|> List.concatMap (\x -> x.context)
-    --c = c1 ++ c2
-  in
-    Dict.get ref c1
+  Dict.get ref file.context
 

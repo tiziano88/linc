@@ -30,7 +30,7 @@ init =
 
 initialModel : Model
 initialModel =
-  { files = []
+  { files = Dict.empty
   , currentFileName = ""
   , parent = Dict.empty
   , currentRef = Nothing
@@ -39,7 +39,7 @@ initialModel =
 
 testModel : Model
 testModel =
-  { files =
+  { files = buildFiles
     [ { name = "test.elm"
       , nextRef = 888
       , context = buildContext
@@ -107,8 +107,17 @@ testModel =
 
 
 buildContext : List Variable -> Dict.Dict ExprRef Variable
-buildContext vs =
-  List.foldr (\v -> Dict.insert v.ref v) Dict.empty vs
+buildContext =
+  indexBy (\v -> v.ref)
+
+buildFiles : List File -> Dict.Dict String File
+buildFiles =
+  indexBy (\v -> v.name)
+
+
+indexBy : (v -> comparable) -> List v -> Dict.Dict comparable v
+indexBy f vs =
+  List.foldl (\v -> Dict.insert (f v) v) Dict.empty vs
 
 
 noEffects : a -> (a, Cmd b)
@@ -131,37 +140,30 @@ update action model =
         Nothing -> noEffects model
         Just ref ->
           case getCurrentVariable model of
-            Nothing -> noEffects model
+            Nothing -> noEffects
+              { model
+              | files =
+                model.files
+                  |> Dict.update model.currentFileName
+                    (Maybe.map <| (\fi -> { fi | context = Dict.insert ref (f newVariable) fi.context }))
+              }
             Just v -> noEffects
               { model
               | files =
                 model.files
-                  |> List.map (\file ->
-                    if
-                      (file.name == model.currentFileName)
-                    then
-                      (mapFile ref f file)
-                    else
-                      file
-                    )
+                  |> Dict.update model.currentFileName (Maybe.map <| mapFile ref f)
               }
 
-mapFile : ExprRef -> (Variable -> List Variable) -> File -> File
+mapFile : ExprRef -> (Variable -> Variable) -> File -> File
 mapFile ref f file =
   { file
-  | context =
-    file.context
-      |> Dict.values
-      |> List.concatMap (\v -> (if v.ref == ref then f v else [v]))
-      |> buildContext
+  | context = Dict.update ref (Maybe.map f) file.context
   }
 
 
 getCurrentFile : Model -> Maybe File
 getCurrentFile model =
-  model.files
-    |> List.filter (\f -> f.name == model.currentFileName)
-    |> List.head
+  Dict.get model.currentFileName model.files
 
 
 getCurrentVariable : Model -> Maybe Variable
@@ -176,45 +178,59 @@ getCurrentVariable model =
 
 
 view model =
-  Html.div []
+  Html.div [] <|
     [ selectComponent ["aaa", "bbb", "ccc"]
     , Html.button
-      [ onClick <| MapExpr (\v -> [{ v | value = EInt 123 }]) ]
+      [ onClick <| MapExpr (\v -> { v | value = EInt 123 }) ]
       [ Html.text "123" ]
     , Html.button
-      [ onClick <| MapExpr (\v -> [{ v | value = EBool True }]) ]
+      [ onClick <| MapExpr (\v -> { v | value = EBool True }) ]
       [ Html.text "True" ]
     , Html.button
-      [ onClick <| MapExpr (\v -> [{ v | value = EList Array.empty }]) ]
+      [ onClick <| MapExpr (\v -> { v | value = EList Array.empty }) ]
       [ Html.text "[]" ]
     , Html.button
-      [ onClick <| MapExpr (\v ->
-        [ { v | value = EIf 222 333 444 }
-        , { newVariable | ref = 222, value = v.value }
-        ])
-      ]
+      [ onClick <| MapExpr (\v -> { v | value = EIf 222 333 444 }) ]
       [ Html.text "if" ]
     , Html.button
-      [ onClick <| MapExpr (\v ->
-        [ { v | value = EApp 222 333 }
-        , { newVariable | ref = 222, value = v.value }
-        ])
-      ]
+      [ onClick <| MapExpr (\v -> { v | value = EApp 222 333 }) ]
       [ Html.text "->" ]
     , Html.button
-      [ onClick <| MapExpr (\v -> []) ]
+      [ onClick <| MapExpr (\v -> v) ]
       [ Html.text "x" ]
-    , Html.button
-      [ onClick <| MapExpr (\v -> [ decrement v ]) ]
-      [ Html.text "-1" ]
-    , Html.button
-      [ onClick <| MapExpr (\v -> [ increment v ]) ]
-      [ Html.text "+1" ]
-    , Html.div [] [ Html.text <| "current file: " ++ model.currentFileName ]
+    ] ++ (typeButtons model) ++
+    [ Html.div [] [ Html.text <| "current file: " ++ model.currentFileName ]
     , Html.div [] [ Html.text <| toString model ]
-    , Html.pre [] (model.files |> List.map (htmlFile model))
+    , Html.pre [] (model.files |> Dict.values |> List.map (htmlFile model))
     ]
 
+typeButtons model =
+  case getCurrentVariable model of
+    Nothing -> []
+    Just v ->
+      case v.value of
+        EInt _ ->
+          [ Html.button
+            [ onClick <| MapExpr decrement ]
+            [ Html.text "-1" ]
+          , Html.button
+            [ onClick <| MapExpr increment ]
+            [ Html.text "+1" ]
+          ]
+
+        EBool _ ->
+          [ Html.button
+            [ onClick <| MapExpr (\v -> v) ]
+            [ Html.text "!" ]
+          ]
+
+        EList _ ->
+          [ Html.button
+            [ onClick <| MapExpr (\v -> v) ]
+            [ Html.text "append" ]
+          ]
+
+        _ -> []
 
 increment : Variable -> Variable
 increment v =
