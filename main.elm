@@ -147,6 +147,26 @@ mapFile ref f file =
   }
 
 
+getCurrentFile : Model -> Maybe File
+getCurrentFile model =
+  model.files
+    |> List.filter (\f -> f.name == model.currentFileName)
+    |> List.head
+
+
+getCurrentVariable : Model -> Maybe Variable
+getCurrentVariable model =
+  case model.currentRef of
+    Nothing -> Nothing
+    Just ref ->
+      case getCurrentFile model of
+        Nothing -> Nothing
+        Just file ->
+          file.context
+            |> List.filter (\v -> v.ref == ref)
+            |> List.head
+
+
 view model =
   Html.div []
     [ selectComponent ["aaa", "bbb", "ccc"]
@@ -177,12 +197,34 @@ view model =
       [ onClick <| MapExpr (\v -> []) ]
       [ Html.text "x" ]
     , Html.button
-      [ onClick <| MapExpr (\v -> []) ]
+      [ onClick <| MapExpr (\v -> [ decrement v ]) ]
+      [ Html.text "-1" ]
+    , Html.button
+      [ onClick <| MapExpr (\v -> [ increment v ]) ]
       [ Html.text "+1" ]
     , Html.div [] [ Html.text <| "current file: " ++ model.currentFileName ]
     , Html.div [] [ Html.text <| toString model ]
     , Html.pre [] (model.files |> List.map (htmlFile model))
     ]
+
+
+increment : Variable -> Variable
+increment v =
+  { v
+  | value =
+    case v.value of
+      EInt n -> EInt (n + 1)
+      x -> x
+  }
+
+decrement : Variable -> Variable
+decrement v =
+  { v
+  | value =
+    case v.value of
+      EInt n -> EInt (n - 1)
+      x -> x
+  }
 
 newVariable : Variable
 newVariable =
