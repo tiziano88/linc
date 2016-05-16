@@ -217,13 +217,13 @@ view model =
       , Html.button
         [ onClick <| MapExpr (\v -> v) 0 ]
         [ Html.text "x" ]
-      ] ++ (typeButtons model) ++
+      ] ++ (typeButtons model file) ++
       [ Html.div [] [ Html.text <| "current file: " ++ model.currentFileName ]
       , Html.div [] [ Html.text <| toString model ]
       , Html.pre [] (model.files |> Dict.values |> List.map (htmlFile model))
       ]
 
-typeButtons model =
+typeButtons model file =
   case getCurrentVariable model of
     Nothing -> []
     Just v ->
@@ -239,35 +239,57 @@ typeButtons model =
 
         EBool _ ->
           [ Html.button
-            [ onClick <| MapExpr (\v -> v) 0 ]
+            [ onClick <| MapExpr negate 0 ]
             [ Html.text "!" ]
           ]
 
         EList _ ->
           [ Html.button
-            [ onClick <| MapExpr (\v -> v) 0 ]
+            [ onClick <| MapExpr (append file.nextRef) 1 ]
             [ Html.text "append" ]
           ]
 
         _ -> []
 
-increment : Variable -> Variable
-increment v =
+
+mapVariable : (Expr -> Expr) -> Variable -> Variable
+mapVariable f v =
   { v
-  | value =
-    case v.value of
-      EInt n -> EInt (n + 1)
-      x -> x
+  | value = f v.value
   }
 
+
+increment : Variable -> Variable
+increment =
+  mapVariable <|
+    \e -> case e of
+      EInt n -> EInt (n + 1)
+      _ -> e
+
+
 decrement : Variable -> Variable
-decrement v =
-  { v
-  | value =
-    case v.value of
+decrement =
+  mapVariable <|
+    \e -> case e of
       EInt n -> EInt (n - 1)
-      x -> x
-  }
+      _ -> e
+
+
+negate : Variable -> Variable
+negate =
+  mapVariable <|
+    \e -> case e of
+      EBool v -> EBool (not v)
+      _ -> e
+
+
+append : ExprRef -> Variable -> Variable
+append ref =
+  mapVariable <|
+    \e -> case e of
+      EList l -> EList (Array.push ref l)
+      _ -> e
+
 
 newVariable : Variable
 newVariable =
@@ -309,7 +331,7 @@ htmlExpr model ref =
             [ Html.text <| "\"" ++ v ++ "\"" ]
 
           EList ls ->
-            ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList) ++ [ Html.text "]" ])
+            ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList |> List.intersperse (Html.text ",")) ++ [ Html.text "]" ])
 
           EIf cond eTrue eFalse ->
             [ Html.text "if"
