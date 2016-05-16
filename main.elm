@@ -148,7 +148,7 @@ update action model =
                     (Maybe.map <|
                       (\fi ->
                         { fi
-                        | context = Dict.insert ref (f newVariable) fi.context
+                        | context = Dict.insert ref (f { newVariable | ref = ref }) fi.context
                         , nextRef = fi.nextRef + n
                         }))
               }
