@@ -85,6 +85,9 @@ printExpr model ref =
         EInt v ->
           toString v
 
+        EFloat v ->
+          toString v
+
         EBool v ->
           toString v
 

@@ -8,6 +8,7 @@ type Msg
   = Nop
   | SetCurrentRef ExprRef
   | MapExpr (Variable -> Variable) Int
+  | Input String
 
 
 
@@ -16,6 +17,7 @@ type alias Model =
   , currentFileName : String
   , parent : Dict.Dict ExprRef ExprRef
   , currentRef : Maybe ExprRef
+  , input : String
   }
 
 
@@ -70,6 +72,7 @@ type Type
 type Expr
   = EEmpty -- Args.
   | EInt Int
+  | EFloat Float
   | EBool Bool
   | EList (Array.Array ExprRef)
   | EString String

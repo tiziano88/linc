@@ -34,6 +34,7 @@ initialModel =
   , currentFileName = ""
   , parent = Dict.empty
   , currentRef = Nothing
+  , input = ""
   }
 
 
@@ -103,6 +104,7 @@ testModel =
   , currentFileName = "test.elm"
   , parent = Dict.empty
   , currentRef = Nothing
+  , input = ""
   }
 
 
@@ -133,6 +135,11 @@ update action model =
     SetCurrentRef ref -> noEffects
       { model
       | currentRef = Just ref
+      }
+
+    Input v -> noEffects
+      { model
+      | input = v
       }
 
     MapExpr f n ->
@@ -196,6 +203,12 @@ view model =
   in
     Html.div [] <|
       [ selectComponent ["aaa", "bbb", "ccc"]
+      , Html.input
+        [ onInput Input ]
+        []
+      , Html.button
+        [ onClick <| MapExpr (\v -> { v | name = model.input }) 0 ]
+        [ Html.text "setName" ]
       , Html.button
         [ onClick <| MapExpr (\v -> { v | value = EInt 0 }) 0 ]
         [ Html.text "0" ]
@@ -206,8 +219,8 @@ view model =
         [ onClick <| MapExpr (\v -> { v | value = EList Array.empty }) 0 ]
         [ Html.text "[]" ]
       , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = EString "" }) 0 ]
-        [ Html.text "\"\"" ]
+        [ onClick <| MapExpr (\v -> { v | value = EString (model.input) }) 0 ]
+        [ Html.text <| "\"" ++ model.input ++ "\" (String) " ]
       , Html.button
         [ onClick <| MapExpr (\v -> { v | value = EIf (file.nextRef) (file.nextRef + 1) (file.nextRef + 2) }) 3 ]
         [ Html.text "if" ]
@@ -217,11 +230,35 @@ view model =
       , Html.button
         [ onClick <| MapExpr (\v -> v) 0 ]
         [ Html.text "x" ]
-      ] ++ (typeButtons model file) ++
+      ] ++ (modelButtons model file) ++ (typeButtons model file) ++
       [ Html.div [] [ Html.text <| "current file: " ++ model.currentFileName ]
       , Html.div [] [ Html.text <| toString model ]
       , Html.pre [] (model.files |> Dict.values |> List.map (htmlFile model))
       ]
+
+modelButtons model file =
+  [intButton, floatButton]
+    |> List.concatMap (\x -> x model file)
+
+
+intButton model file =
+  case String.toInt (model.input) of
+    Ok n ->
+      [ Html.button
+        [ onClick <| MapExpr (\v -> { v | value = EInt n }) 0 ]
+        [ Html.text <| (toString n) ++ " (Int)" ]
+      ]
+    _ -> []
+
+
+floatButton model file =
+  case String.toFloat (model.input) of
+    Ok n ->
+      [ Html.button
+        [ onClick <| MapExpr (\v -> { v | value = EFloat n }) 0 ]
+        [ Html.text <| (toString n) ++ " (Float)" ]
+      ]
+    _ -> []
 
 typeButtons model file =
   case getCurrentVariable model of
@@ -305,6 +342,7 @@ htmlFile : Model -> File -> Html Msg
 htmlFile model file =
   let xs = file.context
     |> Dict.values
+    |> List.filter (\e -> e.name /= "")
     |> List.map (\e -> htmlFunction model e.ref)
   in Html.div [] xs
 
@@ -322,6 +360,9 @@ htmlExpr model ref =
             [ Html.text "<<<EMPTY>>>" ]
 
           EInt v ->
+            [ Html.text <| toString v ]
+
+          EFloat v ->
             [ Html.text <| toString v ]
 
           EBool v ->
