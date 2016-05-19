@@ -219,9 +219,6 @@ view model =
         [ onClick <| MapExpr (\v -> { v | value = EList Array.empty }) 0 ]
         [ Html.text "[]" ]
       , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = EString (model.input) }) 0 ]
-        [ Html.text <| "\"" ++ model.input ++ "\" (String) " ]
-      , Html.button
         [ onClick <| MapExpr (\v -> { v | value = EIf (file.nextRef) (file.nextRef + 1) (file.nextRef + 2) }) 3 ]
         [ Html.text "if" ]
       , Html.button
@@ -237,11 +234,18 @@ view model =
       ]
 
 modelButtons model file =
-  [intButton, floatButton]
+  [stringButtons, intButtons, floatButtons]
     |> List.concatMap (\x -> x model file)
 
 
-intButton model file =
+stringButtons model file =
+  [ Html.button
+    [ onClick <| MapExpr (\v -> { v | value = EString (model.input) }) 0 ]
+    [ Html.text <| "\"" ++ model.input ++ "\" (String) " ]
+  ]
+
+
+intButtons model file =
   case String.toInt (model.input) of
     Ok n ->
       [ Html.button
@@ -251,7 +255,7 @@ intButton model file =
     _ -> []
 
 
-floatButton model file =
+floatButtons model file =
   case String.toFloat (model.input) of
     Ok n ->
       [ Html.button
