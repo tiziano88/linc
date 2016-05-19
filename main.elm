@@ -52,9 +52,21 @@ testModel =
           }
         , { name = "add"
           , ref = 1
+          , context = [311, 312]
+          , type_ = TApp TInt (TApp TInt TInt)
+          , value = EApp 111 311
+          }
+        , { name = "x"
+          , ref = 311
           , context = []
           , type_ = TApp TInt (TApp TInt TInt)
-          , value = EApp 111 112
+          , value = EEmpty
+          }
+        , { name = "y"
+          , ref = 312
+          , context = []
+          , type_ = TApp TInt (TApp TInt TInt)
+          , value = EEmpty
           }
         , { name = ""
           , ref = 11
