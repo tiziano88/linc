@@ -1,0 +1,1 @@
+protoc --elm_out=. proto/*.proto
