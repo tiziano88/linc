@@ -36,11 +36,11 @@ message Expression {
   }
 
   oneof value {
-    Bool bool = 2;
-    Int int = 3;
-    Float float = 4;
-    String string = 5;
-    List list = 6;
-    If if = 7;
+    Bool bool_value = 2;
+    Int int_value = 3;
+    Float float_value = 4;
+    String string_value = 5;
+    /*List list_value = 6;*/
+    /*If if_value = 7;*/
   }
 }

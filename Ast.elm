@@ -1,4 +1,4 @@
-module proto.Ast exposing (..)
+module Ast exposing (..)
 
 
 import Json.Decode as JD exposing ((:=))
@@ -28,9 +28,9 @@ optionalFieldDecoder decoder name =
   optionalDecoder (name := decoder)
 
 
-repeatedFieldDecoder : JD.Decoder a -> JD.Decoder (List a)
-repeatedFieldDecoder decoder =
-  withDefault [] (JD.list decoder)
+repeatedFieldDecoder : JD.Decoder a -> String -> JD.Decoder (List a)
+repeatedFieldDecoder decoder name =
+  withDefault [] (name := (JD.list decoder))
 
 
 withDefault : a -> JD.Decoder a -> JD.Decoder a
@@ -104,12 +104,10 @@ nodeEncoder v =
 
 type alias Expression =
   { ref : Int -- 1
-  , bool : Maybe Expression_Bool -- 2
-  , int : Maybe Expression_Int -- 3
-  , float : Maybe Expression_Float -- 4
-  , string : Maybe Expression_String -- 5
-  , list : Maybe Expression_List -- 6
-  , if : Maybe Expression_If -- 7
+  , boolValue : Maybe Expression_Bool -- 2
+  , intValue : Maybe Expression_Int -- 3
+  , floatValue : Maybe Expression_Float -- 4
+  , stringValue : Maybe Expression_String -- 5
   }
 
 
@@ -117,24 +115,20 @@ expressionDecoder : JD.Decoder Expression
 expressionDecoder =
   Expression
     <$> (intFieldDecoder "ref")
-    <*> (optionalFieldDecoder expression_BoolDecoder "bool")
-    <*> (optionalFieldDecoder expression_IntDecoder "int")
-    <*> (optionalFieldDecoder expression_FloatDecoder "float")
-    <*> (optionalFieldDecoder expression_StringDecoder "string")
-    <*> (optionalFieldDecoder expression_ListDecoder "list")
-    <*> (optionalFieldDecoder expression_IfDecoder "if")
+    <*> (optionalFieldDecoder expression_BoolDecoder "boolValue")
+    <*> (optionalFieldDecoder expression_IntDecoder "intValue")
+    <*> (optionalFieldDecoder expression_FloatDecoder "floatValue")
+    <*> (optionalFieldDecoder expression_StringDecoder "stringValue")
 
 
 expressionEncoder : Expression -> JE.Value
 expressionEncoder v =
   JE.object
     [ ("ref", JE.int v.ref)
-    , ("bool", optionalEncoder expression_BoolEncoder v.bool)
-    , ("int", optionalEncoder expression_IntEncoder v.int)
-    , ("float", optionalEncoder expression_FloatEncoder v.float)
-    , ("string", optionalEncoder expression_StringEncoder v.string)
-    , ("list", optionalEncoder expression_ListEncoder v.list)
-    , ("if", optionalEncoder expression_IfEncoder v.if)
+    , ("boolValue", optionalEncoder expression_BoolEncoder v.boolValue)
+    , ("intValue", optionalEncoder expression_IntEncoder v.intValue)
+    , ("floatValue", optionalEncoder expression_FloatEncoder v.floatValue)
+    , ("stringValue", optionalEncoder expression_StringEncoder v.stringValue)
     ]
 
 
@@ -218,7 +212,7 @@ type alias Expression_List =
 expression_ListDecoder : JD.Decoder Expression_List
 expression_ListDecoder =
   Expression_List
-    <$> (repeatedFieldDecoder (expressionDecoder "values"))
+    <$> (repeatedFieldDecoder expressionDecoder "values")
 
 
 expression_ListEncoder : Expression_List -> JE.Value

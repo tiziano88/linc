@@ -1,1 +1,4 @@
-protoc --elm_out=. proto/*.proto
+{
+  cd proto
+  protoc --elm_out=.. *.proto
+}
