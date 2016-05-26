@@ -23,13 +23,18 @@ optionalDecoder decoder =
     ]
 
 
-optionalFieldDecoder : JD.Decoder a -> String -> JD.Decoder (Maybe a)
-optionalFieldDecoder decoder name =
+requiredFieldDecoder : String -> a -> JD.Decoder a -> JD.Decoder a
+requiredFieldDecoder name default decoder =
+  withDefault default (name := decoder)
+
+
+optionalFieldDecoder : String -> JD.Decoder a -> JD.Decoder (Maybe a)
+optionalFieldDecoder name decoder =
   optionalDecoder (name := decoder)
 
 
-repeatedFieldDecoder : JD.Decoder a -> String -> JD.Decoder (List a)
-repeatedFieldDecoder decoder name =
+repeatedFieldDecoder : String -> JD.Decoder a -> JD.Decoder (List a)
+repeatedFieldDecoder name decoder =
   withDefault [] (name := (JD.list decoder))
 
 
@@ -41,44 +46,33 @@ withDefault default decoder =
     ]
 
 
-intFieldDecoder : String -> JD.Decoder Int
-intFieldDecoder name =
-  withDefault 0 (name := JD.int)
-
-
-floatFieldDecoder : String -> JD.Decoder Float
-floatFieldDecoder name =
-  withDefault 0.0 (name := JD.float)
-
-
-boolFieldDecoder : String -> JD.Decoder Bool
-boolFieldDecoder name =
-  withDefault False (name := JD.bool)
-
-
-stringFieldDecoder : String -> JD.Decoder String
-stringFieldDecoder name =
-  withDefault "" (name := JD.string)
-
-
-enumFieldDecoder : JD.Decoder a -> String -> JD.Decoder a
-enumFieldDecoder decoder name =
-  (name := decoder)
-
-
-optionalEncoder : (a -> JE.Value) -> Maybe a -> JE.Value
-optionalEncoder encoder v =
+optionalEncoder : String -> (a -> JE.Value) -> Maybe a -> Maybe (String, JE.Value)
+optionalEncoder name encoder v =
   case v of
     Just x ->
-      encoder x
+      Just (name, encoder x)
     
     Nothing ->
-      JE.null
+      Nothing
 
 
-repeatedFieldEncoder : (a -> JE.Value) -> List a -> JE.Value
-repeatedFieldEncoder encoder v =
-  JE.list <| List.map encoder v
+requiredFieldEncoder : String -> (a -> JE.Value) -> a -> a -> Maybe (String, JE.Value)
+requiredFieldEncoder name encoder default v =
+  if
+    v == default
+  then
+    Nothing
+  else
+    Just (name, encoder v)
+
+
+repeatedFieldEncoder : String -> (a -> JE.Value) -> List a -> Maybe (String, JE.Value)
+repeatedFieldEncoder name encoder v =
+  case v of
+    [] ->
+      Nothing
+    _ ->
+      Just (name, JE.list <| List.map encoder v)
 
 
 type alias Node =
@@ -90,45 +84,68 @@ type alias Node =
 nodeDecoder : JD.Decoder Node
 nodeDecoder =
   Node
-    <$> (stringFieldDecoder "name")
-    <*> (optionalFieldDecoder expressionDecoder "expression")
+    <$> (requiredFieldDecoder "name" "" JD.string)
+    <*> (optionalFieldDecoder "expression" expressionDecoder)
 
 
 nodeEncoder : Node -> JE.Value
 nodeEncoder v =
-  JE.object
-    [ ("name", JE.string v.name)
-    , ("expression", optionalEncoder expressionEncoder v.expression)
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "name" JE.string "" v.name)
+    , (optionalEncoder "expression" expressionEncoder v.expression)
     ]
 
 
 type alias Expression =
   { ref : Int -- 1
-  , boolValue : Maybe Expression_Bool -- 2
-  , intValue : Maybe Expression_Int -- 3
-  , floatValue : Maybe Expression_Float -- 4
-  , stringValue : Maybe Expression_String -- 5
+  , value : Value
   }
+
+
+type Value
+  = ValueUnspecified
+  | BoolValue Expression_Bool
+  | IntValue Expression_Int
+  | FloatValue Expression_Float
+  | StringValue Expression_String
+  | ListValue Expression_List
+
+
+valueDecoder : JD.Decoder Value
+valueDecoder =
+  JD.oneOf
+    [ JD.map BoolValue ("boolValue" := expression_BoolDecoder)
+    , JD.map IntValue ("intValue" := expression_IntDecoder)
+    , JD.map FloatValue ("floatValue" := expression_FloatDecoder)
+    , JD.map StringValue ("stringValue" := expression_StringDecoder)
+    , JD.map ListValue ("listValue" := expression_ListDecoder)
+    , JD.succeed ValueUnspecified
+    ]
+
+
+valueEncoder : Value -> Maybe (String, JE.Value)
+valueEncoder v =
+  case v of
+    ValueUnspecified -> Nothing
+    BoolValue x -> Just ("boolValue", expression_BoolEncoder x)
+    IntValue x -> Just ("intValue", expression_IntEncoder x)
+    FloatValue x -> Just ("floatValue", expression_FloatEncoder x)
+    StringValue x -> Just ("stringValue", expression_StringEncoder x)
+    ListValue x -> Just ("listValue", expression_ListEncoder x)
 
 
 expressionDecoder : JD.Decoder Expression
 expressionDecoder =
   Expression
-    <$> (intFieldDecoder "ref")
-    <*> (optionalFieldDecoder expression_BoolDecoder "boolValue")
-    <*> (optionalFieldDecoder expression_IntDecoder "intValue")
-    <*> (optionalFieldDecoder expression_FloatDecoder "floatValue")
-    <*> (optionalFieldDecoder expression_StringDecoder "stringValue")
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> valueDecoder
 
 
 expressionEncoder : Expression -> JE.Value
 expressionEncoder v =
-  JE.object
-    [ ("ref", JE.int v.ref)
-    , ("boolValue", optionalEncoder expression_BoolEncoder v.boolValue)
-    , ("intValue", optionalEncoder expression_IntEncoder v.intValue)
-    , ("floatValue", optionalEncoder expression_FloatEncoder v.floatValue)
-    , ("stringValue", optionalEncoder expression_StringEncoder v.stringValue)
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    , (valueEncoder v.value)
     ]
 
 
@@ -140,13 +157,13 @@ type alias Expression_Bool =
 expression_BoolDecoder : JD.Decoder Expression_Bool
 expression_BoolDecoder =
   Expression_Bool
-    <$> (boolFieldDecoder "value")
+    <$> (requiredFieldDecoder "value" False JD.bool)
 
 
 expression_BoolEncoder : Expression_Bool -> JE.Value
 expression_BoolEncoder v =
-  JE.object
-    [ ("value", JE.bool v.value)
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "value" JE.bool False v.value)
     ]
 
 
@@ -158,13 +175,13 @@ type alias Expression_Int =
 expression_IntDecoder : JD.Decoder Expression_Int
 expression_IntDecoder =
   Expression_Int
-    <$> (intFieldDecoder "value")
+    <$> (requiredFieldDecoder "value" 0 JD.int)
 
 
 expression_IntEncoder : Expression_Int -> JE.Value
 expression_IntEncoder v =
-  JE.object
-    [ ("value", JE.int v.value)
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "value" JE.int 0 v.value)
     ]
 
 
@@ -176,13 +193,13 @@ type alias Expression_Float =
 expression_FloatDecoder : JD.Decoder Expression_Float
 expression_FloatDecoder =
   Expression_Float
-    <$> (floatFieldDecoder "value")
+    <$> (requiredFieldDecoder "value" 0.0 JD.float)
 
 
 expression_FloatEncoder : Expression_Float -> JE.Value
 expression_FloatEncoder v =
-  JE.object
-    [ ("value", JE.float v.value)
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "value" JE.float 0.0 v.value)
     ]
 
 
@@ -194,13 +211,13 @@ type alias Expression_String =
 expression_StringDecoder : JD.Decoder Expression_String
 expression_StringDecoder =
   Expression_String
-    <$> (stringFieldDecoder "value")
+    <$> (requiredFieldDecoder "value" "" JD.string)
 
 
 expression_StringEncoder : Expression_String -> JE.Value
 expression_StringEncoder v =
-  JE.object
-    [ ("value", JE.string v.value)
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "value" JE.string "" v.value)
     ]
 
 
@@ -212,13 +229,13 @@ type alias Expression_List =
 expression_ListDecoder : JD.Decoder Expression_List
 expression_ListDecoder =
   Expression_List
-    <$> (repeatedFieldDecoder expressionDecoder "values")
+    <$> (repeatedFieldDecoder "values" expressionDecoder)
 
 
 expression_ListEncoder : Expression_List -> JE.Value
 expression_ListEncoder v =
-  JE.object
-    [ ("values", repeatedFieldEncoder expressionEncoder v.values)
+  JE.object <| List.filterMap identity <|
+    [ (repeatedFieldEncoder "values" expressionEncoder v.values)
     ]
 
 
@@ -232,17 +249,15 @@ type alias Expression_If =
 expression_IfDecoder : JD.Decoder Expression_If
 expression_IfDecoder =
   Expression_If
-    <$> (optionalFieldDecoder expressionDecoder "cond")
-    <*> (optionalFieldDecoder expressionDecoder "true")
-    <*> (optionalFieldDecoder expressionDecoder "false")
+    <$> (optionalFieldDecoder "cond" expressionDecoder)
+    <*> (optionalFieldDecoder "true" expressionDecoder)
+    <*> (optionalFieldDecoder "false" expressionDecoder)
 
 
 expression_IfEncoder : Expression_If -> JE.Value
 expression_IfEncoder v =
-  JE.object
-    [ ("cond", optionalEncoder expressionEncoder v.cond)
-    , ("true", optionalEncoder expressionEncoder v.true)
-    , ("false", optionalEncoder expressionEncoder v.false)
+  JE.object <| List.filterMap identity <|
+    [ (optionalEncoder "cond" expressionEncoder v.cond)
+    , (optionalEncoder "true" expressionEncoder v.true)
+    , (optionalEncoder "false" expressionEncoder v.false)
     ]
-
-

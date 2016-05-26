@@ -40,7 +40,7 @@ message Expression {
     Int int_value = 3;
     Float float_value = 4;
     String string_value = 5;
-    /*List list_value = 6;*/
+    List list_value = 6;
     /*If if_value = 7;*/
   }
 }
