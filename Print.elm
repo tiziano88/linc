@@ -4,6 +4,7 @@ import Array
 import Dict
 import String
 
+import Ast
 import Types exposing (..)
 
 
@@ -14,7 +15,7 @@ printFunctionSignature model ref =
       "<<<ERROR>>>"
 
     Just v ->
-      v.name ++ " : " ++ (printType v.type_)
+      v.name ++ " : " -- ++ (printType v.type_)
 
 
 printFunctionBody : Model -> ExprRef -> String
@@ -26,11 +27,11 @@ printFunctionBody model ref =
     Just v ->
       String.join " "
         [ v.name
-        , v.context
-          |> List.map (printArg model)
-          |> String.join " "
+        --, v.context
+          --|> List.map (printArg model)
+          --|> String.join " "
         , "="
-        , printExpr model ref
+        , printExpr model v
         ]
 
 
@@ -45,7 +46,6 @@ printFunction model ref =
 printFile : Model -> File -> String
 printFile model file =
   file.context
-    |> Dict.values
     |> List.map (\v -> v.ref)
     |> List.map (printFunction model)
     |> String.join "\n\n\n"
@@ -60,74 +60,85 @@ printArg model ref =
       v.name
 
 
-printType : Type -> String
+printType : Ast.Type1 -> String
 printType t =
-  case t of
-    TEmpty -> "<<<EMPTY>>>"
-    TInt -> "Int"
-    TBool -> "Bool"
-    TString -> "String"
-    TList t -> "List " ++ (printType t)
-    TApp t1 t2 -> "(" ++ (printType t1) ++ " -> " ++ (printType t2) ++ ")"
+  "xxx"
+  --case t of
+    --TEmpty -> "<<<EMPTY>>>"
+    --TInt -> "Int"
+    --TBool -> "Bool"
+    --TString -> "String"
+    --TList t -> "List " ++ (printType t)
+    --TApp t1 t2 -> "(" ++ (printType t1) ++ " -> " ++ (printType t2) ++ ")"
 
 
-printExpr : Model -> ExprRef -> String
-printExpr model ref =
-  case (getVariable model ref) of
-    Nothing ->
-      "<<<ERROR>>>"
+printExpr : Model -> Ast.Expression -> String
+printExpr model expr =
+  case expr.value of
+    Ast.EmptyValue _ ->
+      "<<<EMPTY>>>"
 
-    Just var ->
-      case var.value of
-        EEmpty ->
-          "<<<EMPTY>>>"
+    Ast.IntValue v ->
+      toString v.value
 
-        EInt v ->
-          toString v
+    Ast.FloatValue v ->
+      toString v.value
 
-        EFloat v ->
-          toString v
+    Ast.BoolValue v ->
+      toString v.value
 
-        EBool v ->
-          toString v
+    Ast.StringValue v ->
+      "\"" ++ v.value ++ "\""
 
-        EString v ->
-          "\"" ++ v ++ "\""
+    Ast.ListValue v ->
+      let
+        s =
+          v.values
+            |> List.map (printExpr model)
+            |> String.join ", "
+      in
+        "[" ++ s ++ "]"
 
-        EList ls ->
-          let
-            s =
-              ls
-                |> Array.map (printExpr model)
-                |> Array.toList
-                |> String.join ", "
-          in
-            "[" ++ s ++ "]"
+    Ast.IfValue v ->
+      String.join " "
+        [ "if"
+        , printExpr model (Maybe.withDefault defaultExpr v.cond)
+        , "then"
+        , printExpr model (Maybe.withDefault defaultExpr v.true)
+        , "else"
+        , printExpr model (Maybe.withDefault defaultExpr v.false)
+        ]
 
-        EIf cond eTrue eFalse ->
-          String.join " "
-            [ "if"
-            , printExpr model cond
-            , "then"
-            , printExpr model eTrue
-            , "else"
-            , printExpr model eFalse
-            ]
+    --EApp e1 e2 ->
+      --String.join " "
+        --[ "(" ++ printExpr model e1
+        --, printExpr model e2 ++ ")"
+        --]
 
-        EApp e1 e2 ->
-          String.join " "
-            [ "(" ++ printExpr model e1
-            , printExpr model e2 ++ ")"
-            ]
+    _ -> "ooooooooooooooo"
 
+defaultExpr : Ast.Expression
+defaultExpr =
+  { ref = 888
+  , name = "error"
+  , type1 = Ast.Xxx 42
+  , value = Ast.EmptyValue 42
+  }
 
-getVariable : Model -> ExprRef -> Maybe Variable
+getVariable : Model -> ExprRef -> Maybe Ast.Expression
 getVariable model ref =
-  (Dict.get model.currentFileName model.files)
-    `Maybe.andThen` (\x -> getFileFunctionRef x ref)
+  List.filterMap (getExpression ref) model.file.context
+    |> List.head
 
 
-getFileFunctionRef : File -> ExprRef -> Maybe Variable
-getFileFunctionRef file ref =
-  Dict.get ref file.context
-
+getExpression : ExprRef -> Ast.Expression -> Maybe Ast.Expression
+getExpression ref expr =
+  if
+    expr.ref == ref
+  then
+    Just expr
+  else
+    case expr.value of
+      Ast.ListValue _ -> Nothing
+      Ast.IfValue _ -> Nothing
+      _ -> Nothing

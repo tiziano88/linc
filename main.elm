@@ -29,110 +29,35 @@ init =
   noEffects testModel
 
 
-initialModel : Model
-initialModel =
-  { files = Dict.empty
-  , currentFileName = ""
-  , parent = Dict.empty
-  , currentRef = Nothing
-  , input = ""
-  }
+--initialModel : Model
+--initialModel =
+  --{ file = 
+  --, currentFileName = ""
+  --, parent = Dict.empty
+  --, currentRef = Nothing
+  --, input = ""
+  --}
 
 
 testModel : Model
 testModel =
-  { files = buildFiles
-    [ { name = "test.elm"
-      , nextRef = 888
-      , context = buildContext
-        [ { name = "num"
-          , ref = 0
-          , context = []
-          , type_ = TInt
-          , value = EInt 42
-          }
-        , { name = "add"
-          , ref = 1
-          , context = [311, 312]
-          , type_ = TApp TInt (TApp TInt TInt)
-          , value = EApp 111 311
-          }
-        , { name = "x"
-          , ref = 311
-          , context = []
-          , type_ = TApp TInt (TApp TInt TInt)
-          , value = EEmpty
-          }
-        , { name = "y"
-          , ref = 312
-          , context = []
-          , type_ = TApp TInt (TApp TInt TInt)
-          , value = EEmpty
-          }
-        , { name = ""
-          , ref = 11
-          , context = []
-          , type_ = TApp TInt (TApp TInt TInt)
-          , value = EBool True
-          }
-        , { name = ""
-          , ref = 100
-          , context = []
-          , type_ = TApp TInt (TApp TInt TInt)
-          , value = EInt 123
-          }
-        , { name = "test"
-          , ref = 2
-          , context = []
-          , type_ = TInt
-          , value = EApp 3 4
-          }
-        , { name = "error"
-          , ref = 3
-          , context = []
-          , type_ = TInt
-          , value = EApp 333 334
-          }
-        , { name = "st"
-          , ref = 4
-          , context = []
-          , type_ = TString
-          , value = EString "test"
-          }
-        , { name = "list"
-          , ref = 5
-          , context = []
-          , type_ = TList TInt
-          , value = EList (Array.fromList [0, 1])
-          }
-        , { name = "cond"
-          , ref = 6
-          , context = []
-          , type_ = TApp TBool TInt
-          , value = EIf 444 445 446
-          }
-        ]
-      }
-    ]
-  , currentFileName = "test.elm"
-  , parent = Dict.empty
+  { file =
+    { name = "test.elm"
+    , nextRef = 888
+    , context =
+      [ { ref = 1
+        , name = "main"
+        , type1 = Ast.Xxx 42
+        , value =
+          Ast.IntValue
+            { value = 42
+            }
+        }
+      ]
+    }
   , currentRef = Nothing
   , input = ""
   }
-
-
-buildContext : List Variable -> Dict.Dict ExprRef Variable
-buildContext =
-  indexBy (\v -> v.ref)
-
-buildFiles : List File -> Dict.Dict String File
-buildFiles =
-  indexBy (\v -> v.name)
-
-
-indexBy : (v -> comparable) -> List v -> Dict.Dict comparable v
-indexBy f vs =
-  List.foldl (\v -> Dict.insert (f v) v) Dict.empty vs
 
 
 noEffects : a -> (a, Cmd b)
@@ -161,58 +86,65 @@ update action model =
         Just ref ->
           case getCurrentVariable model of
             Nothing -> noEffects
-              { model
-              | files =
-                model.files
-                  |> Dict.update model.currentFileName
-                    (Maybe.map <|
-                      (\fi ->
-                        { fi
-                        | context = Dict.insert ref (f { newVariable | ref = ref }) fi.context
-                        , nextRef = fi.nextRef + n
-                        }))
-              }
-            Just v -> noEffects
-              { model
-              | files =
-                model.files
-                  |> Dict.update model.currentFileName
-                    (Maybe.map <|
-                      (\fi ->
-                        let
-                          nf = mapFile ref f fi
-                        in
-                          { nf | nextRef = nf.nextRef + n}))
+              model
+              --{ model
+              --| files =
+                --model.files
+                  --|> Dict.update model.currentFileName
+                    --(Maybe.map <|
+                      --(\fi ->
+                        --{ fi
+                        --| context = Dict.insert ref (f { newVariable | ref = ref }) fi.context
+                        --, nextRef = fi.nextRef + n
+                        --}))
+              --}
+            Just v -> noEffects <|
+              let
+                fi = model.file
+              in
+                { model
+                | file =
+                  { fi
+                  | context =
+                    fi.context
+                      |> List.map (mapExpr ref f)
+                  }
+                }
 
-              }
+mapExpr : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Expression -> Ast.Expression
+mapExpr ref f expr =
+  if
+    expr.ref == ref
+  then
+    f expr
+  else
+    let
+      v = expr.value
+    in
+      case v of
+        Ast.IfValue v1 ->
+          { expr | value = Ast.IfValue
+            { cond = Maybe.map (mapExpr ref f) v1.cond
+            , true = Maybe.map (mapExpr ref f) v1.true
+            , false = Maybe.map (mapExpr ref f) v1.false
+            }
+          }
+        Ast.ListValue v1 -> expr
+        _ -> expr
 
-mapFile : ExprRef -> (Variable -> Variable) -> File -> File
-mapFile ref f file =
-  { file
-  | context = Dict.update ref (Maybe.map f) file.context
-  }
 
-
-getCurrentFile : Model -> File
-getCurrentFile model =
-  Dict.get model.currentFileName model.files
-    |> Maybe.withDefault { name = "", nextRef = -1, context = Dict.empty }
-
-
-getCurrentVariable : Model -> Maybe Variable
+getCurrentVariable : Model -> Maybe Ast.Expression
 getCurrentVariable model =
   case model.currentRef of
     Nothing -> Nothing
     Just ref ->
-      let
-        file = getCurrentFile model
-      in
-        Dict.get ref file.context
+      -- XXX
+      Nothing
 
 
 view model =
   let
-    file = getCurrentFile model
+    file = model.file
   in
     Html.div [] <|
       [ selectComponent ["aaa", "bbb", "ccc"]
@@ -223,28 +155,35 @@ view model =
         [ onClick <| MapExpr (\v -> { v | name = model.input }) 0 ]
         [ Html.text "setName" ]
       , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = EInt 0 }) 0 ]
+        [ onClick <| MapExpr (\v -> { v | value = Ast.IntValue { value = 0 } }) 0 ]
         [ Html.text "0" ]
       , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = EBool False }) 0 ]
+        [ onClick <| MapExpr (\v -> { v | value = Ast.BoolValue { value = False } }) 0 ]
         [ Html.text "False" ]
       , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = EList Array.empty }) 0 ]
+        [ onClick <| MapExpr (\v -> { v | value = Ast.ListValue { values = [] } }) 0 ]
         [ Html.text "[]" ]
       , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = EIf (file.nextRef) (file.nextRef + 1) (file.nextRef + 2) }) 3 ]
+        [ onClick <| MapExpr (\v -> { v | value = Ast.IfValue { cond = Just defaultExpr, true = Just defaultExpr, false = Just defaultExpr } }) 3 ]
         [ Html.text "if" ]
-      , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = EApp (file.nextRef) (file.nextRef + 1) }) 2 ]
-        [ Html.text "->" ]
+      --, Html.button
+        --[ onClick <| MapExpr (\v -> { v | value = EApp (file.nextRef) (file.nextRef + 1) }) 2 ]
+        --[ Html.text "->" ]
       , Html.button
         [ onClick <| MapExpr (\v -> v) 0 ]
         [ Html.text "x" ]
       ] ++ (modelButtons model file) ++ (typeButtons model file) ++
-      [ Html.div [] [ Html.text <| "current file: " ++ model.currentFileName ]
-      , Html.div [] [ Html.text <| toString model ]
-      , Html.pre [] (model.files |> Dict.values |> List.map (htmlFile model))
+      [ Html.div [] [ Html.text <| toString model ]
+      , Html.pre [] [ (htmlFile model model.file) ]
       ]
+
+defaultExpr : Ast.Expression
+defaultExpr =
+  { ref = 42
+  , name = "kkk"
+  , type1 = Ast.Xxx 41
+  , value = Ast.EmptyValue 41
+  }
 
 modelButtons model file =
   [stringButtons, intButtons, floatButtons]
@@ -253,7 +192,7 @@ modelButtons model file =
 
 stringButtons model file =
   [ Html.button
-    [ onClick <| MapExpr (\v -> { v | value = EString (model.input) }) 0 ]
+    [ onClick <| MapExpr (\v -> { v | value = Ast.StringValue { value = model.input } }) 0 ]
     [ Html.text <| "\"" ++ model.input ++ "\" (String) " ]
   ]
 
@@ -262,7 +201,7 @@ intButtons model file =
   case String.toInt (model.input) of
     Ok n ->
       [ Html.button
-        [ onClick <| MapExpr (\v -> { v | value = EInt n }) 0 ]
+        [ onClick <| MapExpr (\v -> { v | value = Ast.IntValue { value = n } }) 0 ]
         [ Html.text <| (toString n) ++ " (Int)" ]
       ]
     _ -> []
@@ -272,7 +211,7 @@ floatButtons model file =
   case String.toFloat (model.input) of
     Ok n ->
       [ Html.button
-        [ onClick <| MapExpr (\v -> { v | value = EFloat n }) 0 ]
+        [ onClick <| MapExpr (\v -> { v | value = Ast.FloatValue { value = n } }) 0 ]
         [ Html.text <| (toString n) ++ " (Float)" ]
       ]
     _ -> []
@@ -282,7 +221,7 @@ typeButtons model file =
     Nothing -> []
     Just v ->
       case v.value of
-        EInt _ ->
+        Ast.IntValue _ ->
           [ Html.button
             [ onClick <| MapExpr decrement 0 ]
             [ Html.text "-1" ]
@@ -291,13 +230,13 @@ typeButtons model file =
             [ Html.text "+1" ]
           ]
 
-        EBool _ ->
+        Ast.BoolValue _ ->
           [ Html.button
             [ onClick <| MapExpr negate 0 ]
             [ Html.text "!" ]
           ]
 
-        EList _ ->
+        Ast.ListValue _ ->
           [ Html.button
             [ onClick <| MapExpr (append file.nextRef) 1 ]
             [ Html.text "append" ]
@@ -306,106 +245,93 @@ typeButtons model file =
         _ -> []
 
 
-mapVariable : (Expr -> Expr) -> Variable -> Variable
-mapVariable f v =
-  { v
-  | value = f v.value
+mapVariable : (Ast.Value -> Ast.Value) -> Ast.Expression -> Ast.Expression
+mapVariable f expr =
+  { expr
+  | value = f expr.value
   }
 
 
-increment : Variable -> Variable
+increment : Ast.Expression -> Ast.Expression
 increment =
   mapVariable <|
     \e -> case e of
-      EInt n -> EInt (n + 1)
+      Ast.IntValue v -> Ast.IntValue { v | value = v.value + 1 }
       _ -> e
 
 
-decrement : Variable -> Variable
+decrement : Ast.Expression -> Ast.Expression
 decrement =
   mapVariable <|
     \e -> case e of
-      EInt n -> EInt (n - 1)
+      Ast.IntValue v -> Ast.IntValue { v | value = v.value + 1 }
       _ -> e
 
 
-negate : Variable -> Variable
+negate : Ast.Expression -> Ast.Expression
 negate =
   mapVariable <|
     \e -> case e of
-      EBool v -> EBool (not v)
+      Ast.BoolValue v -> Ast.BoolValue { v | value = not v.value }
       _ -> e
 
 
-append : ExprRef -> Variable -> Variable
+append : ExprRef -> Ast.Expression -> Ast.Expression
 append ref =
   mapVariable <|
     \e -> case e of
-      EList l -> EList (Array.push ref l)
+      Ast.ListValue v -> Ast.ListValue { v | values = v.values ++ [ defaultExpr ] }
       _ -> e
-
-
-newVariable : Variable
-newVariable =
-  { name = ""
-  , ref = 1
-  , type_ = TEmpty
-  , context = []
-  , value = EEmpty
-  }
 
 
 htmlFile : Model -> File -> Html Msg
 htmlFile model file =
   let xs = file.context
-    |> Dict.values
     |> List.filter (\e -> e.name /= "")
     |> List.map (\e -> htmlFunction model e.ref)
   in Html.div [] xs
 
 
-htmlExpr : Model -> ExprRef -> Html Msg
-htmlExpr model ref =
+htmlExpr : Model -> Ast.Expression -> Html Msg
+htmlExpr model expr =
   let
-    content = case (getVariable model ref) of
-      Nothing ->
-        [ Html.text "<<<ERROR>>>" ]
+    content = case expr.value of
+      Ast.ValueUnspecified ->
+        [ Html.text "<<<EMPTY>>>" ]
 
-      Just var ->
-        case var.value of
-          EEmpty ->
-            [ Html.text "<<<EMPTY>>>" ]
+      Ast.EmptyValue _ ->
+        [ Html.text "<<<EMPTY>>>" ]
 
-          EInt v ->
-            [ Html.text <| toString v ]
+      Ast.IntValue v ->
+        [ Html.text <| toString v.value ]
 
-          EFloat v ->
-            [ Html.text <| toString v ]
+      Ast.FloatValue v ->
+        [ Html.text <| toString v.value ]
 
-          EBool v ->
-            [ Html.text <| toString v ]
+      Ast.BoolValue v ->
+        [ Html.text <| toString v.value ]
 
-          EString v ->
-            [ Html.text <| "\"" ++ v ++ "\"" ]
+      Ast.StringValue v ->
+        [ Html.text <| "\"" ++ v.value ++ "\"" ]
 
-          EList ls ->
-            ([ Html.text "[" ] ++ (Array.map (htmlExpr model) ls |> Array.toList |> List.intersperse (Html.text ",")) ++ [ Html.text "]" ])
+      Ast.ListValue ls ->
+        ([ Html.text "[" ] ++ (List.map (htmlExpr model) ls.values |> List.intersperse (Html.text ",")) ++ [ Html.text "]" ])
 
-          EIf cond eTrue eFalse ->
-            [ Html.text "if"
-            , htmlExpr model cond
-            , Html.text "then"
-            , htmlExpr model eTrue
-            , Html.text "else"
-            , htmlExpr model eFalse
-            ]
+      Ast.IfValue v ->
+        [ Html.text "if"
+        , htmlExpr model (Maybe.withDefault defaultExpr v.cond)
+        , Html.text "then"
+        , htmlExpr model (Maybe.withDefault defaultExpr v.true)
+        , Html.text "else"
+        , htmlExpr model (Maybe.withDefault defaultExpr v.false)
+        ]
 
-          EApp e1 e2 ->
-            [ Html.text "("
-            , htmlExpr model e1
-            , htmlExpr model e2
-            , Html.text ")"
-            ]
+      --EApp e1 e2 ->
+        --[ Html.text "("
+        --, htmlExpr model e1
+        --, htmlExpr model e2
+        --, Html.text ")"
+        --]
 
   in
     Html.span
@@ -415,12 +341,12 @@ htmlExpr model ref =
         , "display" => "inline-block"
         ] ++
         (if
-          Just ref == model.currentRef
+          Just expr.ref == model.currentRef
         then
           [ "color" => "red" ]
         else
           [])
-      , onClick' (SetCurrentRef ref)
+      , onClick' (SetCurrentRef expr.ref)
       ]
       content
 
@@ -439,7 +365,7 @@ htmlFunctionSignature model ref =
       Html.div []
         [ Html.text v.name
         , Html.text " : "
-        , Html.text <| (printType v.type_)
+        --, Html.text <| (printType v.type_)
         ]
 
 
@@ -449,15 +375,15 @@ htmlFunctionBody model ref =
     Nothing ->
       Html.text "<<<ERROR>>>"
 
-    Just v ->
+    Just expr ->
       Html.div []
-        [ Html.text v.name
-        , v.context
-          |> List.map (printArg model)
-          |> String.join " "
-          |> Html.text
+        [ Html.text expr.name
+        --, expr.context
+          --|> List.map (printArg model)
+          --|> String.join " "
+          --|> Html.text
         , Html.text "="
-        , htmlExpr model ref
+        , htmlExpr model expr
         ]
 
 

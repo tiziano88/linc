@@ -3,19 +3,21 @@ module Types exposing (..)
 import Array
 import Dict
 
+import Ast
+
 
 type Msg
   = Nop
   | SetCurrentRef ExprRef
-  | MapExpr (Variable -> Variable) Int
+  | MapExpr (Ast.Expression -> Ast.Expression) Int
   | Input String
 
 
+type alias ExprRef = Int
+
 
 type alias Model =
-  { files : Dict.Dict String File
-  , currentFileName : String
-  , parent : Dict.Dict ExprRef ExprRef
+  { file : File
   , currentRef : Maybe ExprRef
   , input : String
   }
@@ -24,66 +26,5 @@ type alias Model =
 type alias File =
   { name : String
   , nextRef : ExprRef
-  , context : Dict.Dict ExprRef Variable
+  , context : List Ast.Expression
   }
-
-
-type alias Variable =
-  { name : String
-  , ref : ExprRef
-  , type_ : Type
-  , context : List ExprRef
-  , value : Expr
-  }
-
-
-type alias Definition =
-  { variable : Variable
-  , value : Expr
-  }
-
-
-type alias Node =
-  { ref : ExprRef
-  , value : Expr
-  }
-
-
-type alias TypeVariable =
-  { name : String
-  , kind : String -- ?
-  }
-
-
-type alias TypeConstructor =
-  { name : String
-  }
-
-
-type Type
-  = TEmpty -- Args.
-  | TInt
-  | TBool
-  | TString
-  | TList Type
-  | TApp Type Type
-
-
-type Expr
-  = EEmpty -- Args.
-  | EInt Int
-  | EFloat Float
-  | EBool Bool
-  | EList (Array.Array ExprRef)
-  | EString String
-  | EIf ExprRef ExprRef ExprRef
-  | EApp ExprRef ExprRef
-
-
-type Symbol -- Unused.
-  = SVar Variable
-  | STyVar TypeVariable
-  | STyCon TypeConstructor
-
-
-type alias ExprRef = Int

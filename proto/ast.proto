@@ -1,13 +1,8 @@
 syntax = "proto3";
 
-message Node {
-  string name = 1;
-
-  Expression expression = 2;
-}
-
 message Expression {
   int64 ref = 1;
+  string name = 111;
 
   message Bool {
     bool value = 1;
@@ -36,11 +31,16 @@ message Expression {
   }
 
   oneof value {
+    int32 empty_value = 9;
     Bool bool_value = 2;
     Int int_value = 3;
     Float float_value = 4;
     String string_value = 5;
     List list_value = 6;
-    /*If if_value = 7;*/
+    If if_value = 7;
+  }
+
+  oneof type1 {
+    int32 xxx = 8;
   }
 }
