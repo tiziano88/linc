@@ -192,6 +192,7 @@ view model =
       , Html.pre [] [ Html.text <| String.join "\n" <| List.map (\x -> Json.Encode.encode 2 (Ast.expressionEncoder x)) model.file.context ]
       ]
 
+
 defaultExpr : Ast.Expression
 defaultExpr =
   { ref = 42
@@ -199,6 +200,7 @@ defaultExpr =
   , type1 = Nothing
   , value = Ast.EmptyValue 41
   }
+
 
 modelButtons model file =
   [stringButtons, intButtons, floatButtons]
@@ -400,7 +402,6 @@ htmlFunctionBody model ref =
         , Html.text "="
         , htmlExpr model expr
         ]
-
 
 
 htmlFunction : Model -> ExprRef -> Html Msg
