@@ -53,6 +53,7 @@ testModel =
           Ast.IntValue
             { value = 42
             }
+        , arguments = Ast.ArgumentsUnspecified
         }
       , { ref = 2
         , name = "xxx"
@@ -61,6 +62,7 @@ testModel =
           Ast.IntValue
             { value = 42
             }
+        , arguments = Ast.ArgumentsUnspecified
         }
       ]
     }
@@ -129,34 +131,47 @@ mapExpr ref f expr =
     f expr
   else
     let
-      v = expr.value
+      newValue = mapValue ref f expr.value
+      newArguments = mapArguments ref f expr.arguments
     in
-      case v of
-        Ast.IfValue v1 ->
-          { expr
-          | value = Ast.IfValue
-            { cond = Maybe.map (mapExpr ref f) v1.cond
-            , true = Maybe.map (mapExpr ref f) v1.true
-            , false = Maybe.map (mapExpr ref f) v1.false
-            }
-          }
+      { expr
+      | value = newValue
+      , arguments = newArguments
+      }
 
-        Ast.ListValue v1 ->
-          { expr
-          | value = Ast.ListValue
-            { values = (List.map (mapExpr ref f) v1.values)
-            }
-          }
+mapValue : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Value -> Ast.Value
+mapValue ref f value =
+  case value of
+    Ast.IfValue v1 ->
+      Ast.IfValue
+        { cond = Maybe.map (mapExpr ref f) v1.cond
+        , true = Maybe.map (mapExpr ref f) v1.true
+        , false = Maybe.map (mapExpr ref f) v1.false
+        }
 
-        Ast.LambdaValue v1 ->
-          { expr
-          | value = Ast.LambdaValue
-            { v1
-            | body = Maybe.map (mapExpr ref f) v1.body
-            }
-          }
+    Ast.ListValue v1 ->
+      Ast.ListValue
+        { values = (List.map (mapExpr ref f) v1.values)
+        }
 
-        _ -> expr
+    Ast.LambdaValue v1 ->
+      Ast.LambdaValue
+        { v1
+        | body = Maybe.map (mapExpr ref f) v1.body
+        }
+
+    _ -> value
+
+
+mapArguments : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Arguments -> Ast.Arguments
+mapArguments ref f arguments =
+  case arguments of
+    Ast.Args v1 -> Ast.Args { v1 | values = List.map (mapExpr ref f) v1.values }
+    _ -> arguments
+
+--mapArguments : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Arguments -> Ast.Arguments
+--mapArguments ref f args =
+  --case args of
 
 
 getCurrentVariable : Model -> Maybe Ast.Expression
@@ -187,12 +202,12 @@ view model =
         [ onClick <| MapExpr (\v -> { v | value = Ast.BoolValue { value = False } }) 0 ]
         [ Html.text "False" ]
       , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = Ast.ListValue { values = [ { expr | ref = file.nextRef } ] } }) 1 ]
+        [ onClick <| MapExpr (\v -> { v | value = Ast.ListValue { values = [ { defaultExpr | ref = file.nextRef, value = expr.value } ] } }) 1 ]
         [ Html.text "[]" ]
       , Html.button
         [ onClick <| MapExpr (\v -> { v | value =
           Ast.IfValue
-            { cond = Just { expr | ref = file.nextRef }
+            { cond = Just { defaultExpr | ref = file.nextRef, value = expr.value }
             , true = Just { defaultExpr | ref = file.nextRef + 1 }
             , false = Just { defaultExpr | ref = file.nextRef + 2 }
             }
@@ -202,10 +217,17 @@ view model =
         [ onClick <| MapExpr (\v -> { v | value =
           Ast.LambdaValue
             { argument = Nothing
-            , body = Just { expr | ref = file.nextRef }
+            , body = Just { defaultExpr | ref = file.nextRef, value = expr.value }
             }
           }) 1 ]
         [ Html.text "λ" ]
+      , Html.button
+        [ onClick <| MapExpr (\v -> { v | arguments =
+          case v.arguments of
+            Ast.Args a -> Ast.Args { values = a.values ++ [ { defaultExpr | ref = file.nextRef } ] }
+            Ast.ArgumentsUnspecified -> Ast.Args { values = [ { defaultExpr | ref = file.nextRef } ] }
+        }) 1 ]
+        [ Html.text "arg" ]
       --, Html.button
         --[ onClick <| MapExpr (\v -> { v | value = EApp (file.nextRef) (file.nextRef + 1) }) 2 ]
         --[ Html.text "->" ]
@@ -221,10 +243,11 @@ view model =
 
 defaultExpr : Ast.Expression
 defaultExpr =
-  { ref = 42
-  , name = "kkk"
+  { ref = -1
+  , name = ""
   , type1 = Nothing
   , value = Ast.EmptyValue 41
+  , arguments = Ast.ArgumentsUnspecified
   }
 
 
@@ -386,6 +409,11 @@ htmlExpr model expr =
         --, Html.text ")"
         --]
 
+    arguments =
+      case expr.arguments of
+        Ast.ArgumentsUnspecified -> []
+        Ast.Args a -> List.map (htmlExpr model) a.values
+
   in
     Html.span
       [ style <|
@@ -401,7 +429,10 @@ htmlExpr model expr =
           [])
       , onClick' (SetCurrentRef expr.ref)
       ]
-      content
+      (case arguments of
+        [] -> content
+        _ -> [ Html.text "(" ] ++ content ++ arguments ++ [ Html.text ")" ]
+      )
 
 
 (=>) : String -> String -> (String, String)

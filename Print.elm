@@ -123,6 +123,7 @@ defaultExpr =
   , name = "error"
   , type1 = Nothing
   , value = Ast.EmptyValue 42
+  , arguments = Ast.ArgumentsUnspecified
   }
 
 getVariable : Model -> ExprRef -> Maybe Ast.Expression
@@ -138,17 +139,26 @@ getExpression ref expr =
   then
     Just expr
   else
-    case expr.value of
-      Ast.ListValue v ->
-        List.filterMap (getExpression ref) v.values |> List.head
+    let
+      e1 =
+        case expr.value of
+          Ast.ListValue v ->
+            List.filterMap (getExpression ref) v.values |> List.head
 
-      Ast.IfValue v ->
-        List.map (Maybe.map <| getExpression ref) [v.cond, v.true, v.false]
-          |> List.filterMap identity
-          |> List.filterMap identity
-          |> List.head
+          Ast.IfValue v ->
+            List.filterMap (Maybe.map <| getExpression ref) [v.cond, v.true, v.false]
+              |> List.filterMap identity
+              |> List.head
 
-      Ast.LambdaValue v ->
-        v.body `Maybe.andThen` (getExpression ref)
+          Ast.LambdaValue v ->
+            v.body `Maybe.andThen` (getExpression ref)
 
-      _ -> Nothing
+          _ -> Nothing
+
+      e2 =
+        case expr.arguments of
+          Ast.Args a -> List.filterMap (getExpression ref) a.values |> List.head
+          Ast.ArgumentsUnspecified -> Nothing
+    in
+      Maybe.oneOf [ e1, e2 ]
+

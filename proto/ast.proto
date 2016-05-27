@@ -57,6 +57,14 @@ message Expression {
     Ref ref_value = 11;
   }
 
+  message Arguments {
+    repeated Expression values = 1;
+  }
+
+  oneof arguments {
+    Arguments args = 50;
+  }
+
   Type type1 = 89;
 }
 
