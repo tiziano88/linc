@@ -48,7 +48,7 @@ testModel =
     , context =
       [ { ref = 1
         , name = "main"
-        , type1 = Ast.Xxx 42
+        , type1 = Nothing
         , value =
           Ast.IntValue
             { value = 42
@@ -196,7 +196,7 @@ defaultExpr : Ast.Expression
 defaultExpr =
   { ref = 42
   , name = "kkk"
-  , type1 = Ast.Xxx 41
+  , type1 = Nothing
   , value = Ast.EmptyValue 41
   }
 

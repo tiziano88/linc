@@ -102,8 +102,8 @@ fileEncoder v =
 type alias Expression =
   { ref : Int -- 1
   , name : String -- 111
+  , type1 : Maybe Type -- 8
   , value : Value
-  , type1 : Type1
   }
 
 
@@ -145,33 +145,13 @@ valueEncoder v =
     IfValue x -> Just ("ifValue", expression_IfEncoder x)
 
 
-type Type1
-  = Type1Unspecified
-  | Xxx Int
-
-
-type1Decoder : JD.Decoder Type1
-type1Decoder =
-  JD.oneOf
-    [ JD.map Xxx ("xxx" := JD.int)
-    , JD.succeed Type1Unspecified
-    ]
-
-
-type1Encoder : Type1 -> Maybe (String, JE.Value)
-type1Encoder v =
-  case v of
-    Type1Unspecified -> Nothing
-    Xxx x -> Just ("xxx", JE.int x)
-
-
 expressionDecoder : JD.Decoder Expression
 expressionDecoder =
   Expression
     <$> (requiredFieldDecoder "ref" 0 JD.int)
     <*> (requiredFieldDecoder "name" "" JD.string)
+    <*> (optionalFieldDecoder "type1" typeDecoder)
     <*> valueDecoder
-    <*> type1Decoder
 
 
 expressionEncoder : Expression -> JE.Value
@@ -179,8 +159,8 @@ expressionEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
     , (requiredFieldEncoder "name" JE.string "" v.name)
+    , (optionalEncoder "type1" typeEncoder v.type1)
     , (valueEncoder v.value)
-    , (type1Encoder v.type1)
     ]
 
 
@@ -295,4 +275,99 @@ expression_IfEncoder v =
     [ (optionalEncoder "cond" expressionEncoder v.cond)
     , (optionalEncoder "true" expressionEncoder v.true)
     , (optionalEncoder "false" expressionEncoder v.false)
+    ]
+
+
+type alias Type =
+  { tvalue : Tvalue
+  }
+
+
+type Tvalue
+  = TvalueUnspecified
+  | Primitive Type_PrimitiveType
+  | Compound Type_CompoundType
+
+
+tvalueDecoder : JD.Decoder Tvalue
+tvalueDecoder =
+  JD.oneOf
+    [ JD.map Primitive ("primitive" := type_PrimitiveTypeDecoder)
+    , JD.map Compound ("compound" := type_CompoundTypeDecoder)
+    , JD.succeed TvalueUnspecified
+    ]
+
+
+tvalueEncoder : Tvalue -> Maybe (String, JE.Value)
+tvalueEncoder v =
+  case v of
+    TvalueUnspecified -> Nothing
+    Primitive x -> Just ("primitive", type_PrimitiveTypeEncoder x)
+    Compound x -> Just ("compound", type_CompoundTypeEncoder x)
+
+
+type Type_PrimitiveType
+  = Type_PrimitiveTypeUnspecified -- 0
+  | Type_Int -- 1
+  | Type_Bool -- 2
+
+
+typeDecoder : JD.Decoder Type
+typeDecoder =
+  Type
+    <$> tvalueDecoder
+
+
+type_PrimitiveTypeDecoder : JD.Decoder Type_PrimitiveType
+type_PrimitiveTypeDecoder =
+  let
+    lookup s = case s of
+      "PRIMITIVE_TYPE_UNSPECIFIED" -> Type_PrimitiveTypeUnspecified
+      "INT" -> Type_Int
+      "BOOL" -> Type_Bool
+      _ -> Type_PrimitiveTypeUnspecified
+  in
+    JD.map lookup JD.string
+
+
+type_PrimitiveTypeDefault : Type_PrimitiveType
+type_PrimitiveTypeDefault = Type_PrimitiveTypeUnspecified
+
+
+typeEncoder : Type -> JE.Value
+typeEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (tvalueEncoder v.tvalue)
+    ]
+
+
+type_PrimitiveTypeEncoder : Type_PrimitiveType -> JE.Value
+type_PrimitiveTypeEncoder v =
+  let
+    lookup s = case s of
+      Type_PrimitiveTypeUnspecified -> "PRIMITIVE_TYPE_UNSPECIFIED"
+      Type_Int -> "INT"
+      Type_Bool -> "BOOL"
+  in
+    JE.string <| lookup v
+
+
+type alias Type_CompoundType =
+  { x : Maybe Type -- 1
+  , y : Maybe Type -- 2
+  }
+
+
+type_CompoundTypeDecoder : JD.Decoder Type_CompoundType
+type_CompoundTypeDecoder =
+  Type_CompoundType
+    <$> (optionalFieldDecoder "x" typeDecoder)
+    <*> (optionalFieldDecoder "y" typeDecoder)
+
+
+type_CompoundTypeEncoder : Type_CompoundType -> JE.Value
+type_CompoundTypeEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (optionalEncoder "x" typeEncoder v.x)
+    , (optionalEncoder "y" typeEncoder v.y)
     ]

@@ -46,7 +46,23 @@ message Expression {
     If if_value = 7;
   }
 
-  oneof type1 {
-    int32 xxx = 8;
+  Type type1 = 8;
+}
+
+message Type {
+  enum PrimitiveType {
+    PRIMITIVE_TYPE_UNSPECIFIED = 0;
+    INT = 1;
+    BOOL = 2;
+  }
+
+  message CompoundType {
+    Type x = 1;
+    Type y = 2;
+  }
+
+  oneof tvalue {
+    PrimitiveType primitive = 1;
+    CompoundType compound = 2;
   }
 }

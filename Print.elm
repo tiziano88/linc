@@ -60,7 +60,7 @@ printArg model ref =
       v.name
 
 
-printType : Ast.Type1 -> String
+printType : Ast.Type -> String
 printType t =
   "xxx"
   --case t of
@@ -121,7 +121,7 @@ defaultExpr : Ast.Expression
 defaultExpr =
   { ref = 888
   , name = "error"
-  , type1 = Ast.Xxx 42
+  , type1 = Nothing
   , value = Ast.EmptyValue 42
   }
 
