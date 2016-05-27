@@ -141,9 +141,14 @@ getExpression ref expr =
     case expr.value of
       Ast.ListValue v ->
         List.filterMap (getExpression ref) v.values |> List.head
+
       Ast.IfValue v ->
         List.map (Maybe.map <| getExpression ref) [v.cond, v.true, v.false]
           |> List.filterMap identity
           |> List.filterMap identity
           |> List.head
+
+      Ast.LambdaValue v ->
+        v.body `Maybe.andThen` (getExpression ref)
+
       _ -> Nothing

@@ -36,6 +36,15 @@ message Expression {
     Expression false = 3;
   }
 
+  message Lambda {
+    Expression argument = 1;
+    Expression body = 2;
+  }
+
+  message Ref {
+    int64 ref = 1;
+  }
+
   oneof value {
     int32 empty_value = 9;
     Bool bool_value = 2;
@@ -44,9 +53,21 @@ message Expression {
     String string_value = 5;
     List list_value = 6;
     If if_value = 7;
+    Lambda lambda_value = 10;
+    Ref ref_value = 11;
   }
 
-  Type type1 = 8;
+  Type type1 = 89;
+}
+
+message Symbol {
+  int64 ref = 1;
+
+  oneof svalue {
+    string constructor = 2;
+    string variable = 3;
+    bool placeholder = 4;
+  }
 }
 
 message Type {

@@ -102,7 +102,7 @@ fileEncoder v =
 type alias Expression =
   { ref : Int -- 1
   , name : String -- 111
-  , type1 : Maybe Type -- 8
+  , type1 : Maybe Type -- 89
   , value : Value
   }
 
@@ -116,6 +116,8 @@ type Value
   | StringValue Expression_String
   | ListValue Expression_List
   | IfValue Expression_If
+  | LambdaValue Expression_Lambda
+  | RefValue Expression_Ref
 
 
 valueDecoder : JD.Decoder Value
@@ -128,6 +130,8 @@ valueDecoder =
     , JD.map StringValue ("stringValue" := expression_StringDecoder)
     , JD.map ListValue ("listValue" := expression_ListDecoder)
     , JD.map IfValue ("ifValue" := expression_IfDecoder)
+    , JD.map LambdaValue ("lambdaValue" := expression_LambdaDecoder)
+    , JD.map RefValue ("refValue" := expression_RefDecoder)
     , JD.succeed ValueUnspecified
     ]
 
@@ -143,6 +147,8 @@ valueEncoder v =
     StringValue x -> Just ("stringValue", expression_StringEncoder x)
     ListValue x -> Just ("listValue", expression_ListEncoder x)
     IfValue x -> Just ("ifValue", expression_IfEncoder x)
+    LambdaValue x -> Just ("lambdaValue", expression_LambdaEncoder x)
+    RefValue x -> Just ("refValue", expression_RefEncoder x)
 
 
 expressionDecoder : JD.Decoder Expression
@@ -275,6 +281,92 @@ expression_IfEncoder v =
     [ (optionalEncoder "cond" expressionEncoder v.cond)
     , (optionalEncoder "true" expressionEncoder v.true)
     , (optionalEncoder "false" expressionEncoder v.false)
+    ]
+
+
+type alias Expression_Lambda =
+  { argument : Maybe Expression -- 1
+  , body : Maybe Expression -- 2
+  }
+
+
+expression_LambdaDecoder : JD.Decoder Expression_Lambda
+expression_LambdaDecoder =
+  Expression_Lambda
+    <$> (optionalFieldDecoder "argument" expressionDecoder)
+    <*> (optionalFieldDecoder "body" expressionDecoder)
+
+
+expression_LambdaEncoder : Expression_Lambda -> JE.Value
+expression_LambdaEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (optionalEncoder "argument" expressionEncoder v.argument)
+    , (optionalEncoder "body" expressionEncoder v.body)
+    ]
+
+
+type alias Expression_Ref =
+  { ref : Int -- 1
+  }
+
+
+expression_RefDecoder : JD.Decoder Expression_Ref
+expression_RefDecoder =
+  Expression_Ref
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+
+
+expression_RefEncoder : Expression_Ref -> JE.Value
+expression_RefEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    ]
+
+
+type alias Symbol =
+  { ref : Int -- 1
+  , svalue : Svalue
+  }
+
+
+type Svalue
+  = SvalueUnspecified
+  | Constructor String
+  | Variable String
+  | Placeholder Bool
+
+
+svalueDecoder : JD.Decoder Svalue
+svalueDecoder =
+  JD.oneOf
+    [ JD.map Constructor ("constructor" := JD.string)
+    , JD.map Variable ("variable" := JD.string)
+    , JD.map Placeholder ("placeholder" := JD.bool)
+    , JD.succeed SvalueUnspecified
+    ]
+
+
+svalueEncoder : Svalue -> Maybe (String, JE.Value)
+svalueEncoder v =
+  case v of
+    SvalueUnspecified -> Nothing
+    Constructor x -> Just ("constructor", JE.string x)
+    Variable x -> Just ("variable", JE.string x)
+    Placeholder x -> Just ("placeholder", JE.bool x)
+
+
+symbolDecoder : JD.Decoder Symbol
+symbolDecoder =
+  Symbol
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> svalueDecoder
+
+
+symbolEncoder : Symbol -> JE.Value
+symbolEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    , (svalueEncoder v.svalue)
     ]
 
 

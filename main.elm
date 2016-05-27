@@ -54,6 +54,14 @@ testModel =
             { value = 42
             }
         }
+      , { ref = 2
+        , name = "xxx"
+        , type1 = Nothing
+        , value =
+          Ast.IntValue
+            { value = 42
+            }
+        }
       ]
     }
   , currentRef = Nothing
@@ -132,12 +140,22 @@ mapExpr ref f expr =
             , false = Maybe.map (mapExpr ref f) v1.false
             }
           }
+
         Ast.ListValue v1 ->
           { expr
           | value = Ast.ListValue
             { values = (List.map (mapExpr ref f) v1.values)
             }
           }
+
+        Ast.LambdaValue v1 ->
+          { expr
+          | value = Ast.LambdaValue
+            { v1
+            | body = Maybe.map (mapExpr ref f) v1.body
+            }
+          }
+
         _ -> expr
 
 
@@ -180,6 +198,14 @@ view model =
             }
           }) 3 ]
         [ Html.text "if" ]
+      , Html.button
+        [ onClick <| MapExpr (\v -> { v | value =
+          Ast.LambdaValue
+            { argument = Nothing
+            , body = Just { expr | ref = file.nextRef }
+            }
+          }) 1 ]
+        [ Html.text "λ" ]
       --, Html.button
         --[ onClick <| MapExpr (\v -> { v | value = EApp (file.nextRef) (file.nextRef + 1) }) 2 ]
         --[ Html.text "->" ]
@@ -189,7 +215,7 @@ view model =
       ] ++ (modelButtons model file) ++ (typeButtons model file) ++
       [ Html.div [] [ Html.text <| toString model ]
       , Html.pre [] [ (htmlFile model model.file) ]
-      , Html.pre [] [ Html.text <| String.join "\n" <| List.map (\x -> Json.Encode.encode 2 (Ast.expressionEncoder x)) model.file.context ]
+      , Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
       ]
 
 
@@ -341,6 +367,16 @@ htmlExpr model expr =
         , htmlExpr model (Maybe.withDefault defaultExpr v.true)
         , Html.text "else"
         , htmlExpr model (Maybe.withDefault defaultExpr v.false)
+        ]
+
+      Ast.LambdaValue v ->
+        [ Html.text "λ"
+        , Html.text "→"
+        , htmlExpr model (Maybe.withDefault defaultExpr v.body)
+        ]
+
+      Ast.RefValue v ->
+        [ Html.text "ref"
         ]
 
       --EApp e1 e2 ->
