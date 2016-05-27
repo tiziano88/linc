@@ -17,14 +17,7 @@ type alias ExprRef = Int
 
 
 type alias Model =
-  { file : File
+  { file : Ast.File
   , currentRef : Maybe ExprRef
   , input : String
-  }
-
-
-type alias File =
-  { name : String
-  , nextRef : ExprRef
-  , context : List Ast.Expression
   }

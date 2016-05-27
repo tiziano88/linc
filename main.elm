@@ -299,7 +299,7 @@ append ref =
       _ -> e
 
 
-htmlFile : Model -> File -> Html Msg
+htmlFile : Model -> Ast.File -> Html Msg
 htmlFile model file =
   let xs = file.context
     |> List.filter (\e -> e.name /= "")

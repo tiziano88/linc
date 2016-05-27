@@ -43,7 +43,7 @@ printFunction model ref =
     ]
 
 
-printFile : Model -> File -> String
+printFile : Model -> Ast.File -> String
 printFile model file =
   file.context
     |> List.map (\v -> v.ref)

@@ -1,5 +1,11 @@
 syntax = "proto3";
 
+message File {
+  int64 next_ref = 1;
+  string name = 2;
+  repeated Expression context = 3;
+}
+
 message Expression {
   int64 ref = 1;
   string name = 111;

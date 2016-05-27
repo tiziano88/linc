@@ -75,6 +75,30 @@ repeatedFieldEncoder name encoder v =
       Just (name, JE.list <| List.map encoder v)
 
 
+type alias File =
+  { nextRef : Int -- 1
+  , name : String -- 2
+  , context : List Expression -- 3
+  }
+
+
+fileDecoder : JD.Decoder File
+fileDecoder =
+  File
+    <$> (requiredFieldDecoder "nextRef" 0 JD.int)
+    <*> (requiredFieldDecoder "name" "" JD.string)
+    <*> (repeatedFieldDecoder "context" expressionDecoder)
+
+
+fileEncoder : File -> JE.Value
+fileEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "nextRef" JE.int 0 v.nextRef)
+    , (requiredFieldEncoder "name" JE.string "" v.name)
+    , (repeatedFieldEncoder "context" expressionEncoder v.context)
+    ]
+
+
 type alias Expression =
   { ref : Int -- 1
   , name : String -- 111
