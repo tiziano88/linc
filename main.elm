@@ -5,6 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode
+import Json.Encode
 import String
 import Task
 import Time
@@ -84,7 +85,7 @@ update action model =
       case model.currentRef of
         Nothing -> noEffects model
         Just ref ->
-          case getCurrentVariable model of
+          case Debug.log "model" (getCurrentVariable model) of
             Nothing -> noEffects
               model
               --{ model
@@ -108,6 +109,7 @@ update action model =
                   | context =
                     fi.context
                       |> List.map (mapExpr ref f)
+                  , nextRef = fi.nextRef + n
                   }
                 }
 
@@ -123,13 +125,19 @@ mapExpr ref f expr =
     in
       case v of
         Ast.IfValue v1 ->
-          { expr | value = Ast.IfValue
+          { expr
+          | value = Ast.IfValue
             { cond = Maybe.map (mapExpr ref f) v1.cond
             , true = Maybe.map (mapExpr ref f) v1.true
             , false = Maybe.map (mapExpr ref f) v1.false
             }
           }
-        Ast.ListValue v1 -> expr
+        Ast.ListValue v1 ->
+          { expr
+          | value = Ast.ListValue
+            { values = (List.map (mapExpr ref f) v1.values)
+            }
+          }
         _ -> expr
 
 
@@ -138,13 +146,13 @@ getCurrentVariable model =
   case model.currentRef of
     Nothing -> Nothing
     Just ref ->
-      -- XXX
-      Nothing
+      getVariable model ref
 
 
 view model =
   let
     file = model.file
+    expr = Maybe.withDefault defaultExpr <| getCurrentVariable model
   in
     Html.div [] <|
       [ selectComponent ["aaa", "bbb", "ccc"]
@@ -161,10 +169,16 @@ view model =
         [ onClick <| MapExpr (\v -> { v | value = Ast.BoolValue { value = False } }) 0 ]
         [ Html.text "False" ]
       , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = Ast.ListValue { values = [] } }) 0 ]
+        [ onClick <| MapExpr (\v -> { v | value = Ast.ListValue { values = [ { expr | ref = file.nextRef } ] } }) 1 ]
         [ Html.text "[]" ]
       , Html.button
-        [ onClick <| MapExpr (\v -> { v | value = Ast.IfValue { cond = Just defaultExpr, true = Just defaultExpr, false = Just defaultExpr } }) 3 ]
+        [ onClick <| MapExpr (\v -> { v | value =
+          Ast.IfValue
+            { cond = Just { expr | ref = file.nextRef }
+            , true = Just { defaultExpr | ref = file.nextRef + 1 }
+            , false = Just { defaultExpr | ref = file.nextRef + 2 }
+            }
+          }) 3 ]
         [ Html.text "if" ]
       --, Html.button
         --[ onClick <| MapExpr (\v -> { v | value = EApp (file.nextRef) (file.nextRef + 1) }) 2 ]
@@ -175,6 +189,7 @@ view model =
       ] ++ (modelButtons model file) ++ (typeButtons model file) ++
       [ Html.div [] [ Html.text <| toString model ]
       , Html.pre [] [ (htmlFile model model.file) ]
+      , Html.pre [] [ Html.text <| String.join "\n" <| List.map (\x -> Json.Encode.encode 2 (Ast.expressionEncoder x)) model.file.context ]
       ]
 
 defaultExpr : Ast.Expression
@@ -264,7 +279,7 @@ decrement : Ast.Expression -> Ast.Expression
 decrement =
   mapVariable <|
     \e -> case e of
-      Ast.IntValue v -> Ast.IntValue { v | value = v.value + 1 }
+      Ast.IntValue v -> Ast.IntValue { v | value = v.value - 1 }
       _ -> e
 
 
@@ -280,7 +295,7 @@ append : ExprRef -> Ast.Expression -> Ast.Expression
 append ref =
   mapVariable <|
     \e -> case e of
-      Ast.ListValue v -> Ast.ListValue { v | values = v.values ++ [ defaultExpr ] }
+      Ast.ListValue v -> Ast.ListValue { v | values = v.values ++ [ { defaultExpr | ref = ref } ] }
       _ -> e
 
 

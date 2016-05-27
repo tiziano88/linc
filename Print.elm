@@ -139,6 +139,11 @@ getExpression ref expr =
     Just expr
   else
     case expr.value of
-      Ast.ListValue _ -> Nothing
-      Ast.IfValue _ -> Nothing
+      Ast.ListValue v ->
+        List.filterMap (getExpression ref) v.values |> List.head
+      Ast.IfValue v ->
+        List.map (Maybe.map <| getExpression ref) [v.cond, v.true, v.false]
+          |> List.filterMap identity
+          |> List.filterMap identity
+          |> List.head
       _ -> Nothing
