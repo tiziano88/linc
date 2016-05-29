@@ -15,7 +15,8 @@ printFunctionSignature model ref =
       "<<<ERROR>>>"
 
     Just v ->
-      v.name ++ " : " -- ++ (printType v.type_)
+      (Maybe.withDefault "" <| Maybe.map printLabel v.label)
+        ++ " : " -- ++ (printType v.type_)
 
 
 printFunctionBody : Model -> ExprRef -> String
@@ -26,7 +27,7 @@ printFunctionBody model ref =
 
     Just v ->
       String.join " "
-        [ v.name
+        [ Maybe.withDefault "" <| Maybe.map printLabel v.label
         --, v.context
           --|> List.map (printArg model)
           --|> String.join " "
@@ -43,6 +44,11 @@ printFunction model ref =
     ]
 
 
+printLabel : Ast.Label -> String
+printLabel label =
+  label.name
+
+
 printFile : Model -> Ast.File -> String
 printFile model file =
   file.context
@@ -57,7 +63,9 @@ printArg model ref =
     Nothing ->
       "<<<ERROR>>>"
     Just v ->
-      v.name
+      case v.label of
+        Just l -> l.name
+        _ -> "<<<ERROR>>>"
 
 
 printType : Ast.Type -> String
@@ -120,7 +128,7 @@ printExpr model expr =
 defaultExpr : Ast.Expression
 defaultExpr =
   { ref = 888
-  , name = "error"
+  , label = Nothing
   , type1 = Nothing
   , value = Ast.EmptyValue 42
   , arguments = Ast.ArgumentsUnspecified

@@ -21,3 +21,8 @@ type alias Model =
   , currentRef : Maybe ExprRef
   , input : String
   }
+
+type Node
+  = Expr Ast.Expression
+  | VarDef Ast.VariableDefinition
+  | TypeAlias Ast.TypeAlias

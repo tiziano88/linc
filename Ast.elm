@@ -104,7 +104,7 @@ fileEncoder v =
 
 type alias Expression =
   { ref : Int -- 1
-  , name : String -- 111
+  , label : Maybe Label -- 111
   , type1 : Maybe Type -- 89
   , value : Value
   , arguments : Arguments
@@ -179,7 +179,7 @@ expressionDecoder : JD.Decoder Expression
 expressionDecoder =
   Expression
     <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> (requiredFieldDecoder "name" "" JD.string)
+    <*> (optionalFieldDecoder "label" labelDecoder)
     <*> (optionalFieldDecoder "type1" typeDecoder)
     <*> valueDecoder
     <*> argumentsDecoder
@@ -189,7 +189,7 @@ expressionEncoder : Expression -> JE.Value
 expressionEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
-    , (requiredFieldEncoder "name" JE.string "" v.name)
+    , (optionalEncoder "label" labelEncoder v.label)
     , (optionalEncoder "type1" typeEncoder v.type1)
     , (valueEncoder v.value)
     , (argumentsEncoder v.arguments)
@@ -369,7 +369,7 @@ expression_ArgumentsEncoder v =
 
 type alias VariableDefinition =
   { ref : Int -- 1
-  , name : String -- 2
+  , label : Maybe Label -- 2
   , value : Maybe Expression -- 3
   }
 
@@ -378,7 +378,7 @@ variableDefinitionDecoder : JD.Decoder VariableDefinition
 variableDefinitionDecoder =
   VariableDefinition
     <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> (requiredFieldDecoder "name" "" JD.string)
+    <*> (optionalFieldDecoder "label" labelDecoder)
     <*> (optionalFieldDecoder "value" expressionDecoder)
 
 
@@ -386,14 +386,14 @@ variableDefinitionEncoder : VariableDefinition -> JE.Value
 variableDefinitionEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
-    , (requiredFieldEncoder "name" JE.string "" v.name)
+    , (optionalEncoder "label" labelEncoder v.label)
     , (optionalEncoder "value" expressionEncoder v.value)
     ]
 
 
 type alias TypeAlias =
   { ref : Int -- 1
-  , name : String -- 10
+  , label : Maybe Label -- 2
   , type1 : Maybe Type -- 20
   }
 
@@ -402,7 +402,7 @@ typeAliasDecoder : JD.Decoder TypeAlias
 typeAliasDecoder =
   TypeAlias
     <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> (requiredFieldDecoder "name" "" JD.string)
+    <*> (optionalFieldDecoder "label" labelDecoder)
     <*> (optionalFieldDecoder "type1" typeDecoder)
 
 
@@ -410,7 +410,7 @@ typeAliasEncoder : TypeAlias -> JE.Value
 typeAliasEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
-    , (requiredFieldEncoder "name" JE.string "" v.name)
+    , (optionalEncoder "label" labelEncoder v.label)
     , (optionalEncoder "type1" typeEncoder v.type1)
     ]
 
@@ -601,7 +601,7 @@ type_CompoundTypeEncoder v =
 
 type alias TypeConstructor =
   { ref : Int -- 1
-  , name : String -- 2
+  , label : Maybe Label -- 2
   }
 
 
@@ -609,14 +609,14 @@ typeConstructorDecoder : JD.Decoder TypeConstructor
 typeConstructorDecoder =
   TypeConstructor
     <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> (requiredFieldDecoder "name" "" JD.string)
+    <*> (optionalFieldDecoder "label" labelDecoder)
 
 
 typeConstructorEncoder : TypeConstructor -> JE.Value
 typeConstructorEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
-    , (requiredFieldEncoder "name" JE.string "" v.name)
+    , (optionalEncoder "label" labelEncoder v.label)
     ]
 
 
@@ -664,4 +664,22 @@ patternEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
     , (vvvEncoder v.vvv)
+    ]
+
+
+type alias Label =
+  { name : String -- 1
+  }
+
+
+labelDecoder : JD.Decoder Label
+labelDecoder =
+  Label
+    <$> (requiredFieldDecoder "name" "" JD.string)
+
+
+labelEncoder : Label -> JE.Value
+labelEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "name" JE.string "" v.name)
     ]

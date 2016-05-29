@@ -47,7 +47,7 @@ testModel =
     , nextRef = 888
     , typeAliases =
       [ { ref = 222
-        , name = "al"
+        , label = Nothing
         , type1 = Just
           { ref = 223
           , tvalue = Ast.Primitive Ast.Type_Int
@@ -56,7 +56,9 @@ testModel =
       ]
     , context =
       [ { ref = 1
-        , name = "main"
+        , label = Just
+          { name = "main"
+          }
         , type1 = Nothing
         , value =
           Ast.IntValue
@@ -65,7 +67,9 @@ testModel =
         , arguments = Ast.ArgumentsUnspecified
         }
       , { ref = 2
-        , name = "xxx"
+        , label = Just
+          { name = "mainxxx"
+          }
         , type1 = Nothing
         , value =
           Ast.IntValue
@@ -198,9 +202,9 @@ view model =
       , Html.input
         [ onInput Input ]
         []
-      , Html.button
-        [ onClick <| MapExpr (\v -> { v | name = model.input }) 0 ]
-        [ Html.text "setName" ]
+      --, Html.button
+        --[ onClick <| MapExpr (\v -> { v | name = model.input }) 0 ]
+        --[ Html.text "setName" ]
       , Html.button
         [ onClick <| MapExpr (\v -> { v | value = Ast.IntValue { value = 0 } }) 0 ]
         [ Html.text "0" ]
@@ -250,7 +254,7 @@ view model =
 defaultExpr : Ast.Expression
 defaultExpr =
   { ref = -1
-  , name = ""
+  , label = Nothing
   , type1 = Nothing
   , value = Ast.EmptyValue 41
   , arguments = Ast.ArgumentsUnspecified
@@ -360,7 +364,7 @@ append ref =
 htmlFile : Model -> Ast.File -> Html Msg
 htmlFile model file =
   let xs = file.context
-    |> List.filter (\e -> e.name /= "")
+    |> List.filter (\e -> e.label /= Nothing)
     |> List.map (\e -> htmlFunction model e.ref)
   in Html.div [] xs
 
@@ -455,7 +459,7 @@ htmlFunctionSignature model ref =
 
     Just v ->
       Html.div []
-        [ Html.text v.name
+        [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel v.label
         , Html.text " : "
         --, Html.text <| (printType v.type_)
         ]
@@ -469,7 +473,7 @@ htmlFunctionBody model ref =
 
     Just expr ->
       Html.div []
-        [ Html.text expr.name
+        [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel expr.label
         --, expr.context
           --|> List.map (printArg model)
           --|> String.join " "
