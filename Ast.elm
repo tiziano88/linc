@@ -79,6 +79,7 @@ type alias File =
   { nextRef : Int -- 1
   , name : String -- 2
   , context : List Expression -- 3
+  , typeAliases : List TypeAlias -- 4
   }
 
 
@@ -88,6 +89,7 @@ fileDecoder =
     <$> (requiredFieldDecoder "nextRef" 0 JD.int)
     <*> (requiredFieldDecoder "name" "" JD.string)
     <*> (repeatedFieldDecoder "context" expressionDecoder)
+    <*> (repeatedFieldDecoder "typeAliases" typeAliasDecoder)
 
 
 fileEncoder : File -> JE.Value
@@ -96,6 +98,7 @@ fileEncoder v =
     [ (requiredFieldEncoder "nextRef" JE.int 0 v.nextRef)
     , (requiredFieldEncoder "name" JE.string "" v.name)
     , (repeatedFieldEncoder "context" expressionEncoder v.context)
+    , (repeatedFieldEncoder "typeAliases" typeAliasEncoder v.typeAliases)
     ]
 
 
@@ -364,6 +367,54 @@ expression_ArgumentsEncoder v =
     ]
 
 
+type alias VariableDefinition =
+  { ref : Int -- 1
+  , name : String -- 2
+  , value : Maybe Expression -- 3
+  }
+
+
+variableDefinitionDecoder : JD.Decoder VariableDefinition
+variableDefinitionDecoder =
+  VariableDefinition
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> (requiredFieldDecoder "name" "" JD.string)
+    <*> (optionalFieldDecoder "value" expressionDecoder)
+
+
+variableDefinitionEncoder : VariableDefinition -> JE.Value
+variableDefinitionEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    , (requiredFieldEncoder "name" JE.string "" v.name)
+    , (optionalEncoder "value" expressionEncoder v.value)
+    ]
+
+
+type alias TypeAlias =
+  { ref : Int -- 1
+  , name : String -- 10
+  , type1 : Maybe Type -- 20
+  }
+
+
+typeAliasDecoder : JD.Decoder TypeAlias
+typeAliasDecoder =
+  TypeAlias
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> (requiredFieldDecoder "name" "" JD.string)
+    <*> (optionalFieldDecoder "type1" typeDecoder)
+
+
+typeAliasEncoder : TypeAlias -> JE.Value
+typeAliasEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    , (requiredFieldEncoder "name" JE.string "" v.name)
+    , (optionalEncoder "type1" typeEncoder v.type1)
+    ]
+
+
 type alias Symbol =
   { ref : Int -- 1
   , svalue : Svalue
@@ -412,7 +463,8 @@ symbolEncoder v =
 
 
 type alias Type =
-  { tvalue : Tvalue
+  { ref : Int -- 1
+  , tvalue : Tvalue
   }
 
 
@@ -420,6 +472,7 @@ type Tvalue
   = TvalueUnspecified
   | Primitive Type_PrimitiveType
   | Compound Type_CompoundType
+  | RefType Type_RefType
 
 
 tvalueDecoder : JD.Decoder Tvalue
@@ -427,6 +480,7 @@ tvalueDecoder =
   JD.oneOf
     [ JD.map Primitive ("primitive" := type_PrimitiveTypeDecoder)
     , JD.map Compound ("compound" := type_CompoundTypeDecoder)
+    , JD.map RefType ("refType" := type_RefTypeDecoder)
     , JD.succeed TvalueUnspecified
     ]
 
@@ -437,18 +491,20 @@ tvalueEncoder v =
     TvalueUnspecified -> Nothing
     Primitive x -> Just ("primitive", type_PrimitiveTypeEncoder x)
     Compound x -> Just ("compound", type_CompoundTypeEncoder x)
+    RefType x -> Just ("refType", type_RefTypeEncoder x)
 
 
 type Type_PrimitiveType
   = Type_PrimitiveTypeUnspecified -- 0
   | Type_Int -- 1
-  | Type_Bool -- 2
+  | Type_Float -- 2
 
 
 typeDecoder : JD.Decoder Type
 typeDecoder =
   Type
-    <$> tvalueDecoder
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> tvalueDecoder
 
 
 type_PrimitiveTypeDecoder : JD.Decoder Type_PrimitiveType
@@ -457,7 +513,7 @@ type_PrimitiveTypeDecoder =
     lookup s = case s of
       "PRIMITIVE_TYPE_UNSPECIFIED" -> Type_PrimitiveTypeUnspecified
       "INT" -> Type_Int
-      "BOOL" -> Type_Bool
+      "FLOAT" -> Type_Float
       _ -> Type_PrimitiveTypeUnspecified
   in
     JD.map lookup JD.string
@@ -470,7 +526,8 @@ type_PrimitiveTypeDefault = Type_PrimitiveTypeUnspecified
 typeEncoder : Type -> JE.Value
 typeEncoder v =
   JE.object <| List.filterMap identity <|
-    [ (tvalueEncoder v.tvalue)
+    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    , (tvalueEncoder v.tvalue)
     ]
 
 
@@ -480,9 +537,45 @@ type_PrimitiveTypeEncoder v =
     lookup s = case s of
       Type_PrimitiveTypeUnspecified -> "PRIMITIVE_TYPE_UNSPECIFIED"
       Type_Int -> "INT"
-      Type_Bool -> "BOOL"
+      Type_Float -> "FLOAT"
   in
     JE.string <| lookup v
+
+
+type alias Type_RefType =
+  { ref : Int -- 1
+  }
+
+
+type_RefTypeDecoder : JD.Decoder Type_RefType
+type_RefTypeDecoder =
+  Type_RefType
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+
+
+type_RefTypeEncoder : Type_RefType -> JE.Value
+type_RefTypeEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    ]
+
+
+type alias Type_OpaqueType =
+  { name : String -- 1
+  }
+
+
+type_OpaqueTypeDecoder : JD.Decoder Type_OpaqueType
+type_OpaqueTypeDecoder =
+  Type_OpaqueType
+    <$> (requiredFieldDecoder "name" "" JD.string)
+
+
+type_OpaqueTypeEncoder : Type_OpaqueType -> JE.Value
+type_OpaqueTypeEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "name" JE.string "" v.name)
+    ]
 
 
 type alias Type_CompoundType =
@@ -503,4 +596,72 @@ type_CompoundTypeEncoder v =
   JE.object <| List.filterMap identity <|
     [ (optionalEncoder "x" typeEncoder v.x)
     , (optionalEncoder "y" typeEncoder v.y)
+    ]
+
+
+type alias TypeConstructor =
+  { ref : Int -- 1
+  , name : String -- 2
+  }
+
+
+typeConstructorDecoder : JD.Decoder TypeConstructor
+typeConstructorDecoder =
+  TypeConstructor
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> (requiredFieldDecoder "name" "" JD.string)
+
+
+typeConstructorEncoder : TypeConstructor -> JE.Value
+typeConstructorEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    , (requiredFieldEncoder "name" JE.string "" v.name)
+    ]
+
+
+type alias Pattern =
+  { ref : Int -- 1
+  , vvv : Vvv
+  }
+
+
+type Vvv
+  = VvvUnspecified
+  | TypeConstructorValue TypeConstructor
+  | SymbolValue Symbol
+  | PatternValue Pattern
+
+
+vvvDecoder : JD.Decoder Vvv
+vvvDecoder =
+  JD.oneOf
+    [ JD.map TypeConstructorValue ("typeConstructorValue" := typeConstructorDecoder)
+    , JD.map SymbolValue ("symbolValue" := symbolDecoder)
+    , JD.map PatternValue ("patternValue" := patternDecoder)
+    , JD.succeed VvvUnspecified
+    ]
+
+
+vvvEncoder : Vvv -> Maybe (String, JE.Value)
+vvvEncoder v =
+  case v of
+    VvvUnspecified -> Nothing
+    TypeConstructorValue x -> Just ("typeConstructorValue", typeConstructorEncoder x)
+    SymbolValue x -> Just ("symbolValue", symbolEncoder x)
+    PatternValue x -> Just ("patternValue", patternEncoder x)
+
+
+patternDecoder : JD.Decoder Pattern
+patternDecoder =
+  Pattern
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> vvvDecoder
+
+
+patternEncoder : Pattern -> JE.Value
+patternEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    , (vvvEncoder v.vvv)
     ]

@@ -45,6 +45,15 @@ testModel =
   { file =
     { name = "test.elm"
     , nextRef = 888
+    , typeAliases =
+      [ { ref = 222
+        , name = "al"
+        , type1 = Just
+          { ref = 223
+          , tvalue = Ast.Primitive Ast.Type_Int
+          }
+        }
+      ]
     , context =
       [ { ref = 1
         , name = "main"
@@ -95,7 +104,7 @@ update action model =
       case model.currentRef of
         Nothing -> noEffects model
         Just ref ->
-          case Debug.log "model" (getCurrentVariable model) of
+          case Debug.log "model" (getCurrentExpression model) of
             Nothing -> noEffects
               model
               --{ model
@@ -157,7 +166,8 @@ mapValue ref f value =
     Ast.LambdaValue v1 ->
       Ast.LambdaValue
         { v1
-        | body = Maybe.map (mapExpr ref f) v1.body
+        | argument = Maybe.map (mapExpr ref f) v1.argument
+        , body = Maybe.map (mapExpr ref f) v1.body
         }
 
     _ -> value
@@ -169,13 +179,9 @@ mapArguments ref f arguments =
     Ast.Args v1 -> Ast.Args { v1 | values = List.map (mapExpr ref f) v1.values }
     _ -> arguments
 
---mapArguments : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Arguments -> Ast.Arguments
---mapArguments ref f args =
-  --case args of
 
-
-getCurrentVariable : Model -> Maybe Ast.Expression
-getCurrentVariable model =
+getCurrentExpression : Model -> Maybe Ast.Expression
+getCurrentExpression model =
   case model.currentRef of
     Nothing -> Nothing
     Just ref ->
@@ -185,7 +191,7 @@ getCurrentVariable model =
 view model =
   let
     file = model.file
-    expr = Maybe.withDefault defaultExpr <| getCurrentVariable model
+    expr = Maybe.withDefault defaultExpr <| getCurrentExpression model
   in
     Html.div [] <|
       [ selectComponent ["aaa", "bbb", "ccc"]
@@ -282,8 +288,9 @@ floatButtons model file =
       ]
     _ -> []
 
+
 typeButtons model file =
-  case getCurrentVariable model of
+  case getCurrentExpression model of
     Nothing -> []
     Just v ->
       case v.value of
@@ -311,8 +318,8 @@ typeButtons model file =
         _ -> []
 
 
-mapVariable : (Ast.Value -> Ast.Value) -> Ast.Expression -> Ast.Expression
-mapVariable f expr =
+mapExpression : (Ast.Value -> Ast.Value) -> Ast.Expression -> Ast.Expression
+mapExpression f expr =
   { expr
   | value = f expr.value
   }
@@ -320,7 +327,7 @@ mapVariable f expr =
 
 increment : Ast.Expression -> Ast.Expression
 increment =
-  mapVariable <|
+  mapExpression <|
     \e -> case e of
       Ast.IntValue v -> Ast.IntValue { v | value = v.value + 1 }
       _ -> e
@@ -328,7 +335,7 @@ increment =
 
 decrement : Ast.Expression -> Ast.Expression
 decrement =
-  mapVariable <|
+  mapExpression <|
     \e -> case e of
       Ast.IntValue v -> Ast.IntValue { v | value = v.value - 1 }
       _ -> e
@@ -336,7 +343,7 @@ decrement =
 
 negate : Ast.Expression -> Ast.Expression
 negate =
-  mapVariable <|
+  mapExpression <|
     \e -> case e of
       Ast.BoolValue v -> Ast.BoolValue { v | value = not v.value }
       _ -> e
@@ -344,7 +351,7 @@ negate =
 
 append : ExprRef -> Ast.Expression -> Ast.Expression
 append ref =
-  mapVariable <|
+  mapExpression <|
     \e -> case e of
       Ast.ListValue v -> Ast.ListValue { v | values = v.values ++ [ { defaultExpr | ref = ref } ] }
       _ -> e
@@ -394,6 +401,7 @@ htmlExpr model expr =
 
       Ast.LambdaValue v ->
         [ Html.text "λ"
+        , htmlExpr model (Maybe.withDefault defaultExpr v.argument)
         , Html.text "→"
         , htmlExpr model (Maybe.withDefault defaultExpr v.body)
         ]

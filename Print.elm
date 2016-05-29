@@ -151,7 +151,9 @@ getExpression ref expr =
               |> List.head
 
           Ast.LambdaValue v ->
-            v.body `Maybe.andThen` (getExpression ref)
+            List.filterMap (Maybe.map <| getExpression ref) [v.argument, v.body]
+              |> List.filterMap identity
+              |> List.head
 
           _ -> Nothing
 

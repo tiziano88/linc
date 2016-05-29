@@ -4,6 +4,8 @@ message File {
   int64 next_ref = 1;
   string name = 2;
   repeated Expression context = 3;
+  repeated TypeAlias type_aliases = 4;
+  /*repeated TypeDefinition type_definitions = 5;*/
 }
 
 message Expression {
@@ -68,6 +70,19 @@ message Expression {
   Type type1 = 89;
 }
 
+message VariableDefinition {
+  int64 ref = 1;
+  string name = 2;
+  Expression value = 3;
+}
+
+message TypeAlias {
+  int64 ref = 1;
+
+  string name = 10;
+  Type type1 = 20;
+}
+
 message Symbol {
   int64 ref = 1;
 
@@ -79,10 +94,20 @@ message Symbol {
 }
 
 message Type {
+  int64 ref = 1;
+
   enum PrimitiveType {
     PRIMITIVE_TYPE_UNSPECIFIED = 0;
     INT = 1;
-    BOOL = 2;
+    FLOAT = 2;
+  }
+
+  message RefType {
+    int64 ref = 1;
+  }
+
+  message OpaqueType {
+    string name = 1;
   }
 
   message CompoundType {
@@ -91,7 +116,23 @@ message Type {
   }
 
   oneof tvalue {
-    PrimitiveType primitive = 1;
-    CompoundType compound = 2;
+    PrimitiveType primitive = 10;
+    CompoundType compound = 11;
+    RefType ref_type = 12;
+  }
+}
+
+message TypeConstructor {
+  int64 ref = 1;
+  string name = 2;
+}
+
+message Pattern {
+  int64 ref = 1;
+
+  oneof vvv {
+    TypeConstructor type_constructor_value = 2;
+    Symbol symbol_value = 3;
+    Pattern pattern_value = 4;
   }
 }
