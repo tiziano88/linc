@@ -10,38 +10,41 @@ import Types exposing (..)
 
 printFunctionSignature : Model -> ExprRef -> String
 printFunctionSignature model ref =
-  case (getVariable model ref) of
-    Nothing ->
-      "<<<ERROR>>>"
+  ""
+  --case (getVariable model ref) of
+    --Nothing ->
+      --"<<<ERROR>>>"
 
-    Just v ->
-      (Maybe.withDefault "" <| Maybe.map printLabel v.label)
-        ++ " : " -- ++ (printType v.type_)
+    --Just v ->
+      --(Maybe.withDefault "" <| Maybe.map printLabel v.label)
+        --++ " : " -- ++ (printType v.type_)
 
 
 printFunctionBody : Model -> ExprRef -> String
 printFunctionBody model ref =
-  case (getVariable model ref) of
-    Nothing ->
-      "<<<ERROR>>>"
+  ""
+  --case (getVariable model ref) of
+    --Nothing ->
+      --"<<<ERROR>>>"
 
-    Just v ->
-      String.join " "
-        [ Maybe.withDefault "" <| Maybe.map printLabel v.label
-        --, v.context
-          --|> List.map (printArg model)
-          --|> String.join " "
-        , "="
-        , printExpr model v
-        ]
+    --Just v ->
+      --String.join " "
+        --[ -- Maybe.withDefault "" <| Maybe.map printLabel v.label
+        ----, v.context
+          ----|> List.map (printArg model)
+          ----|> String.join " "
+          --"="
+        --, printExpr model v
+        --]
 
 
 printFunction : Model -> ExprRef -> String
 printFunction model ref =
-  String.join "\n"
-    [ (printFunctionSignature model ref)
-    , (printFunctionBody model ref)
-    ]
+  ""
+  --String.join "\n"
+    --[ (printFunctionSignature model ref)
+    --, (printFunctionBody model ref)
+    --]
 
 
 printLabel : Ast.Label -> String
@@ -51,21 +54,23 @@ printLabel label =
 
 printFile : Model -> Ast.File -> String
 printFile model file =
-  file.context
-    |> List.map (\v -> v.ref)
-    |> List.map (printFunction model)
-    |> String.join "\n\n\n"
+  ""
+  --file.context
+    --|> List.map (\v -> v.ref)
+    --|> List.map (printFunction model)
+    --|> String.join "\n\n\n"
 
 
 printArg : Model -> ExprRef -> String
 printArg model ref =
-  case (getVariable model ref) of
-    Nothing ->
-      "<<<ERROR>>>"
-    Just v ->
-      case v.label of
-        Just l -> l.name
-        _ -> "<<<ERROR>>>"
+  ""
+  --case (getVariable model ref) of
+    --Nothing ->
+      --"<<<ERROR>>>"
+    --Just v ->
+      --case v.label of
+        --Just l -> l.name
+        --_ -> "<<<ERROR>>>"
 
 
 printType : Ast.Type -> String
@@ -82,62 +87,61 @@ printType t =
 
 printExpr : Model -> Ast.Expression -> String
 printExpr model expr =
-  case expr.value of
-    Ast.EmptyValue _ ->
-      "<<<EMPTY>>>"
+  ""
+  --case expr.value of
+    --Ast.EmptyValue _ ->
+      --"<<<EMPTY>>>"
 
-    Ast.IntValue v ->
-      toString v.value
+    --Ast.IntValue v ->
+      --toString v.value
 
-    Ast.FloatValue v ->
-      toString v.value
+    --Ast.FloatValue v ->
+      --toString v.value
 
-    Ast.BoolValue v ->
-      toString v.value
+    --Ast.BoolValue v ->
+      --toString v.value
 
-    Ast.StringValue v ->
-      "\"" ++ v.value ++ "\""
+    --Ast.StringValue v ->
+      --"\"" ++ v.value ++ "\""
 
-    Ast.ListValue v ->
-      let
-        s =
-          v.values
-            |> List.map (printExpr model)
-            |> String.join ", "
-      in
-        "[" ++ s ++ "]"
+    --Ast.ListValue v ->
+      --let
+        --s =
+          --v.values
+            --|> List.map (printExpr model)
+            --|> String.join ", "
+      --in
+        --"[" ++ s ++ "]"
 
-    Ast.IfValue v ->
-      String.join " "
-        [ "if"
-        , printExpr model (Maybe.withDefault defaultExpr v.cond)
-        , "then"
-        , printExpr model (Maybe.withDefault defaultExpr v.true)
-        , "else"
-        , printExpr model (Maybe.withDefault defaultExpr v.false)
-        ]
-
-    --EApp e1 e2 ->
+    --Ast.IfValue v ->
       --String.join " "
-        --[ "(" ++ printExpr model e1
-        --, printExpr model e2 ++ ")"
+        --[ "if"
+        --, printExpr model (Maybe.withDefault defaultExpr v.cond)
+        --, "then"
+        --, printExpr model (Maybe.withDefault defaultExpr v.true)
+        --, "else"
+        --, printExpr model (Maybe.withDefault defaultExpr v.false)
         --]
 
-    _ -> "ooooooooooooooo"
+    ----EApp e1 e2 ->
+      ----String.join " "
+        ----[ "(" ++ printExpr model e1
+        ----, printExpr model e2 ++ ")"
+        ----]
+
+    --_ -> "ooooooooooooooo"
 
 defaultExpr : Ast.Expression
 defaultExpr =
   { ref = 888
-  , label = Nothing
-  , type1 = Nothing
   , value = Ast.EmptyValue 42
-  , arguments = Ast.ArgumentsUnspecified
+  , arguments = Ast.Args { values = [] }
   }
 
-getVariable : Model -> ExprRef -> Maybe Ast.Expression
-getVariable model ref =
-  List.filterMap (getExpression ref) model.file.context
-    |> List.head
+--getVariable : Model -> ExprRef -> Maybe Ast.Expression
+--getVariable model ref =
+  --List.filterMap (getExpression ref) model.file.variableDefinitions
+    --|> List.head
 
 
 getExpression : ExprRef -> Ast.Expression -> Maybe Ast.Expression
@@ -164,11 +168,6 @@ getExpression ref expr =
               |> List.head
 
           _ -> Nothing
-
-      e2 =
-        case expr.arguments of
-          Ast.Args a -> List.filterMap (getExpression ref) a.values |> List.head
-          Ast.ArgumentsUnspecified -> Nothing
     in
-      Maybe.oneOf [ e1, e2 ]
+      Maybe.oneOf [ e1 ]
 

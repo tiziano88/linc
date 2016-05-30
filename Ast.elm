@@ -78,8 +78,8 @@ repeatedFieldEncoder name encoder v =
 type alias File =
   { nextRef : Int -- 1
   , name : String -- 2
-  , context : List Expression -- 3
   , typeAliases : List TypeAlias -- 4
+  , variableDefinitions : List VariableDefinition -- 5
   }
 
 
@@ -88,8 +88,8 @@ fileDecoder =
   File
     <$> (requiredFieldDecoder "nextRef" 0 JD.int)
     <*> (requiredFieldDecoder "name" "" JD.string)
-    <*> (repeatedFieldDecoder "context" expressionDecoder)
     <*> (repeatedFieldDecoder "typeAliases" typeAliasDecoder)
+    <*> (repeatedFieldDecoder "variableDefinitions" variableDefinitionDecoder)
 
 
 fileEncoder : File -> JE.Value
@@ -97,15 +97,13 @@ fileEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "nextRef" JE.int 0 v.nextRef)
     , (requiredFieldEncoder "name" JE.string "" v.name)
-    , (repeatedFieldEncoder "context" expressionEncoder v.context)
     , (repeatedFieldEncoder "typeAliases" typeAliasEncoder v.typeAliases)
+    , (repeatedFieldEncoder "variableDefinitions" variableDefinitionEncoder v.variableDefinitions)
     ]
 
 
 type alias Expression =
   { ref : Int -- 1
-  , label : Maybe Label -- 111
-  , type1 : Maybe Type -- 89
   , value : Value
   , arguments : Arguments
   }
@@ -179,8 +177,6 @@ expressionDecoder : JD.Decoder Expression
 expressionDecoder =
   Expression
     <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> (optionalFieldDecoder "label" labelDecoder)
-    <*> (optionalFieldDecoder "type1" typeDecoder)
     <*> valueDecoder
     <*> argumentsDecoder
 
@@ -189,8 +185,6 @@ expressionEncoder : Expression -> JE.Value
 expressionEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
-    , (optionalEncoder "label" labelEncoder v.label)
-    , (optionalEncoder "type1" typeEncoder v.type1)
     , (valueEncoder v.value)
     , (argumentsEncoder v.arguments)
     ]
@@ -371,6 +365,7 @@ type alias VariableDefinition =
   { ref : Int -- 1
   , label : Maybe Label -- 2
   , value : Maybe Expression -- 3
+  , arguments : List Symbol -- 4
   }
 
 
@@ -380,6 +375,7 @@ variableDefinitionDecoder =
     <$> (requiredFieldDecoder "ref" 0 JD.int)
     <*> (optionalFieldDecoder "label" labelDecoder)
     <*> (optionalFieldDecoder "value" expressionDecoder)
+    <*> (repeatedFieldDecoder "arguments" symbolDecoder)
 
 
 variableDefinitionEncoder : VariableDefinition -> JE.Value
@@ -388,6 +384,7 @@ variableDefinitionEncoder v =
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
     , (optionalEncoder "label" labelEncoder v.label)
     , (optionalEncoder "value" expressionEncoder v.value)
+    , (repeatedFieldEncoder "arguments" symbolEncoder v.arguments)
     ]
 
 

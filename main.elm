@@ -30,16 +30,6 @@ init =
   noEffects testModel
 
 
---initialModel : Model
---initialModel =
-  --{ file = 
-  --, currentFileName = ""
-  --, parent = Dict.empty
-  --, currentRef = Nothing
-  --, input = ""
-  --}
-
-
 testModel : Model
 testModel =
   { file =
@@ -54,33 +44,38 @@ testModel =
           }
         }
       ]
-    , context =
+    , variableDefinitions =
       [ { ref = 1
         , label = Just
           { name = "main"
           }
-        , type1 = Nothing
-        , value =
-          Ast.IntValue
+        , value = Just
+          { ref = 12
+          , value = Ast.IntValue
             { value = 42
             }
-        , arguments = Ast.ArgumentsUnspecified
+          , arguments = Ast.Args { values = [] }
+          }
+        , arguments = []
         }
       , { ref = 2
         , label = Just
           { name = "mainxxx"
           }
-        , type1 = Nothing
-        , value =
-          Ast.IntValue
+        , value = Just
+          { ref = 22
+          , value = Ast.IntValue
             { value = 42
             }
-        , arguments = Ast.ArgumentsUnspecified
+          , arguments = Ast.Args { values = [] }
+          }
+        , arguments = []
         }
       ]
     }
   , currentRef = Nothing
   , input = ""
+  , node = Nothing
   }
 
 
@@ -108,7 +103,7 @@ update action model =
       case model.currentRef of
         Nothing -> noEffects model
         Just ref ->
-          case Debug.log "model" (getCurrentExpression model) of
+          case Debug.log "current expression" (getCurrentExpression model) of
             Nothing -> noEffects
               model
               --{ model
@@ -129,15 +124,23 @@ update action model =
                 { model
                 | file =
                   { fi
-                  | context =
-                    fi.context
-                      |> List.map (mapExpr ref f)
+                  | variableDefinitions =
+                    fi.variableDefinitions
+                      |> List.map (mapVariableDefinition ref f)
                   , nextRef = fi.nextRef + n
                   }
                 }
 
-mapExpr : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Expression -> Ast.Expression
-mapExpr ref f expr =
+
+mapVariableDefinition : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.VariableDefinition -> Ast.VariableDefinition
+mapVariableDefinition ref f def =
+  { def
+  | value = Maybe.map (mapExpression ref f) def.value
+  }
+
+
+mapExpression : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Expression -> Ast.Expression
+mapExpression ref f expr =
   if
     expr.ref == ref
   then
@@ -145,11 +148,9 @@ mapExpr ref f expr =
   else
     let
       newValue = mapValue ref f expr.value
-      newArguments = mapArguments ref f expr.arguments
     in
       { expr
       | value = newValue
-      , arguments = newArguments
       }
 
 mapValue : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Value -> Ast.Value
@@ -157,31 +158,31 @@ mapValue ref f value =
   case value of
     Ast.IfValue v1 ->
       Ast.IfValue
-        { cond = Maybe.map (mapExpr ref f) v1.cond
-        , true = Maybe.map (mapExpr ref f) v1.true
-        , false = Maybe.map (mapExpr ref f) v1.false
+        { cond = Maybe.map (mapExpression ref f) v1.cond
+        , true = Maybe.map (mapExpression ref f) v1.true
+        , false = Maybe.map (mapExpression ref f) v1.false
         }
 
     Ast.ListValue v1 ->
       Ast.ListValue
-        { values = (List.map (mapExpr ref f) v1.values)
+        { values = (List.map (mapExpression ref f) v1.values)
         }
 
     Ast.LambdaValue v1 ->
       Ast.LambdaValue
         { v1
-        | argument = Maybe.map (mapExpr ref f) v1.argument
-        , body = Maybe.map (mapExpr ref f) v1.body
+        | argument = Maybe.map (mapExpression ref f) v1.argument
+        , body = Maybe.map (mapExpression ref f) v1.body
         }
 
     _ -> value
 
 
-mapArguments : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Arguments -> Ast.Arguments
-mapArguments ref f arguments =
-  case arguments of
-    Ast.Args v1 -> Ast.Args { v1 | values = List.map (mapExpr ref f) v1.values }
-    _ -> arguments
+--mapArguments : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Arguments -> Ast.Arguments
+--mapArguments ref f arguments =
+  --case arguments of
+    --Ast.Args v1 -> Ast.Args { v1 | values = List.map (mapExpression ref f) v1.values }
+    --_ -> arguments
 
 
 getCurrentExpression : Model -> Maybe Ast.Expression
@@ -189,7 +190,18 @@ getCurrentExpression model =
   case model.currentRef of
     Nothing -> Nothing
     Just ref ->
-      getVariable model ref
+      model.file.variableDefinitions
+        |> List.filterMap (getVariableDefinition ref)
+        |> List.head
+      --getVariable model ref
+
+
+getVariableDefinition : ExprRef -> Ast.VariableDefinition -> Maybe Ast.Expression
+getVariableDefinition ref def =
+  case def.value of
+    Nothing -> Nothing
+    Just expr ->
+      getExpression ref expr
 
 
 view model =
@@ -254,10 +266,8 @@ view model =
 defaultExpr : Ast.Expression
 defaultExpr =
   { ref = -1
-  , label = Nothing
-  , type1 = Nothing
   , value = Ast.EmptyValue 41
-  , arguments = Ast.ArgumentsUnspecified
+  , arguments = Ast.Args { values = [] }
   }
 
 
@@ -322,8 +332,8 @@ typeButtons model file =
         _ -> []
 
 
-mapExpression : (Ast.Value -> Ast.Value) -> Ast.Expression -> Ast.Expression
-mapExpression f expr =
+me : (Ast.Value -> Ast.Value) -> Ast.Expression -> Ast.Expression
+me f expr =
   { expr
   | value = f expr.value
   }
@@ -331,7 +341,7 @@ mapExpression f expr =
 
 increment : Ast.Expression -> Ast.Expression
 increment =
-  mapExpression <|
+  me <|
     \e -> case e of
       Ast.IntValue v -> Ast.IntValue { v | value = v.value + 1 }
       _ -> e
@@ -339,7 +349,7 @@ increment =
 
 decrement : Ast.Expression -> Ast.Expression
 decrement =
-  mapExpression <|
+  me <|
     \e -> case e of
       Ast.IntValue v -> Ast.IntValue { v | value = v.value - 1 }
       _ -> e
@@ -347,7 +357,7 @@ decrement =
 
 negate : Ast.Expression -> Ast.Expression
 negate =
-  mapExpression <|
+  me <|
     \e -> case e of
       Ast.BoolValue v -> Ast.BoolValue { v | value = not v.value }
       _ -> e
@@ -355,7 +365,7 @@ negate =
 
 append : ExprRef -> Ast.Expression -> Ast.Expression
 append ref =
-  mapExpression <|
+  me <|
     \e -> case e of
       Ast.ListValue v -> Ast.ListValue { v | values = v.values ++ [ { defaultExpr | ref = ref } ] }
       _ -> e
@@ -363,9 +373,8 @@ append ref =
 
 htmlFile : Model -> Ast.File -> Html Msg
 htmlFile model file =
-  let xs = file.context
-    |> List.filter (\e -> e.label /= Nothing)
-    |> List.map (\e -> htmlFunction model e.ref)
+  let xs = file.variableDefinitions
+    |> List.map (htmlFunction model)
   in Html.div [] xs
 
 
@@ -451,29 +460,24 @@ htmlExpr model expr =
 (=>) = (,)
 
 
-htmlFunctionSignature : Model -> ExprRef -> Html Msg
-htmlFunctionSignature model ref =
-  case (getVariable model ref) of
-    Nothing ->
-      Html.text "<<<ERROR>>>"
-
-    Just v ->
-      Html.div []
-        [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel v.label
-        , Html.text " : "
-        --, Html.text <| (printType v.type_)
-        ]
+htmlFunctionSignature : Model -> Ast.VariableDefinition -> Html Msg
+htmlFunctionSignature model def =
+  Html.div []
+    [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label
+    , Html.text " : "
+    --, Html.text <| (printType v.type_)
+    ]
 
 
-htmlFunctionBody : Model -> ExprRef -> Html Msg
-htmlFunctionBody model ref =
-  case (getVariable model ref) of
+htmlFunctionBody : Model -> Ast.VariableDefinition -> Html Msg
+htmlFunctionBody model def =
+  case def.value of
     Nothing ->
       Html.text "<<<ERROR>>>"
 
     Just expr ->
       Html.div []
-        [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel expr.label
+        [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label
         --, expr.context
           --|> List.map (printArg model)
           --|> String.join " "
@@ -483,11 +487,11 @@ htmlFunctionBody model ref =
         ]
 
 
-htmlFunction : Model -> ExprRef -> Html Msg
-htmlFunction model ref =
+htmlFunction : Model -> Ast.VariableDefinition -> Html Msg
+htmlFunction model v =
   Html.div []
-    [ htmlFunctionSignature model ref
-    , htmlFunctionBody model ref
+    [ htmlFunctionSignature model v
+    , htmlFunctionBody model v
     ]
 
 

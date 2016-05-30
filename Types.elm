@@ -20,7 +20,9 @@ type alias Model =
   { file : Ast.File
   , currentRef : Maybe ExprRef
   , input : String
+  , node : Maybe Node
   }
+
 
 type Node
   = Expr Ast.Expression
