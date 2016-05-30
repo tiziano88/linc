@@ -257,11 +257,16 @@ view model =
       [ Html.input
         [ onInput Input ]
         []
-      ] ++ buttons ++ (modelButtons model file) ++ (typeButtons model file) ++
+      ] ++ buttons ++ (modelButtons model) ++ (typeButtons model) ++
       [ Html.div [] [ Html.text <| toString model ]
       , Html.pre [] [ (htmlFile model model.file) ]
       , Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
       ]
+
+
+--expressionButtons : Model -> Html Msg
+--expressionButtons model =
+
 
 
 defaultExpr : Ast.Expression
@@ -272,19 +277,19 @@ defaultExpr =
   }
 
 
-modelButtons model file =
+modelButtons model =
   [stringButtons, intButtons, floatButtons]
-    |> List.concatMap (\x -> x model file)
+    |> List.concatMap (\x -> x model)
 
 
-stringButtons model file =
+stringButtons model =
   [ Html.button
     [ onClick <| MapExpr (\v -> { v | value = Ast.StringValue { value = model.input } }) 0 ]
     [ Html.text <| "\"" ++ model.input ++ "\" (String) " ]
   ]
 
 
-intButtons model file =
+intButtons model =
   case String.toInt (model.input) of
     Ok n ->
       [ Html.button
@@ -294,7 +299,7 @@ intButtons model file =
     _ -> []
 
 
-floatButtons model file =
+floatButtons model =
   case String.toFloat (model.input) of
     Ok n ->
       [ Html.button
@@ -304,7 +309,7 @@ floatButtons model file =
     _ -> []
 
 
-typeButtons model file =
+typeButtons model =
   case getCurrentNode model of
     Nothing -> []
     Just (Expr expr) ->
@@ -326,7 +331,7 @@ typeButtons model file =
 
         Ast.ListValue _ ->
           [ Html.button
-            [ onClick <| MapExpr (append file.nextRef) 1 ]
+            [ onClick <| MapExpr (append model.file.nextRef) 1 ]
             [ Html.text "append" ]
           ]
 
