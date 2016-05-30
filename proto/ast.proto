@@ -71,7 +71,7 @@ message VariableDefinition {
   int64 ref = 1;
   Label label = 2;
   Expression value = 3;
-  repeated Symbol arguments = 4;
+  repeated Pattern arguments = 4;
 }
 
 message TypeAlias {
@@ -79,16 +79,6 @@ message TypeAlias {
 
   Label label = 2;
   Type type1 = 20;
-}
-
-message Symbol {
-  int64 ref = 1;
-
-  oneof svalue {
-    string constructor = 2;
-    string variable = 3;
-    bool placeholder = 4;
-  }
 }
 
 message Type {
@@ -128,9 +118,9 @@ message TypeConstructor {
 message Pattern {
   int64 ref = 1;
 
-  oneof vvv {
+  oneof pvalue {
     TypeConstructor type_constructor_value = 2;
-    Symbol symbol_value = 3;
+    Label label_value = 3;
     Pattern pattern_value = 4;
   }
 }

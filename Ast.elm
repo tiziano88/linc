@@ -365,7 +365,7 @@ type alias VariableDefinition =
   { ref : Int -- 1
   , label : Maybe Label -- 2
   , value : Maybe Expression -- 3
-  , arguments : List Symbol -- 4
+  , arguments : List Pattern -- 4
   }
 
 
@@ -375,7 +375,7 @@ variableDefinitionDecoder =
     <$> (requiredFieldDecoder "ref" 0 JD.int)
     <*> (optionalFieldDecoder "label" labelDecoder)
     <*> (optionalFieldDecoder "value" expressionDecoder)
-    <*> (repeatedFieldDecoder "arguments" symbolDecoder)
+    <*> (repeatedFieldDecoder "arguments" patternDecoder)
 
 
 variableDefinitionEncoder : VariableDefinition -> JE.Value
@@ -384,7 +384,7 @@ variableDefinitionEncoder v =
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
     , (optionalEncoder "label" labelEncoder v.label)
     , (optionalEncoder "value" expressionEncoder v.value)
-    , (repeatedFieldEncoder "arguments" symbolEncoder v.arguments)
+    , (repeatedFieldEncoder "arguments" patternEncoder v.arguments)
     ]
 
 
@@ -409,53 +409,6 @@ typeAliasEncoder v =
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
     , (optionalEncoder "label" labelEncoder v.label)
     , (optionalEncoder "type1" typeEncoder v.type1)
-    ]
-
-
-type alias Symbol =
-  { ref : Int -- 1
-  , svalue : Svalue
-  }
-
-
-type Svalue
-  = SvalueUnspecified
-  | Constructor String
-  | Variable String
-  | Placeholder Bool
-
-
-svalueDecoder : JD.Decoder Svalue
-svalueDecoder =
-  JD.oneOf
-    [ JD.map Constructor ("constructor" := JD.string)
-    , JD.map Variable ("variable" := JD.string)
-    , JD.map Placeholder ("placeholder" := JD.bool)
-    , JD.succeed SvalueUnspecified
-    ]
-
-
-svalueEncoder : Svalue -> Maybe (String, JE.Value)
-svalueEncoder v =
-  case v of
-    SvalueUnspecified -> Nothing
-    Constructor x -> Just ("constructor", JE.string x)
-    Variable x -> Just ("variable", JE.string x)
-    Placeholder x -> Just ("placeholder", JE.bool x)
-
-
-symbolDecoder : JD.Decoder Symbol
-symbolDecoder =
-  Symbol
-    <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> svalueDecoder
-
-
-symbolEncoder : Symbol -> JE.Value
-symbolEncoder v =
-  JE.object <| List.filterMap identity <|
-    [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
-    , (svalueEncoder v.svalue)
     ]
 
 
@@ -619,33 +572,33 @@ typeConstructorEncoder v =
 
 type alias Pattern =
   { ref : Int -- 1
-  , vvv : Vvv
+  , pvalue : Pvalue
   }
 
 
-type Vvv
-  = VvvUnspecified
+type Pvalue
+  = PvalueUnspecified
   | TypeConstructorValue TypeConstructor
-  | SymbolValue Symbol
+  | LabelValue Label
   | PatternValue Pattern
 
 
-vvvDecoder : JD.Decoder Vvv
-vvvDecoder =
+pvalueDecoder : JD.Decoder Pvalue
+pvalueDecoder =
   JD.oneOf
     [ JD.map TypeConstructorValue ("typeConstructorValue" := typeConstructorDecoder)
-    , JD.map SymbolValue ("symbolValue" := symbolDecoder)
+    , JD.map LabelValue ("labelValue" := labelDecoder)
     , JD.map PatternValue ("patternValue" := patternDecoder)
-    , JD.succeed VvvUnspecified
+    , JD.succeed PvalueUnspecified
     ]
 
 
-vvvEncoder : Vvv -> Maybe (String, JE.Value)
-vvvEncoder v =
+pvalueEncoder : Pvalue -> Maybe (String, JE.Value)
+pvalueEncoder v =
   case v of
-    VvvUnspecified -> Nothing
+    PvalueUnspecified -> Nothing
     TypeConstructorValue x -> Just ("typeConstructorValue", typeConstructorEncoder x)
-    SymbolValue x -> Just ("symbolValue", symbolEncoder x)
+    LabelValue x -> Just ("labelValue", labelEncoder x)
     PatternValue x -> Just ("patternValue", patternEncoder x)
 
 
@@ -653,14 +606,14 @@ patternDecoder : JD.Decoder Pattern
 patternDecoder =
   Pattern
     <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> vvvDecoder
+    <*> pvalueDecoder
 
 
 patternEncoder : Pattern -> JE.Value
 patternEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
-    , (vvvEncoder v.vvv)
+    , (pvalueEncoder v.pvalue)
     ]
 
 

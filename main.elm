@@ -75,7 +75,6 @@ testModel =
     }
   , currentRef = Nothing
   , input = ""
-  , node = Nothing
   }
 
 
@@ -86,51 +85,76 @@ noEffects m =
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update action model =
-  case action of
-    Nop -> noEffects model
+  let
+    currentNode = Debug.log "previous node" <| getCurrentNode model
+  in
+    case action of
+      Nop -> noEffects model
 
-    SetCurrentRef ref -> noEffects
-      { model
-      | currentRef = Just ref
-      , node = getCurrentNode { model | currentRef = Just ref }
-      }
+      SetCurrentRef ref -> noEffects
+        { model
+        | currentRef = Just ref
+        }
 
-    Input v -> noEffects
-      { model
-      | input = v
-      }
+      Input v -> noEffects
+        { model
+        | input = v
+        }
 
-    MapExpr f n ->
-      case model.currentRef of
-        Nothing -> noEffects model
-        Just ref ->
-          case Debug.log "current node" (getCurrentNode model) of
-            Nothing -> noEffects
-              model
-              --{ model
-              --| files =
-                --model.files
-                  --|> Dict.update model.currentFileName
-                    --(Maybe.map <|
-                      --(\fi ->
-                        --{ fi
-                        --| context = Dict.insert ref (f { newVariable | ref = ref }) fi.context
-                        --, nextRef = fi.nextRef + n
-                        --}))
-              --}
-            Just v -> noEffects <|
-              let
-                fi = model.file
-              in
-                { model
-                | file =
-                  { fi
-                  | variableDefinitions =
-                    fi.variableDefinitions
-                      |> List.map (mapVariableDefinition ref f)
-                  , nextRef = fi.nextRef + n
+      SetNode node n ->
+        noEffects model
+
+      MapVarDef f n ->
+        case model.currentRef of
+          Nothing -> noEffects model
+          Just ref ->
+            case currentNode of
+              Nothing -> noEffects model
+              Just node -> noEffects <|
+                let
+                  fi = model.file
+                in
+                  { model
+                  | file =
+                    { fi
+                    | variableDefinitions =
+                      fi.variableDefinitions
+                        |> List.map (\d -> if d.ref == ref then f d else d)
+                    , nextRef = fi.nextRef + n
+                    }
                   }
-                }
+
+      MapExpr f n ->
+        case model.currentRef of
+          Nothing -> noEffects model
+          Just ref ->
+            case Debug.log "current node" (getCurrentNode model) of
+              Nothing -> noEffects
+                model
+                --{ model
+                --| files =
+                  --model.files
+                    --|> Dict.update model.currentFileName
+                      --(Maybe.map <|
+                        --(\fi ->
+                          --{ fi
+                          --| context = Dict.insert ref (f { newVariable | ref = ref }) fi.context
+                          --, nextRef = fi.nextRef + n
+                          --}))
+                --}
+              Just v -> noEffects <|
+                let
+                  fi = model.file
+                in
+                  { model
+                  | file =
+                    { fi
+                    | variableDefinitions =
+                      fi.variableDefinitions
+                        |> List.map (mapVariableDefinition ref f)
+                    , nextRef = fi.nextRef + n
+                    }
+                  }
 
 
 mapVariableDefinition : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.VariableDefinition -> Ast.VariableDefinition
@@ -192,12 +216,12 @@ getCurrentNode model =
     Nothing -> Nothing
     Just ref ->
       model.file.variableDefinitions
-        |> List.filterMap (getVariableDefinition ref)
+        |> List.filterMap (getNode ref)
         |> List.head
 
 
-getVariableDefinition : ExprRef -> Ast.VariableDefinition -> Maybe Node
-getVariableDefinition ref def =
+getNode : ExprRef -> Ast.VariableDefinition -> Maybe Node
+getNode ref def =
   if
     def.ref == ref
   then
@@ -306,10 +330,8 @@ expressionButtons model expr =
 variableDefinitionButtons : Model -> Ast.VariableDefinition -> List (Html Msg)
 variableDefinitionButtons model def =
   [ Html.button
-    [ onClick <| MapExpr (\v -> { v | arguments =
-      case v.arguments of
-        Ast.Args a -> Ast.Args { values = a.values ++ [ { defaultExpr | ref = model.file.nextRef } ] }
-        Ast.ArgumentsUnspecified -> Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
+    [ onClick <| MapVarDef (\v -> { v | arguments =
+      v.arguments ++ [ { ref = model.file.nextRef, pvalue = Ast.LabelValue { name = "xyz" } } ]
     }) 1 ]
     [ Html.text "arg" ]
   ]
@@ -487,15 +509,41 @@ htmlFunctionBody model def =
       Html.text "<<<ERROR>>>"
 
     Just expr ->
-      Html.div []
-        [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label
-        --, expr.context
-          --|> List.map (printArg model)
-          --|> String.join " "
-          --|> Html.text
-        , Html.text "="
+      Html.div [] <|
+        [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label ]
+        ++
+        (List.map (htmlPattern model) def.arguments)
+        ++
+        [ Html.text "="
         , htmlExpr model expr
         ]
+
+
+htmlPattern : Model -> Ast.Pattern -> Html Msg
+htmlPattern model pat =
+  let
+    content = case pat.pvalue of
+      Ast.LabelValue l ->
+        [ Html.text l.name ]
+      Ast.TypeConstructorValue v -> []
+      Ast.PatternValue v -> []
+      Ast.PvalueUnspecified -> []
+  in
+    Html.div
+      [ style <|
+        [ "border" => "solid"
+        , "margin" => "5px"
+        , "display" => "inline-block"
+        ] ++
+        (if
+          Just pat.ref == model.currentRef
+        then
+          [ "color" => "red" ]
+        else
+          [])
+      , onClick' (SetCurrentRef pat.ref)
+      ]
+      content
 
 
 htmlVariableDefinition : Model -> Ast.VariableDefinition -> Html Msg
