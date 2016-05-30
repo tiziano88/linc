@@ -27,4 +27,3 @@ type alias Model =
 type Node
   = Expr Ast.Expression
   | VarDef Ast.VariableDefinition
-  | TypeAlias Ast.TypeAlias
