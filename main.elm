@@ -213,60 +213,106 @@ view model =
     node = getCurrentNode model
     buttons = case node of
       Nothing -> []
-      Just (Expr expr) ->
-        [ Html.button
-          [ onClick <| MapExpr (\v -> { v | value = Ast.IntValue { value = 0 } }) 0 ]
-          [ Html.text "0" ]
-        , Html.button
-          [ onClick <| MapExpr (\v -> { v | value = Ast.BoolValue { value = False } }) 0 ]
-          [ Html.text "False" ]
-        , Html.button
-          [ onClick <| MapExpr (\v -> { v | value = Ast.ListValue { values = [ { defaultExpr | ref = file.nextRef, value = expr.value } ] } }) 1 ]
-          [ Html.text "[]" ]
-        , Html.button
-          [ onClick <| MapExpr (\v -> { v | value =
-            Ast.IfValue
-              { cond = Just { defaultExpr | ref = file.nextRef, value = expr.value }
-              , true = Just { defaultExpr | ref = file.nextRef + 1 }
-              , false = Just { defaultExpr | ref = file.nextRef + 2 }
-              }
-            }) 3 ]
-          [ Html.text "if" ]
-        , Html.button
-          [ onClick <| MapExpr (\v -> { v | value =
-            Ast.LambdaValue
-              { argument = Nothing
-              , body = Just { defaultExpr | ref = file.nextRef, value = expr.value }
-              }
-            }) 1 ]
-          [ Html.text "λ" ]
-        , Html.button
-          [ onClick <| MapExpr (\v -> { v | arguments =
-            case v.arguments of
-              Ast.Args a -> Ast.Args { values = a.values ++ [ { defaultExpr | ref = file.nextRef } ] }
-              Ast.ArgumentsUnspecified -> Ast.Args { values = [ { defaultExpr | ref = file.nextRef } ] }
-          }) 1 ]
-          [ Html.text "arg" ]
-        , Html.button
-          [ onClick <| MapExpr (\v -> v) 0 ]
-          [ Html.text "x" ]
-        ]
-      Just (VarDef v) -> []
+      Just n -> nodeButtons model n
   in
     Html.div [] <|
       [ Html.input
         [ onInput Input ]
         []
-      ] ++ buttons ++ (modelButtons model) ++ (typeButtons model) ++
+      ]
+      ++ buttons
+      ++
       [ Html.div [] [ Html.text <| toString model ]
       , Html.pre [] [ (htmlFile model model.file) ]
       , Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
       ]
 
 
---expressionButtons : Model -> Html Msg
---expressionButtons model =
+nodeButtons : Model -> Node -> List (Html Msg)
+nodeButtons model node =
+  case node of
+    Expr expr -> expressionButtons model expr
+    VarDef vdef -> variableDefinitionButtons model vdef
 
+
+expressionButtons : Model -> Ast.Expression -> List (Html Msg)
+expressionButtons model expr =
+  [ Html.button
+    [ onClick <| MapExpr (\v -> { v | value = Ast.IntValue { value = 0 } }) 0 ]
+    [ Html.text "0" ]
+  , Html.button
+    [ onClick <| MapExpr (\v -> { v | value = Ast.BoolValue { value = False } }) 0 ]
+    [ Html.text "False" ]
+  , Html.button
+    [ onClick <| MapExpr (\v -> { v | value = Ast.ListValue { values = [ { defaultExpr | ref = model.file.nextRef, value = expr.value } ] } }) 1 ]
+    [ Html.text "[]" ]
+  , Html.button
+    [ onClick <| MapExpr (\v -> { v | value =
+      Ast.IfValue
+        { cond = Just { defaultExpr | ref = model.file.nextRef, value = expr.value }
+        , true = Just { defaultExpr | ref = model.file.nextRef + 1 }
+        , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
+        }
+      }) 3 ]
+    [ Html.text "if" ]
+  , Html.button
+    [ onClick <| MapExpr (\v -> { v | value =
+      Ast.LambdaValue
+        { argument = Nothing
+        , body = Just { defaultExpr | ref = model.file.nextRef, value = expr.value }
+        }
+      }) 1 ]
+    [ Html.text "λ" ]
+  , Html.button
+    [ onClick <| MapExpr (\v -> { v | arguments =
+      case v.arguments of
+        Ast.Args a -> Ast.Args { values = a.values ++ [ { defaultExpr | ref = model.file.nextRef } ] }
+        Ast.ArgumentsUnspecified -> Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
+    }) 1 ]
+    [ Html.text "arg" ]
+  , Html.button
+    [ onClick <| MapExpr (\v -> v) 0 ]
+    [ Html.text "x" ]
+  , Html.button
+    [ onClick <| MapExpr (\v -> { v | value = Ast.StringValue { value = model.input } }) 0 ]
+    [ Html.text <| "\"" ++ model.input ++ "\" (String) " ]
+  ]
+  ++
+  case expr.value of
+    Ast.StringValue v -> []
+    Ast.IntValue v ->
+      [ Html.button
+        [ onClick <| MapExpr decrement 0 ]
+        [ Html.text "-1" ]
+      , Html.button
+        [ onClick <| MapExpr increment 0 ]
+        [ Html.text "+1" ]
+      ]
+    Ast.FloatValue v -> []
+    Ast.BoolValue v ->
+      [ Html.button
+        [ onClick <| MapExpr negate 0 ]
+        [ Html.text "!" ]
+      ]
+    Ast.ListValue _ ->
+      [ Html.button
+        [ onClick <| MapExpr (append model.file.nextRef) 1 ]
+        [ Html.text "append" ]
+      ]
+    _ -> []
+
+
+
+variableDefinitionButtons : Model -> Ast.VariableDefinition -> List (Html Msg)
+variableDefinitionButtons model def =
+  [ Html.button
+    [ onClick <| MapExpr (\v -> { v | arguments =
+      case v.arguments of
+        Ast.Args a -> Ast.Args { values = a.values ++ [ { defaultExpr | ref = model.file.nextRef } ] }
+        Ast.ArgumentsUnspecified -> Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
+    }) 1 ]
+    [ Html.text "arg" ]
+  ]
 
 
 defaultExpr : Ast.Expression
@@ -275,18 +321,6 @@ defaultExpr =
   , value = Ast.EmptyValue 41
   , arguments = Ast.Args { values = [] }
   }
-
-
-modelButtons model =
-  [stringButtons, intButtons, floatButtons]
-    |> List.concatMap (\x -> x model)
-
-
-stringButtons model =
-  [ Html.button
-    [ onClick <| MapExpr (\v -> { v | value = Ast.StringValue { value = model.input } }) 0 ]
-    [ Html.text <| "\"" ++ model.input ++ "\" (String) " ]
-  ]
 
 
 intButtons model =
@@ -307,37 +341,6 @@ floatButtons model =
         [ Html.text <| (toString n) ++ " (Float)" ]
       ]
     _ -> []
-
-
-typeButtons model =
-  case getCurrentNode model of
-    Nothing -> []
-    Just (Expr expr) ->
-      case expr.value of
-        Ast.IntValue _ ->
-          [ Html.button
-            [ onClick <| MapExpr decrement 0 ]
-            [ Html.text "-1" ]
-          , Html.button
-            [ onClick <| MapExpr increment 0 ]
-            [ Html.text "+1" ]
-          ]
-
-        Ast.BoolValue _ ->
-          [ Html.button
-            [ onClick <| MapExpr negate 0 ]
-            [ Html.text "!" ]
-          ]
-
-        Ast.ListValue _ ->
-          [ Html.button
-            [ onClick <| MapExpr (append model.file.nextRef) 1 ]
-            [ Html.text "append" ]
-          ]
-
-        _ -> []
-
-    Just (VarDef def) -> []
 
 
 me : (Ast.Value -> Ast.Value) -> Ast.Expression -> Ast.Expression
