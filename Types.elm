@@ -9,9 +9,7 @@ import Ast
 type Msg
   = Nop
   | SetCurrentRef ExprRef
-  | MapExpr (Ast.Expression -> Ast.Expression) Int
-  | MapVarDef (Ast.VariableDefinition -> Ast.VariableDefinition) Int
-  | SetNode Node Int
+  | SetNode Int Node
   | Input String
 
 

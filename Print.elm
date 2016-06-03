@@ -131,13 +131,6 @@ printExpr model expr =
 
     --_ -> "ooooooooooooooo"
 
-defaultExpr : Ast.Expression
-defaultExpr =
-  { ref = 888
-  , value = Ast.EmptyValue 42
-  , arguments = Ast.Args { values = [] }
-  }
-
 --getVariable : Model -> ExprRef -> Maybe Ast.Expression
 --getVariable model ref =
   --List.filterMap (getExpression ref) model.file.variableDefinitions

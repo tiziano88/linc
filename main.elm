@@ -1,3 +1,5 @@
+module Main exposing (..)
+
 import Array
 import Dict
 import Html.App as Html
@@ -11,6 +13,7 @@ import Task
 import Time
 
 import Ast
+import Defaults exposing (..)
 import Print exposing (..)
 import Types exposing (..)
 
@@ -101,47 +104,12 @@ update action model =
         | input = v
         }
 
-      SetNode node n ->
-        noEffects model
-
-      MapVarDef f n ->
-        case model.currentRef of
-          Nothing -> noEffects model
-          Just ref ->
-            case currentNode of
-              Nothing -> noEffects model
-              Just node -> noEffects <|
-                let
-                  fi = model.file
-                in
-                  { model
-                  | file =
-                    { fi
-                    | variableDefinitions =
-                      fi.variableDefinitions
-                        |> List.map (\d -> if d.ref == ref then f d else d)
-                    , nextRef = fi.nextRef + n
-                    }
-                  }
-
-      MapExpr f n ->
+      SetNode n node ->
         case model.currentRef of
           Nothing -> noEffects model
           Just ref ->
             case Debug.log "current node" (getCurrentNode model) of
-              Nothing -> noEffects
-                model
-                --{ model
-                --| files =
-                  --model.files
-                    --|> Dict.update model.currentFileName
-                      --(Maybe.map <|
-                        --(\fi ->
-                          --{ fi
-                          --| context = Dict.insert ref (f { newVariable | ref = ref }) fi.context
-                          --, nextRef = fi.nextRef + n
-                          --}))
-                --}
+              Nothing -> noEffects model
               Just v -> noEffects <|
                 let
                   fi = model.file
@@ -150,67 +118,68 @@ update action model =
                   | file =
                     { fi
                     | variableDefinitions =
-                      fi.variableDefinitions
-                        |> List.map (mapVariableDefinition ref f)
+                      List.map
+                        (setNodeVariableDefinition ref node)
+                        fi.variableDefinitions
                     , nextRef = fi.nextRef + n
                     }
                   }
 
 
-mapVariableDefinition : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.VariableDefinition -> Ast.VariableDefinition
-mapVariableDefinition ref f def =
-  { def
-  | value = Maybe.map (mapExpression ref f) def.value
-  }
+setNodeVariableDefinition : ExprRef -> Node -> Ast.VariableDefinition -> Ast.VariableDefinition
+setNodeVariableDefinition ref node def =
+  if
+    def.ref == ref
+  then
+    case node of
+      VarDef x -> x
+      _ -> def
+  else
+    { def
+    | value = Maybe.map (setNodeExpression ref node) def.value
+    }
 
 
-mapExpression : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Expression -> Ast.Expression
-mapExpression ref f expr =
+setNodeExpression : ExprRef -> Node -> Ast.Expression -> Ast.Expression
+setNodeExpression ref node expr =
   if
     expr.ref == ref
   then
-    f expr
+    case node of
+      Expr e -> e
+      _ -> expr
   else
-    let
-      newValue = mapValue ref f expr.value
+    let newValue =
+      case expr.value of
+        Ast.IfValue v1 ->
+          Ast.IfValue
+            { cond = Maybe.map (setNodeExpression ref node) v1.cond
+            , true = Maybe.map (setNodeExpression ref node) v1.true
+            , false = Maybe.map (setNodeExpression ref node) v1.false
+            }
+
+        Ast.ListValue v1 ->
+          Ast.ListValue
+            { values = (List.map (setNodeExpression ref node) v1.values)
+            }
+
+        Ast.LambdaValue v1 ->
+          Ast.LambdaValue
+            { v1
+            | argument = v1.argument
+            , body = Maybe.map (setNodeExpression ref node) v1.body
+            }
+
+        _ -> expr.value
     in
       { expr
       | value = newValue
       }
 
-mapPattern : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Pattern -> Ast.Pattern
-mapPattern ref f pat = pat
 
-mapValue : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Value -> Ast.Value
-mapValue ref f value =
-  case value of
-    Ast.IfValue v1 ->
-      Ast.IfValue
-        { cond = Maybe.map (mapExpression ref f) v1.cond
-        , true = Maybe.map (mapExpression ref f) v1.true
-        , false = Maybe.map (mapExpression ref f) v1.false
-        }
-
-    Ast.ListValue v1 ->
-      Ast.ListValue
-        { values = (List.map (mapExpression ref f) v1.values)
-        }
-
-    Ast.LambdaValue v1 ->
-      Ast.LambdaValue
-        { v1
-        | argument = Maybe.map (mapPattern ref f) v1.argument
-        , body = Maybe.map (mapExpression ref f) v1.body
-        }
-
-    _ -> value
-
-
---mapArguments : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Arguments -> Ast.Arguments
---mapArguments ref f arguments =
-  --case arguments of
-    --Ast.Args v1 -> Ast.Args { v1 | values = List.map (mapExpression ref f) v1.values }
-    --_ -> arguments
+setNodePattern : ExprRef -> Node -> Ast.Pattern -> Ast.Pattern
+setNodePattern ref node pat =
+  pat
 
 
 getCurrentNode : Model -> Maybe Node
@@ -265,43 +234,60 @@ nodeButtons model node =
 expressionButtons : Model -> Ast.Expression -> List (Html Msg)
 expressionButtons model expr =
   [ Html.button
-    [ onClick <| MapExpr (\v -> { v | value = Ast.IntValue { value = 0 } }) 0 ]
+    [ onClick <| SetNode 0 <| Expr { expr | value = Ast.IntValue { value = 0 } } ]
     [ Html.text "0" ]
   , Html.button
-    [ onClick <| MapExpr (\v -> { v | value = Ast.BoolValue { value = False } }) 0 ]
+    [ onClick <| SetNode 0 <| Expr { expr | value = Ast.BoolValue { value = False } } ]
     [ Html.text "False" ]
   , Html.button
-    [ onClick <| MapExpr (\v -> { v | value = Ast.ListValue { values = [ { defaultExpr | ref = model.file.nextRef, value = expr.value } ] } }) 1 ]
+    [ onClick <| SetNode 1 <| Expr
+      { expr
+      | value =
+        Ast.ListValue
+          { values =
+            [ { defaultExpr | ref = model.file.nextRef, value = expr.value } ]
+          }
+      }
+    ]
     [ Html.text "[]" ]
   , Html.button
-    [ onClick <| MapExpr (\v -> { v | value =
-      Ast.IfValue
-        { cond = Just { defaultExpr | ref = model.file.nextRef, value = expr.value }
-        , true = Just { defaultExpr | ref = model.file.nextRef + 1 }
-        , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
-        }
-      }) 3 ]
+    [ onClick <| SetNode 3 <| Expr
+      { expr
+      | value =
+        Ast.IfValue
+          { cond = Just { defaultExpr | ref = model.file.nextRef, value = expr.value }
+          , true = Just { defaultExpr | ref = model.file.nextRef + 1 }
+          , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
+          }
+      }
+    ]
     [ Html.text "if" ]
   , Html.button
-    [ onClick <| MapExpr (\v -> { v | value =
-      Ast.LambdaValue
-        { argument = Nothing
-        , body = Just { defaultExpr | ref = model.file.nextRef, value = expr.value }
-        }
-      }) 1 ]
+    [ onClick <| SetNode 3 <| Expr
+      { expr
+      | value =
+        Ast.LambdaValue
+          { argument = Nothing
+          , body = Just { defaultExpr | ref = model.file.nextRef, value = expr.value }
+          }
+      }
+    ]
     [ Html.text "λ" ]
   , Html.button
-    [ onClick <| MapExpr (\v -> { v | arguments =
-      case v.arguments of
-        Ast.Args a -> Ast.Args { values = a.values ++ [ { defaultExpr | ref = model.file.nextRef } ] }
-        Ast.ArgumentsUnspecified -> Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
-    }) 1 ]
+    [ onClick <| SetNode 1 <| Expr
+      { expr
+      | arguments =
+        case expr.arguments of
+          Ast.Args a -> Ast.Args { values = a.values ++ [ { defaultExpr | ref = model.file.nextRef } ] }
+          Ast.ArgumentsUnspecified -> Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
+      }
+    ]
     [ Html.text "arg" ]
   , Html.button
-    [ onClick <| MapExpr (\v -> v) 0 ]
+    [ onClick <| SetNode 0 <| Expr expr ]
     [ Html.text "x" ]
   , Html.button
-    [ onClick <| MapExpr (\v -> { v | value = Ast.StringValue { value = model.input } }) 0 ]
+    [ onClick <| SetNode 0 <| Expr { expr | value = Ast.StringValue { value = model.input } } ]
     [ Html.text <| "\"" ++ model.input ++ "\" (String) " ]
   ]
   ++
@@ -309,21 +295,21 @@ expressionButtons model expr =
     Ast.StringValue v -> []
     Ast.IntValue v ->
       [ Html.button
-        [ onClick <| MapExpr decrement 0 ]
+        [ onClick <| SetNode 0 <| Expr { expr | value = Ast.IntValue { value = v.value - 1 } } ]
         [ Html.text "-1" ]
       , Html.button
-        [ onClick <| MapExpr increment 0 ]
+        [ onClick <| SetNode 0 <| Expr { expr | value = Ast.IntValue { value = v.value + 1 } } ]
         [ Html.text "+1" ]
       ]
     Ast.FloatValue v -> []
     Ast.BoolValue v ->
       [ Html.button
-        [ onClick <| MapExpr negate 0 ]
+        [ onClick <| SetNode 0 <| Expr { expr | value = Ast.BoolValue { value = not v.value } } ]
         [ Html.text "!" ]
       ]
-    Ast.ListValue _ ->
+    Ast.ListValue v ->
       [ Html.button
-        [ onClick <| MapExpr (append model.file.nextRef) 1 ]
+        [ onClick <| SetNode 1 <| Expr { expr | value = Ast.ListValue { values = v.values ++ [ { defaultExpr | ref = model.file.nextRef } ] } } ]
         [ Html.text "append" ]
       ]
     _ -> []
@@ -333,85 +319,41 @@ expressionButtons model expr =
 variableDefinitionButtons : Model -> Ast.VariableDefinition -> List (Html Msg)
 variableDefinitionButtons model def =
   [ Html.button
-    [ onClick <| MapVarDef (\v -> { v | arguments =
-      v.arguments ++ [ { ref = model.file.nextRef, pvalue = Ast.LabelValue { name = "xyz" } } ]
-    }) 1 ]
+    [ onClick
+      <| SetNode 1
+      <| VarDef
+        { def
+        | arguments =
+          def.arguments
+          ++ [
+            { ref = model.file.nextRef
+            , pvalue = Ast.LabelValue { name = "xyz" }
+            } ]
+        } ]
     [ Html.text "arg" ]
   ]
 
 
-defaultExpr : Ast.Expression
-defaultExpr =
-  { ref = -1
-  , value = Ast.EmptyValue 41
-  , arguments = Ast.Args { values = [] }
-  }
-
-
-defaultPattern : Ast.Pattern
-defaultPattern =
-  { ref = -1
-  , pvalue = Ast.PvalueUnspecified
-  }
-
-
-intButtons model =
+intButtons : Model -> Ast.Expression -> List (Html Msg)
+intButtons model expr =
   case String.toInt (model.input) of
     Ok n ->
       [ Html.button
-        [ onClick <| MapExpr (\v -> { v | value = Ast.IntValue { value = n } }) 0 ]
+        [ onClick <| SetNode 0 <| Expr { expr | value = Ast.IntValue { value = n } } ]
         [ Html.text <| (toString n) ++ " (Int)" ]
       ]
     _ -> []
 
 
-floatButtons model =
+floatButtons : Model -> Ast.Expression -> List (Html Msg)
+floatButtons model expr =
   case String.toFloat (model.input) of
     Ok n ->
       [ Html.button
-        [ onClick <| MapExpr (\v -> { v | value = Ast.FloatValue { value = n } }) 0 ]
+        [ onClick <| SetNode 0 <| Expr { expr | value = Ast.FloatValue { value = n } } ]
         [ Html.text <| (toString n) ++ " (Float)" ]
       ]
     _ -> []
-
-
-me : (Ast.Value -> Ast.Value) -> Ast.Expression -> Ast.Expression
-me f expr =
-  { expr
-  | value = f expr.value
-  }
-
-
-increment : Ast.Expression -> Ast.Expression
-increment =
-  me <|
-    \e -> case e of
-      Ast.IntValue v -> Ast.IntValue { v | value = v.value + 1 }
-      _ -> e
-
-
-decrement : Ast.Expression -> Ast.Expression
-decrement =
-  me <|
-    \e -> case e of
-      Ast.IntValue v -> Ast.IntValue { v | value = v.value - 1 }
-      _ -> e
-
-
-negate : Ast.Expression -> Ast.Expression
-negate =
-  me <|
-    \e -> case e of
-      Ast.BoolValue v -> Ast.BoolValue { v | value = not v.value }
-      _ -> e
-
-
-append : ExprRef -> Ast.Expression -> Ast.Expression
-append ref =
-  me <|
-    \e -> case e of
-      Ast.ListValue v -> Ast.ListValue { v | values = v.values ++ [ { defaultExpr | ref = ref } ] }
-      _ -> e
 
 
 htmlFile : Model -> Ast.File -> Html Msg
