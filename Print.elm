@@ -163,7 +163,7 @@ getExpression ref expr =
               |> List.head
 
           Ast.LambdaValue v ->
-            List.filterMap (Maybe.map <| getExpression ref) [v.argument, v.body]
+            List.filterMap (Maybe.map <| getExpression ref) [v.body]
               |> List.filterMap identity
               |> List.head
 

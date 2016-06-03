@@ -38,7 +38,7 @@ message Expression {
   }
 
   message Lambda {
-    Expression argument = 1;
+    Pattern argument = 1;
     Expression body = 2;
   }
 

@@ -305,7 +305,7 @@ expression_IfEncoder v =
 
 
 type alias Expression_Lambda =
-  { argument : Maybe Expression -- 1
+  { argument : Maybe Pattern -- 1
   , body : Maybe Expression -- 2
   }
 
@@ -313,14 +313,14 @@ type alias Expression_Lambda =
 expression_LambdaDecoder : JD.Decoder Expression_Lambda
 expression_LambdaDecoder =
   Expression_Lambda
-    <$> (optionalFieldDecoder "argument" expressionDecoder)
+    <$> (optionalFieldDecoder "argument" patternDecoder)
     <*> (optionalFieldDecoder "body" expressionDecoder)
 
 
 expression_LambdaEncoder : Expression_Lambda -> JE.Value
 expression_LambdaEncoder v =
   JE.object <| List.filterMap identity <|
-    [ (optionalEncoder "argument" expressionEncoder v.argument)
+    [ (optionalEncoder "argument" patternEncoder v.argument)
     , (optionalEncoder "body" expressionEncoder v.body)
     ]
 

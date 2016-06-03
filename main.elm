@@ -178,6 +178,9 @@ mapExpression ref f expr =
       | value = newValue
       }
 
+mapPattern : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Pattern -> Ast.Pattern
+mapPattern ref f pat = pat
+
 mapValue : ExprRef -> (Ast.Expression -> Ast.Expression) -> Ast.Value -> Ast.Value
 mapValue ref f value =
   case value of
@@ -196,7 +199,7 @@ mapValue ref f value =
     Ast.LambdaValue v1 ->
       Ast.LambdaValue
         { v1
-        | argument = Maybe.map (mapExpression ref f) v1.argument
+        | argument = Maybe.map (mapPattern ref f) v1.argument
         , body = Maybe.map (mapExpression ref f) v1.body
         }
 
@@ -345,6 +348,13 @@ defaultExpr =
   }
 
 
+defaultPattern : Ast.Pattern
+defaultPattern =
+  { ref = -1
+  , pvalue = Ast.PvalueUnspecified
+  }
+
+
 intButtons model =
   case String.toInt (model.input) of
     Ok n ->
@@ -447,7 +457,7 @@ htmlExpr model expr =
 
       Ast.LambdaValue v ->
         [ Html.text "λ"
-        , htmlExpr model (Maybe.withDefault defaultExpr v.argument)
+        , htmlPattern model (Maybe.withDefault defaultPattern v.argument)
         , Html.text "→"
         , htmlExpr model (Maybe.withDefault defaultExpr v.body)
         ]
