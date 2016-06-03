@@ -127,4 +127,6 @@ message Pattern {
 
 message Label {
   string name = 1;
+
+  // TODO: Add styles etc.
 }

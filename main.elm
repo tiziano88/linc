@@ -137,6 +137,7 @@ setNodeVariableDefinition ref node def =
   else
     { def
     | value = Maybe.map (setNodeExpression ref node) def.value
+    , arguments = List.map (setNodePattern ref node) def.arguments
     }
 
 
@@ -179,7 +180,14 @@ setNodeExpression ref node expr =
 
 setNodePattern : ExprRef -> Node -> Ast.Pattern -> Ast.Pattern
 setNodePattern ref node pat =
-  pat
+  if
+    pat.ref == ref
+  then
+    case node of
+      Pat p -> p
+      _ -> pat
+  else
+    pat
 
 
 getCurrentNode : Model -> Maybe Node
@@ -188,19 +196,53 @@ getCurrentNode model =
     Nothing -> Nothing
     Just ref ->
       model.file.variableDefinitions
-        |> List.filterMap (getNode ref)
+        |> List.filterMap (getNodeVariableDefinition ref)
         |> List.head
 
 
-getNode : ExprRef -> Ast.VariableDefinition -> Maybe Node
-getNode ref def =
+getNodeVariableDefinition : ExprRef -> Ast.VariableDefinition -> Maybe Node
+getNodeVariableDefinition ref def =
   if
     def.ref == ref
   then
     Just (VarDef def)
   else
     -- TODO: Find more elegant way.
-    Maybe.map Expr <| def.value `Maybe.andThen` (getExpression ref)
+    Maybe.oneOf <|
+      [ def.value `Maybe.andThen` (getNodeExpression ref) ]
+      ++ List.map (getNodePattern ref) def.arguments
+
+
+getNodeExpression : ExprRef -> Ast.Expression -> Maybe Node
+getNodeExpression ref expr =
+  if
+    expr.ref == ref
+  then
+    Just (Expr expr)
+  else
+    case expr.value of
+      Ast.ListValue v ->
+        List.filterMap (getNodeExpression ref) v.values |> List.head
+
+      Ast.IfValue v ->
+        List.filterMap (Maybe.map <| getNodeExpression ref) [v.cond, v.true, v.false]
+          |> Maybe.oneOf
+
+      Ast.LambdaValue v ->
+        List.filterMap (Maybe.map <| getNodeExpression ref) [v.body]
+          |> Maybe.oneOf
+
+      _ -> Nothing
+
+
+getNodePattern : ExprRef -> Ast.Pattern -> Maybe Node
+getNodePattern ref pat =
+  if
+    pat.ref == ref
+  then
+    Just (Pat pat)
+  else
+    Nothing
 
 
 view model =
@@ -229,6 +271,7 @@ nodeButtons model node =
   case node of
     Expr expr -> expressionButtons model expr
     VarDef vdef -> variableDefinitionButtons model vdef
+    Pat pat -> patternButtons model pat
 
 
 expressionButtons : Model -> Ast.Expression -> List (Html Msg)
@@ -332,6 +375,20 @@ variableDefinitionButtons model def =
         } ]
     [ Html.text "arg" ]
   ]
+
+
+patternButtons : Model -> Ast.Pattern -> List (Html Msg)
+patternButtons model pat =
+  case pat.pvalue of
+    Ast.LabelValue v ->
+      [ Html.button
+        [ onClick
+          <| SetNode 0
+          <| Pat { pat | pvalue = Ast.LabelValue { v | name = model.input } } ]
+        [ Html.text "set name" ]
+      ]
+
+    _ -> []
 
 
 intButtons : Model -> Ast.Expression -> List (Html Msg)
