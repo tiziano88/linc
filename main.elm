@@ -54,19 +54,32 @@ testModel =
           }
         , value = Just
           { ref = 12
-          , value = Ast.IntValue
-            { value = 42
+          , value = Ast.RefValue
+            { ref = 123
             }
-          , arguments = Ast.Args { values = [] }
+          , arguments = Ast.Args
+            { values =
+              [ { ref = 22
+                , value = Ast.IntValue
+                  { value = 42
+                  }
+                , arguments = Ast.Args { values = [] }
+                }
+              ]
+            }
           }
-        , arguments = []
+        , arguments = [
+          { ref = 123
+          , pvalue = Ast.LabelValue { name = "yyy" }
+          }
+        ]
         }
       , { ref = 2
         , label = Just
           { name = "mainxxx"
           }
         , value = Just
-          { ref = 22
+          { ref = 23
           , value = Ast.IntValue
             { value = 42
             }
@@ -167,7 +180,7 @@ setNodeExpression ref node expr =
         Ast.LambdaValue v1 ->
           Ast.LambdaValue
             { v1
-            | argument = v1.argument
+            | argument = Maybe.map (setNodePattern ref node) v1.argument
             , body = Maybe.map (setNodeExpression ref node) v1.body
             }
 
@@ -194,10 +207,14 @@ getCurrentNode : Model -> Maybe Node
 getCurrentNode model =
   case model.currentRef of
     Nothing -> Nothing
-    Just ref ->
-      model.file.variableDefinitions
-        |> List.filterMap (getNodeVariableDefinition ref)
-        |> List.head
+    Just ref -> getNode model ref
+
+
+getNode : Model -> Int -> Maybe Node
+getNode model ref =
+  model.file.variableDefinitions
+    |> List.filterMap (getNodeVariableDefinition ref)
+    |> List.head
 
 
 getNodeVariableDefinition : ExprRef -> Ast.VariableDefinition -> Maybe Node
@@ -229,8 +246,9 @@ getNodeExpression ref expr =
           |> Maybe.oneOf
 
       Ast.LambdaValue v ->
-        List.filterMap (Maybe.map <| getNodeExpression ref) [v.body]
-          |> Maybe.oneOf
+        Maybe.oneOf <|
+          (List.filterMap (Maybe.map <| getNodeExpression ref) [v.body])
+          ++ (List.filterMap (Maybe.map <| getNodePattern ref) [v.argument])
 
       _ -> Nothing
 
@@ -306,12 +324,12 @@ expressionButtons model expr =
     ]
     [ Html.text "if" ]
   , Html.button
-    [ onClick <| SetNode 3 <| Expr
+    [ onClick <| SetNode 2 <| Expr
       { expr
       | value =
         Ast.LambdaValue
-          { argument = Nothing
-          , body = Just { defaultExpr | ref = model.file.nextRef, value = expr.value }
+          { argument = Just { defaultPattern | ref = model.file.nextRef }
+          , body = Just { defaultExpr | ref = model.file.nextRef + 1, value = expr.value }
           }
       }
     ]
@@ -462,7 +480,7 @@ htmlExpr model expr =
         ]
 
       Ast.RefValue v ->
-        [ Html.text "ref"
+        [ htmlRef model v.ref
         ]
 
       --EApp e1 e2 ->
@@ -496,6 +514,19 @@ htmlExpr model expr =
         [] -> content
         _ -> [ Html.text "(" ] ++ content ++ arguments ++ [ Html.text ")" ]
       )
+
+
+htmlRef : Model -> Int -> Html Msg
+htmlRef model ref =
+  let
+    n = getNode model ref
+  in
+    case n of
+      Just n ->
+        case n of
+          Pat p -> htmlPattern model p
+          _ -> Html.text "<<ERROR>>"
+      Nothing -> Html.text "<<ERROR>>"
 
 
 (=>) : String -> String -> (String, String)

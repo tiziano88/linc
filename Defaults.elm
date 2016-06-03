@@ -14,5 +14,5 @@ defaultExpr =
 defaultPattern : Ast.Pattern
 defaultPattern =
   { ref = -1
-  , pvalue = Ast.PvalueUnspecified
+  , pvalue = Ast.LabelValue { name = "xxx" }
   }
