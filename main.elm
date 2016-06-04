@@ -13,8 +13,11 @@ import Task
 import Time
 
 import Ast
+import GetNode exposing (..)
+import GetContext exposing (..)
 import Defaults exposing (..)
 import Print exposing (..)
+import SetNode exposing (..)
 import Types exposing (..)
 
 
@@ -137,131 +140,6 @@ update action model =
                     , nextRef = fi.nextRef + n
                     }
                   }
-
-
-setNodeVariableDefinition : ExprRef -> Node -> Ast.VariableDefinition -> Ast.VariableDefinition
-setNodeVariableDefinition ref node def =
-  if
-    def.ref == ref
-  then
-    case node of
-      VarDef x -> x
-      _ -> def
-  else
-    { def
-    | value = Maybe.map (setNodeExpression ref node) def.value
-    , arguments = List.map (setNodePattern ref node) def.arguments
-    }
-
-
-setNodeExpression : ExprRef -> Node -> Ast.Expression -> Ast.Expression
-setNodeExpression ref node expr =
-  if
-    expr.ref == ref
-  then
-    case node of
-      Expr e -> e
-      _ -> expr
-  else
-    let newValue =
-      case expr.value of
-        Ast.IfValue v1 ->
-          Ast.IfValue
-            { cond = Maybe.map (setNodeExpression ref node) v1.cond
-            , true = Maybe.map (setNodeExpression ref node) v1.true
-            , false = Maybe.map (setNodeExpression ref node) v1.false
-            }
-
-        Ast.ListValue v1 ->
-          Ast.ListValue
-            { values = (List.map (setNodeExpression ref node) v1.values)
-            }
-
-        Ast.LambdaValue v1 ->
-          Ast.LambdaValue
-            { v1
-            | argument = Maybe.map (setNodePattern ref node) v1.argument
-            , body = Maybe.map (setNodeExpression ref node) v1.body
-            }
-
-        _ -> expr.value
-    in
-      { expr
-      | value = newValue
-      }
-
-
-setNodePattern : ExprRef -> Node -> Ast.Pattern -> Ast.Pattern
-setNodePattern ref node pat =
-  if
-    pat.ref == ref
-  then
-    case node of
-      Pat p -> p
-      _ -> pat
-  else
-    pat
-
-
-getCurrentNode : Model -> Maybe Node
-getCurrentNode model =
-  case model.currentRef of
-    Nothing -> Nothing
-    Just ref -> getNode model ref
-
-
-getNode : Model -> Int -> Maybe Node
-getNode model ref =
-  model.file.variableDefinitions
-    |> List.filterMap (getNodeVariableDefinition ref)
-    |> List.head
-
-
-getNodeVariableDefinition : ExprRef -> Ast.VariableDefinition -> Maybe Node
-getNodeVariableDefinition ref def =
-  if
-    def.ref == ref
-  then
-    Just (VarDef def)
-  else
-    -- TODO: Find more elegant way.
-    Maybe.oneOf <|
-      [ def.value `Maybe.andThen` (getNodeExpression ref) ]
-      ++ List.map (getNodePattern ref) def.arguments
-
-
-getNodeExpression : ExprRef -> Ast.Expression -> Maybe Node
-getNodeExpression ref expr =
-  if
-    expr.ref == ref
-  then
-    Just (Expr expr)
-  else
-    case expr.value of
-      Ast.ListValue v ->
-        List.filterMap (getNodeExpression ref) v.values |> List.head
-
-      Ast.IfValue v ->
-        List.filterMap (Maybe.map <| getNodeExpression ref) [v.cond, v.true, v.false]
-          |> Maybe.oneOf
-
-      Ast.LambdaValue v ->
-        Maybe.oneOf <|
-          (List.filterMap (Maybe.map <| getNodeExpression ref) [v.body])
-          ++ (List.filterMap (Maybe.map <| getNodePattern ref) [v.argument])
-
-      _ -> Nothing
-
-
-getNodePattern : ExprRef -> Ast.Pattern -> Maybe Node
-getNodePattern ref pat =
-  if
-    pat.ref == ref
-  then
-    Just (Pat pat)
-  else
-    Nothing
-
 
 view model =
   let
