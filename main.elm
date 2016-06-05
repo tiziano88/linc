@@ -106,6 +106,7 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update action model =
   let
     currentNode = Debug.log "previous node" <| getCurrentNode model
+    currentContext = Debug.log "previous context" <| getCurrentContext model
   in
     case action of
       Nop -> noEffects model
@@ -312,12 +313,12 @@ floatButtons model expr =
 htmlFile : Model -> Ast.File -> Html Msg
 htmlFile model file =
   let xs = file.variableDefinitions
-    |> List.map (htmlVariableDefinition model)
+    |> List.map (htmlVariableDefinition model Dict.empty)
   in Html.div [] xs
 
 
-htmlExpr : Model -> Ast.Expression -> Html Msg
-htmlExpr model expr =
+htmlExpr : Model -> Context -> Ast.Expression -> Html Msg
+htmlExpr model ctx expr =
   let
     content = case expr.value of
       Ast.ValueUnspecified ->
@@ -339,26 +340,26 @@ htmlExpr model expr =
         [ Html.text <| "\"" ++ v.value ++ "\"" ]
 
       Ast.ListValue ls ->
-        ([ Html.text "[" ] ++ (List.map (htmlExpr model) ls.values |> List.intersperse (Html.text ",")) ++ [ Html.text "]" ])
+        ([ Html.text "[" ] ++ (List.map (htmlExpr model ctx) ls.values |> List.intersperse (Html.text ",")) ++ [ Html.text "]" ])
 
       Ast.IfValue v ->
         [ Html.text "if"
-        , htmlExpr model (Maybe.withDefault defaultExpr v.cond)
+        , htmlExpr model ctx (Maybe.withDefault defaultExpr v.cond)
         , Html.text "then"
-        , htmlExpr model (Maybe.withDefault defaultExpr v.true)
+        , htmlExpr model ctx (Maybe.withDefault defaultExpr v.true)
         , Html.text "else"
-        , htmlExpr model (Maybe.withDefault defaultExpr v.false)
+        , htmlExpr model ctx (Maybe.withDefault defaultExpr v.false)
         ]
 
       Ast.LambdaValue v ->
         [ Html.text "λ"
-        , htmlPattern model (Maybe.withDefault defaultPattern v.argument)
+        , htmlPattern model ctx (Maybe.withDefault defaultPattern v.argument)
         , Html.text "→"
-        , htmlExpr model (Maybe.withDefault defaultExpr v.body)
+        , htmlExpr model ctx (Maybe.withDefault defaultExpr v.body)
         ]
 
       Ast.RefValue v ->
-        [ htmlRef model v.ref
+        [ htmlRef model ctx v.ref
         ]
 
       --EApp e1 e2 ->
@@ -371,7 +372,7 @@ htmlExpr model expr =
     arguments =
       case expr.arguments of
         Ast.ArgumentsUnspecified -> []
-        Ast.Args a -> List.map (htmlExpr model) a.values
+        Ast.Args a -> List.map (htmlExpr model ctx) a.values
 
   in
     Html.span
@@ -394,15 +395,15 @@ htmlExpr model expr =
       )
 
 
-htmlRef : Model -> Int -> Html Msg
-htmlRef model ref =
+htmlRef : Model -> Context -> ExprRef -> Html Msg
+htmlRef model ctx ref =
   let
-    n = getNode model ref
+    n = getNode model ref Dict.empty
   in
     case n of
       Just n ->
         case n of
-          Pat p -> htmlPattern model p
+          Pat p -> htmlPattern model ctx p
           _ -> Html.text "<<ERROR>>"
       Nothing -> Html.text "<<ERROR>>"
 
@@ -411,8 +412,8 @@ htmlRef model ref =
 (=>) = (,)
 
 
-htmlFunctionSignature : Model -> Ast.VariableDefinition -> Html Msg
-htmlFunctionSignature model def =
+htmlFunctionSignature : Model -> Context -> Ast.VariableDefinition -> Html Msg
+htmlFunctionSignature model ctx def =
   Html.div []
     [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label
     , Html.text " : "
@@ -420,8 +421,8 @@ htmlFunctionSignature model def =
     ]
 
 
-htmlFunctionBody : Model -> Ast.VariableDefinition -> Html Msg
-htmlFunctionBody model def =
+htmlFunctionBody : Model -> Context -> Ast.VariableDefinition -> Html Msg
+htmlFunctionBody model ctx def =
   case def.value of
     Nothing ->
       Html.text "<<<ERROR>>>"
@@ -430,15 +431,15 @@ htmlFunctionBody model def =
       Html.div [] <|
         [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label ]
         ++
-        (List.map (htmlPattern model) def.arguments)
+        (List.map (htmlPattern model ctx) def.arguments)
         ++
         [ Html.text "="
-        , htmlExpr model expr
+        , htmlExpr model ctx expr
         ]
 
 
-htmlPattern : Model -> Ast.Pattern -> Html Msg
-htmlPattern model pat =
+htmlPattern : Model -> Context -> Ast.Pattern -> Html Msg
+htmlPattern model ctx pat =
   let
     content = case pat.pvalue of
       Ast.LabelValue l ->
@@ -464,8 +465,8 @@ htmlPattern model pat =
       content
 
 
-htmlVariableDefinition : Model -> Ast.VariableDefinition -> Html Msg
-htmlVariableDefinition model v =
+htmlVariableDefinition : Model -> Context -> Ast.VariableDefinition -> Html Msg
+htmlVariableDefinition model ctx v =
   Html.div
     [ style <|
       [ "border" => "solid"
@@ -479,8 +480,8 @@ htmlVariableDefinition model v =
         [])
     , onClick' (SetCurrentRef v.ref)
     ]
-    [ htmlFunctionSignature model v
-    , htmlFunctionBody model v
+    [ htmlFunctionSignature model ctx v
+    , htmlFunctionBody model ctx v
     ]
 
 

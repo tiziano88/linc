@@ -16,6 +16,9 @@ type Msg
 type alias ExprRef = Int
 
 
+type alias Context = Dict.Dict ExprRef Node
+
+
 type alias Model =
   { file : Ast.File
   , currentRef : Maybe ExprRef

@@ -1,5 +1,7 @@
 module GetNode exposing (..)
 
+import Dict
+
 import Ast
 import Types exposing (..)
 
@@ -8,11 +10,11 @@ getCurrentNode : Model -> Maybe Node
 getCurrentNode model =
   case model.currentRef of
     Nothing -> Nothing
-    Just ref -> getNode model ref
+    Just ref -> getNode model ref Dict.empty
 
 
-getNode : Model -> Int -> Maybe Node
-getNode model ref =
+getNode : Model -> Int -> Context -> Maybe Node
+getNode model ref ctx =
   model.file.variableDefinitions
     |> List.filterMap (getNodeVariableDefinition ref)
     |> List.head
@@ -62,3 +64,4 @@ getNodePattern ref pat =
     Just (Pat pat)
   else
     Nothing
+
