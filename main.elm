@@ -63,9 +63,7 @@ testModel =
           , arguments = Ast.Args
             { values =
               [ { ref = 22
-                , value = Ast.IntValue
-                  { value = 42
-                  }
+                , value = Ast.IntValue { value = 42 }
                 , arguments = Ast.Args { values = [] }
                 }
               ]
@@ -83,8 +81,16 @@ testModel =
           }
         , value = Just
           { ref = 23
-          , value = Ast.IntValue
-            { value = 42
+          , value = Ast.LambdaValue
+            { argument = Just
+              { ref = 24
+              , pvalue = Ast.LabelValue { name = "iii" }
+              }
+            , body = Just
+              { ref = 42
+              , value = Ast.RefValue { ref = 24 }
+              , arguments = Ast.Args { values = [] }
+              }
             }
           , arguments = Ast.Args { values = [] }
           }
@@ -352,22 +358,18 @@ htmlExpr model ctx expr =
         ]
 
       Ast.LambdaValue v ->
-        [ Html.text "λ"
-        , htmlPattern model ctx (Maybe.withDefault defaultPattern v.argument)
-        , Html.text "→"
-        , htmlExpr model ctx (Maybe.withDefault defaultExpr v.body)
-        ]
+        let
+          newCtx = mergeContexts ctx [ getContextPattern (Maybe.withDefault defaultPattern v.argument) ]
+        in
+          [ Html.text "λ"
+          , htmlPattern model ctx (Maybe.withDefault defaultPattern v.argument)
+          , Html.text "→"
+          , htmlExpr model newCtx (Maybe.withDefault defaultExpr v.body)
+          ]
 
       Ast.RefValue v ->
         [ htmlRef model ctx v.ref
         ]
-
-      --EApp e1 e2 ->
-        --[ Html.text "("
-        --, htmlExpr model e1
-        --, htmlExpr model e2
-        --, Html.text ")"
-        --]
 
     arguments =
       case expr.arguments of
@@ -377,14 +379,12 @@ htmlExpr model ctx expr =
   in
     Html.span
       [ style <|
-        [ "border" => "solid"
-        , "margin" => "5px"
-        , "display" => "inline-block"
-        ] ++
+        nodeStyle
+        ++
         (if
           Just expr.ref == model.currentRef
         then
-          [ "color" => "red" ]
+          selectedStyle
         else
           [])
       , onClick' (SetCurrentRef expr.ref)
@@ -395,15 +395,35 @@ htmlExpr model ctx expr =
       )
 
 
+nodeStyle =
+  [ "border" => "solid"
+  , "margin" => "2px"
+  , "padding" => "2px"
+  , "display" => "inline-block"
+  ]
+
+
+refStyle =
+  [ "border" => "dotted"
+  , "margin" => "2px"
+  , "padding" => "2px"
+  , "display" => "inline-block"
+  ]
+
+
+selectedStyle =
+  [ "color" => "red" ]
+
+
 htmlRef : Model -> Context -> ExprRef -> Html Msg
 htmlRef model ctx ref =
   let
-    n = getNode model ref Dict.empty
+    n = Dict.get ref ctx
   in
     case n of
       Just n ->
         case n of
-          Pat p -> htmlPattern model ctx p
+          Pat p -> htmlPatternRef model ctx p
           _ -> Html.text "<<ERROR>>"
       Nothing -> Html.text "<<ERROR>>"
 
@@ -421,47 +441,68 @@ htmlFunctionSignature model ctx def =
     ]
 
 
+mergeContexts : Context -> List Context -> Context
+mergeContexts ctx ctxs =
+  List.foldl Dict.union ctx ctxs
+
+
 htmlFunctionBody : Model -> Context -> Ast.VariableDefinition -> Html Msg
 htmlFunctionBody model ctx def =
-  case def.value of
-    Nothing ->
-      Html.text "<<<ERROR>>>"
+  let
+    newCtx = mergeContexts ctx <| List.map getContextPattern def.arguments
+  in
+    case def.value of
+      Nothing ->
+        Html.text "<<<ERROR>>>"
 
-    Just expr ->
-      Html.div [] <|
-        [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label ]
-        ++
-        (List.map (htmlPattern model ctx) def.arguments)
-        ++
-        [ Html.text "="
-        , htmlExpr model ctx expr
-        ]
+      Just expr ->
+        Html.div [] <|
+          [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label ]
+          ++
+          (List.map (htmlPattern model newCtx) def.arguments)
+          ++
+          [ Html.text "="
+          , htmlExpr model newCtx expr
+          ]
+
+
+htmlPatternContent : Model -> Context -> Ast.Pattern -> List (Html Msg)
+htmlPatternContent model ctx pat =
+  case pat.pvalue of
+    Ast.LabelValue l ->
+      [ Html.text l.name ]
+    Ast.TypeConstructorValue v -> []
+    Ast.PatternValue v -> []
+    Ast.PvalueUnspecified -> []
 
 
 htmlPattern : Model -> Context -> Ast.Pattern -> Html Msg
 htmlPattern model ctx pat =
   let
-    content = case pat.pvalue of
-      Ast.LabelValue l ->
-        [ Html.text l.name ]
-      Ast.TypeConstructorValue v -> []
-      Ast.PatternValue v -> []
-      Ast.PvalueUnspecified -> []
+    content = htmlPatternContent model ctx pat
   in
     Html.div
       [ style <|
-        [ "border" => "solid"
-        , "margin" => "5px"
-        , "display" => "inline-block"
-        ] ++
+        nodeStyle
+        ++
         (if
           Just pat.ref == model.currentRef
         then
-          [ "color" => "red" ]
+          selectedStyle
         else
           [])
       , onClick' (SetCurrentRef pat.ref)
       ]
+      content
+
+
+htmlPatternRef : Model -> Context -> Ast.Pattern -> Html Msg
+htmlPatternRef model ctx pat =
+  let
+    content = htmlPatternContent model ctx pat
+  in
+    Html.div
+      [ style refStyle ]
       content
 
 
@@ -475,7 +516,7 @@ htmlVariableDefinition model ctx v =
       (if
         Just v.ref == model.currentRef
       then
-        [ "color" => "red" ]
+        selectedStyle
       else
         [])
     , onClick' (SetCurrentRef v.ref)
@@ -483,6 +524,14 @@ htmlVariableDefinition model ctx v =
     [ htmlFunctionSignature model ctx v
     , htmlFunctionBody model ctx v
     ]
+
+
+getContextPattern : Ast.Pattern -> Context
+getContextPattern pat =
+  case pat.pvalue of
+    Ast.LabelValue _ ->
+      Dict.singleton pat.ref <| Pat pat
+    _ -> Dict.empty
 
 
 -- http://ethanschoonover.com/solarized
