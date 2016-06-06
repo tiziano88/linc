@@ -77,28 +77,30 @@ expressionButtons model ctx expr =
     [ Html.text <| "\"" ++ model.input ++ "\" (String) " ]
   ]
   ++
-  case expr.value of
-    Ast.StringValue v -> []
-    Ast.IntValue v ->
-      [ Html.button
-        [ onClick <| SetNode 0 <| Expr { expr | value = Ast.IntValue { value = v.value - 1 } } ]
-        [ Html.text "-1" ]
-      , Html.button
-        [ onClick <| SetNode 0 <| Expr { expr | value = Ast.IntValue { value = v.value + 1 } } ]
-        [ Html.text "+1" ]
-      ]
-    Ast.FloatValue v -> []
-    Ast.BoolValue v ->
-      [ Html.button
-        [ onClick <| SetNode 0 <| Expr { expr | value = Ast.BoolValue { value = not v.value } } ]
-        [ Html.text "!" ]
-      ]
-    Ast.ListValue v ->
-      [ Html.button
-        [ onClick <| SetNode 1 <| Expr { expr | value = Ast.ListValue { values = v.values ++ [ { defaultExpr | ref = model.file.nextRef } ] } } ]
-        [ Html.text "append" ]
-      ]
-    _ -> []
+  ( case expr.value of
+      Ast.IntValue v ->
+        [ Html.button
+          [ onClick <| SetNode 0 <| Expr { expr | value = Ast.IntValue { value = v.value - 1 } } ]
+          [ Html.text "-1" ]
+        , Html.button
+          [ onClick <| SetNode 0 <| Expr { expr | value = Ast.IntValue { value = v.value + 1 } } ]
+          [ Html.text "+1" ]
+        ]
+
+      Ast.BoolValue v ->
+        [ Html.button
+          [ onClick <| SetNode 0 <| Expr { expr | value = Ast.BoolValue { value = not v.value } } ]
+          [ Html.text "!" ]
+        ]
+
+      Ast.ListValue v ->
+        [ Html.button
+          [ onClick <| SetNode 1 <| Expr { expr | value = Ast.ListValue { values = v.values ++ [ { defaultExpr | ref = model.file.nextRef } ] } } ]
+          [ Html.text "append" ]
+        ]
+
+      _ -> []
+  )
   ++
   [ Html.text <| "context: " ++ (toString <| Dict.keys ctx) ]
 

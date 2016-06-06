@@ -11,11 +11,11 @@ getCurrentContext : Model -> Context
 getCurrentContext model =
   case model.currentRef of
     Nothing -> Dict.empty
-    Just ref -> getContextFile ref Dict.empty model.file
+    Just ref -> getContextFile ref model.file
 
 
-getContextFile : ExprRef -> Context -> Ast.File -> Context
-getContextFile ref ctx file =
+getContextFile : ExprRef -> Ast.File -> Context
+getContextFile ref file =
   let
     newCtx = file.variableDefinitions
       |> List.map (\def -> (def.ref, VarDef def))
@@ -23,7 +23,7 @@ getContextFile ref ctx file =
   in
     file.variableDefinitions
       |> List.map (getContextVariableDefinition ref newCtx)
-      |> mergeContexts ctx
+      |> mergeContexts Dict.empty
 
 
 getContextVariableDefinition : ExprRef -> Context -> Ast.VariableDefinition -> Context
@@ -31,7 +31,9 @@ getContextVariableDefinition ref ctx def =
   let
     newCtx = mergeContexts ctx <| List.map getContextPattern def.arguments
   in
-    getContextExpression ref newCtx (Maybe.withDefault defaultExpr def.value)
+    case def.value of
+      Just v -> getContextExpression ref newCtx v
+      _ -> Dict.empty
 
 
 getContextExpression : ExprRef -> Context -> Ast.Expression -> Context
@@ -39,11 +41,13 @@ getContextExpression ref ctx expr =
   if
     (Debug.log "eref" expr.ref) == (Debug.log "ref" ref)
   then
-    ctx
+    (Debug.log "ctx" ctx)
   else
     case expr.value of
       Ast.LambdaValue v ->
-        Dict.union ctx <| getContextPattern (Maybe.withDefault defaultPattern v.argument)
+        case v.argument of
+          Just a -> getContextPattern a
+          _ -> Dict.empty
       _ -> Dict.empty
 
 
