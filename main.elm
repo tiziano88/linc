@@ -165,20 +165,20 @@ view model =
       ++ buttons
       ++
       [ Html.div [] [ Html.text <| toString model ]
-      , Html.pre [] [ (htmlFile model model.file) ]
+      , Html.pre [] [ (htmlFile model node model.file) ]
       , Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
       ]
 
 
-htmlFile : Model -> Ast.File -> Html Msg
-htmlFile model file =
+htmlFile : Model -> Maybe Node -> Ast.File -> Html Msg
+htmlFile model node file =
   let xs = file.variableDefinitions
-    |> List.map (htmlVariableDefinition model Dict.empty)
+    |> List.map (htmlVariableDefinition model node Dict.empty)
   in Html.div [] xs
 
 
-htmlExpr : Model -> Context -> Ast.Expression -> Html Msg
-htmlExpr model ctx expr =
+htmlExpr : Model -> Maybe Node -> Context -> Ast.Expression -> Html Msg
+htmlExpr model node ctx expr =
   let
     content = case expr.value of
       Ast.ValueUnspecified ->
@@ -200,15 +200,15 @@ htmlExpr model ctx expr =
         [ Html.text <| "\"" ++ v.value ++ "\"" ]
 
       Ast.ListValue ls ->
-        ([ Html.text "[" ] ++ (List.map (htmlExpr model ctx) ls.values |> List.intersperse (Html.text ",")) ++ [ Html.text "]" ])
+        ([ Html.text "[" ] ++ (List.map (htmlExpr model node ctx) ls.values |> List.intersperse (Html.text ",")) ++ [ Html.text "]" ])
 
       Ast.IfValue v ->
         [ Html.text "if"
-        , htmlExpr model ctx (Maybe.withDefault defaultExpr v.cond)
+        , htmlExpr model node ctx (Maybe.withDefault defaultExpr v.cond)
         , Html.text "then"
-        , htmlExpr model ctx (Maybe.withDefault defaultExpr v.true)
+        , htmlExpr model node ctx (Maybe.withDefault defaultExpr v.true)
         , Html.text "else"
-        , htmlExpr model ctx (Maybe.withDefault defaultExpr v.false)
+        , htmlExpr model node ctx (Maybe.withDefault defaultExpr v.false)
         ]
 
       Ast.LambdaValue v ->
@@ -216,19 +216,19 @@ htmlExpr model ctx expr =
           newCtx = mergeContexts ctx [ getContextPattern (Maybe.withDefault defaultPattern v.argument) ]
         in
           [ Html.text "λ"
-          , htmlPattern model ctx (Maybe.withDefault defaultPattern v.argument)
+          , htmlPattern model node ctx (Maybe.withDefault defaultPattern v.argument)
           , Html.text "→"
-          , htmlExpr model newCtx (Maybe.withDefault defaultExpr v.body)
+          , htmlExpr model node newCtx (Maybe.withDefault defaultExpr v.body)
           ]
 
       Ast.RefValue v ->
-        [ htmlRef model ctx v.ref
+        [ htmlRef model node ctx v.ref
         ]
 
     arguments =
       case expr.arguments of
         Ast.ArgumentsUnspecified -> []
-        Ast.Args a -> List.map (htmlExpr model ctx) a.values
+        Ast.Args a -> List.map (htmlExpr model node ctx) a.values
 
   in
     Html.span
@@ -241,12 +241,38 @@ htmlExpr model ctx expr =
           selectedStyle
         else
           [])
+        ++
+        (if
+          isRefSource node expr.ref
+        then
+          refSourceStyle
+        else
+          [])
       , onClick' (SetCurrentRef expr.ref)
       ]
       (case arguments of
         [] -> content
         _ -> [ Html.text "(" ] ++ content ++ arguments ++ [ Html.text ")" ]
       )
+
+
+isRefSource : Maybe Node -> ExprRef -> Bool
+isRefSource node ref =
+  False
+
+
+isRefTarget : Maybe Node -> ExprRef -> Bool
+isRefTarget node ref =
+  case node of
+    Just n ->
+      case n of
+        Expr e ->
+          case e.value of
+            Ast.RefValue v ->
+              ref == v.ref
+            _ -> False
+        _ -> False
+    _ -> False
 
 
 nodeStyle =
@@ -269,8 +295,16 @@ selectedStyle =
   [ "color" => "red" ]
 
 
-htmlRef : Model -> Context -> ExprRef -> Html Msg
-htmlRef model ctx ref =
+refSourceStyle =
+  [ "color" => "blue" ]
+
+
+refTargetStyle =
+  [ "color" => "green" ]
+
+
+htmlRef : Model -> Maybe Node -> Context -> ExprRef -> Html Msg
+htmlRef model node ctx ref =
   let
     n = Dict.get ref ctx
   in
@@ -300,8 +334,8 @@ mergeContexts ctx ctxs =
   List.foldl Dict.union ctx ctxs
 
 
-htmlFunctionBody : Model -> Context -> Ast.VariableDefinition -> Html Msg
-htmlFunctionBody model ctx def =
+htmlFunctionBody : Model -> Maybe Node -> Context -> Ast.VariableDefinition -> Html Msg
+htmlFunctionBody model node ctx def =
   let
     newCtx = mergeContexts ctx <| List.map getContextPattern def.arguments
   in
@@ -313,10 +347,10 @@ htmlFunctionBody model ctx def =
         Html.div [] <|
           [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label ]
           ++
-          (List.map (htmlPattern model newCtx) def.arguments)
+          (List.map (htmlPattern model node newCtx) def.arguments)
           ++
           [ Html.text "="
-          , htmlExpr model newCtx expr
+          , htmlExpr model node newCtx expr
           ]
 
 
@@ -330,8 +364,8 @@ htmlPatternContent model ctx pat =
     Ast.PvalueUnspecified -> []
 
 
-htmlPattern : Model -> Context -> Ast.Pattern -> Html Msg
-htmlPattern model ctx pat =
+htmlPattern : Model -> Maybe Node -> Context -> Ast.Pattern -> Html Msg
+htmlPattern model node ctx pat =
   let
     content = htmlPatternContent model ctx pat
   in
@@ -343,6 +377,13 @@ htmlPattern model ctx pat =
           Just pat.ref == model.currentRef
         then
           selectedStyle
+        else
+          [])
+        ++
+        (if
+          isRefTarget node pat.ref
+        then
+          refTargetStyle
         else
           [])
       , onClick' (SetCurrentRef pat.ref)
@@ -360,8 +401,8 @@ htmlPatternRef model ctx pat =
       content
 
 
-htmlVariableDefinition : Model -> Context -> Ast.VariableDefinition -> Html Msg
-htmlVariableDefinition model ctx v =
+htmlVariableDefinition : Model -> Maybe Node -> Context -> Ast.VariableDefinition -> Html Msg
+htmlVariableDefinition model node ctx v =
   Html.div
     [ style <|
       [ "border" => "solid"
@@ -376,7 +417,7 @@ htmlVariableDefinition model ctx v =
     , onClick' (SetCurrentRef v.ref)
     ]
     [ htmlFunctionSignature model ctx v
-    , htmlFunctionBody model ctx v
+    , htmlFunctionBody model node ctx v
     ]
 
 
