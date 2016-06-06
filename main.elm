@@ -63,8 +63,12 @@ testModel =
             }
           , arguments = Ast.Args
             { values =
-              [ { ref = 22
+              [ { ref = 13
                 , value = Ast.IntValue { value = 42 }
+                , arguments = Ast.Args { values = [] }
+                }
+              , { ref = 14
+                , value = Ast.RefValue { ref = 2 }
                 , arguments = Ast.Args { values = [] }
                 }
               ]
@@ -201,7 +205,11 @@ htmlExpr model node ctx expr =
         [ Html.text <| "\"" ++ v.value ++ "\"" ]
 
       Ast.ListValue ls ->
-        ([ Html.text "[" ] ++ (List.map (htmlExpr model node ctx) ls.values |> List.intersperse (Html.text ",")) ++ [ Html.text "]" ])
+        [ Html.text "[" ]
+        ++
+        (List.map (htmlExpr model node ctx) ls.values |> List.intersperse (Html.text ","))
+        ++
+        [ Html.text "]" ]
 
       Ast.IfValue v ->
         [ Html.text "if"
@@ -214,7 +222,7 @@ htmlExpr model node ctx expr =
 
       Ast.LambdaValue v ->
         let
-          newCtx = mergeContexts ctx [ getContextPattern (Maybe.withDefault defaultPattern v.argument) ]
+          newCtx = Dict.union ctx <| getContextPattern (Maybe.withDefault defaultPattern v.argument)
         in
           [ Html.text "λ"
           , htmlPattern model node ctx (Maybe.withDefault defaultPattern v.argument)
@@ -223,13 +231,12 @@ htmlExpr model node ctx expr =
           ]
 
       Ast.RefValue v ->
-        [ htmlRef model node ctx v.ref
-        ]
+        [ htmlRef model node ctx v.ref ]
 
     arguments =
       case expr.arguments of
-        Ast.ArgumentsUnspecified -> []
         Ast.Args a -> List.map (htmlExpr model node ctx) a.values
+        _ -> []
 
   in
     Html.span
@@ -251,9 +258,11 @@ htmlExpr model node ctx expr =
           [])
       , onClick' (SetCurrentRef expr.ref)
       ]
-      (case arguments of
-        [] -> content
-        _ -> [ Html.text "(" ] ++ content ++ arguments ++ [ Html.text ")" ]
+      ( case arguments of
+          [] ->
+            content
+          _ ->
+            [ Html.text "(" ] ++ content ++ arguments ++ [ Html.text ")" ]
       )
 
 

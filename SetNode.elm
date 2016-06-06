@@ -27,31 +27,38 @@ setNodeExpression ref node expr =
       Expr e -> e
       _ -> expr
   else
-    let newValue =
-      case expr.value of
-        Ast.IfValue v1 ->
-          Ast.IfValue
-            { cond = Maybe.map (setNodeExpression ref node) v1.cond
-            , true = Maybe.map (setNodeExpression ref node) v1.true
-            , false = Maybe.map (setNodeExpression ref node) v1.false
-            }
+    let
+      newValue =
+        case expr.value of
+          Ast.IfValue v1 ->
+            Ast.IfValue
+              { cond = Maybe.map (setNodeExpression ref node) v1.cond
+              , true = Maybe.map (setNodeExpression ref node) v1.true
+              , false = Maybe.map (setNodeExpression ref node) v1.false
+              }
 
-        Ast.ListValue v1 ->
-          Ast.ListValue
-            { values = (List.map (setNodeExpression ref node) v1.values)
-            }
+          Ast.ListValue v1 ->
+            Ast.ListValue
+              { values = (List.map (setNodeExpression ref node) v1.values)
+              }
 
-        Ast.LambdaValue v1 ->
-          Ast.LambdaValue
-            { v1
-            | argument = Maybe.map (setNodePattern ref node) v1.argument
-            , body = Maybe.map (setNodeExpression ref node) v1.body
-            }
+          Ast.LambdaValue v1 ->
+            Ast.LambdaValue
+              { v1
+              | argument = Maybe.map (setNodePattern ref node) v1.argument
+              , body = Maybe.map (setNodeExpression ref node) v1.body
+              }
 
-        _ -> expr.value
+          _ -> expr.value
+
+      newArgs =
+        case expr.arguments of
+          Ast.Args args -> List.map (setNodeExpression ref node) args.values
+          _ -> []
     in
       { expr
       | value = newValue
+      , arguments = Ast.Args { values = newArgs }
       }
 
 

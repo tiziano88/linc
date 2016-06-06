@@ -1,5 +1,6 @@
 module Buttons exposing (..)
 
+import Dict
 import Html exposing (..)
 import Html.Events exposing (..)
 import String
@@ -99,7 +100,7 @@ expressionButtons model ctx expr =
       ]
     _ -> []
   ++
-  [ Html.text <| "context: " ++ (toString ctx) ]
+  [ Html.text <| "context: " ++ (toString <| Dict.keys ctx) ]
 
 
 

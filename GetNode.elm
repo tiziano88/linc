@@ -40,20 +40,31 @@ getNodeExpression ref expr =
   then
     Just (Expr expr)
   else
-    case expr.value of
-      Ast.ListValue v ->
-        List.filterMap (getNodeExpression ref) v.values |> List.head
+    let
+      vNode =
+        case expr.value of
+          Ast.ListValue v ->
+            List.filterMap (getNodeExpression ref) v.values |> List.head
 
-      Ast.IfValue v ->
-        List.filterMap (Maybe.map <| getNodeExpression ref) [v.cond, v.true, v.false]
-          |> Maybe.oneOf
+          Ast.IfValue v ->
+            List.filterMap (Maybe.map <| getNodeExpression ref) [v.cond, v.true, v.false]
+              |> Maybe.oneOf
 
-      Ast.LambdaValue v ->
-        Maybe.oneOf <|
-          (List.filterMap (Maybe.map <| getNodeExpression ref) [v.body])
-          ++ (List.filterMap (Maybe.map <| getNodePattern ref) [v.argument])
+          Ast.LambdaValue v ->
+            Maybe.oneOf <|
+              (List.filterMap (Maybe.map <| getNodeExpression ref) [v.body])
+              ++
+              (List.filterMap (Maybe.map <| getNodePattern ref) [v.argument])
 
-      _ -> Nothing
+          _ -> Nothing
+
+      aNodes =
+        case expr.arguments of
+          Ast.Args args -> List.map (getNodeExpression ref) args.values
+          _ -> []
+    in
+      Maybe.oneOf <| [ vNode ] ++ aNodes
+
 
 
 getNodePattern : ExprRef -> Ast.Pattern -> Maybe Node
