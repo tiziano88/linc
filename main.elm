@@ -153,9 +153,10 @@ view model =
   let
     file = model.file
     node = getCurrentNode model
+    context = getCurrentContext model
     buttons = case node of
       Nothing -> []
-      Just n -> nodeButtons model n
+      Just n -> nodeButtons model n context
   in
     Html.div [] <|
       [ Html.input
@@ -329,11 +330,6 @@ htmlFunctionSignature model ctx def =
     ]
 
 
-mergeContexts : Context -> List Context -> Context
-mergeContexts ctx ctxs =
-  List.foldl Dict.union ctx ctxs
-
-
 htmlFunctionBody : Model -> Maybe Node -> Context -> Ast.VariableDefinition -> Html Msg
 htmlFunctionBody model node ctx def =
   let
@@ -419,14 +415,6 @@ htmlVariableDefinition model node ctx v =
     [ htmlFunctionSignature model ctx v
     , htmlFunctionBody model node ctx v
     ]
-
-
-getContextPattern : Ast.Pattern -> Context
-getContextPattern pat =
-  case pat.pvalue of
-    Ast.LabelValue _ ->
-      Dict.singleton pat.ref <| Pat pat
-    _ -> Dict.empty
 
 
 -- http://ethanschoonover.com/solarized

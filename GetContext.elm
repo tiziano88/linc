@@ -1,35 +1,55 @@
 module GetContext exposing (..)
 
+import Dict
+
 import Ast
+import Defaults exposing (..)
 import Types exposing (..)
 
 
-getCurrentContext : Model -> List Node
+getCurrentContext : Model -> Context
 getCurrentContext model =
   case model.currentRef of
-    Nothing -> []
-    Just ref -> getContext model ref
+    Nothing -> Dict.empty
+    Just ref -> getContext model ref Dict.empty
 
 
-getContext : Model -> ExprRef -> List Node
-getContext model ref =
-  model.file.variableDefinitions
-    |> List.concatMap (getContextVariableDefinition ref)
+getContext : Model -> ExprRef -> Context -> Context
+getContext model ref ctx =
+  getContextFile ref ctx model.file
 
 
-getContextVariableDefinition : ExprRef -> Ast.VariableDefinition -> List Node
-getContextVariableDefinition model ref = []
+getContextFile : ExprRef -> Context -> Ast.File -> Context
+getContextFile ref ctx file =
+  mergeContexts ctx <| List.map (getContextVariableDefinition ref ctx) file.variableDefinitions
 
 
-getContextExpression : ExprRef -> Ast.Expression -> List Node
-getContextExpression ref expr =
+getContextVariableDefinition : ExprRef -> Context -> Ast.VariableDefinition -> Context
+getContextVariableDefinition model ctx def =
+  mergeContexts ctx <| List.map getContextPattern def.arguments
+
+
+getContextExpression : ExprRef -> Context -> Ast.Expression -> Context
+getContextExpression ref ctx expr =
   if
     expr.ref == ref
   then
-    [Expr expr]
+    ctx
   else
     case expr.value of
-      Ast.ListValue v -> List.concatMap (getContextExpression ref) v.values
-      Ast.IfValue v -> []
-      Ast.LambdaValue v -> []
-      _ -> []
+      Ast.LambdaValue v ->
+        mergeContexts ctx [ getContextPattern (Maybe.withDefault defaultPattern v.argument) ]
+      _ -> Dict.empty
+
+
+getContextPattern : Ast.Pattern -> Context
+getContextPattern pat =
+  case pat.pvalue of
+    Ast.LabelValue _ ->
+      Dict.singleton pat.ref <| Pat pat
+    _ -> Dict.empty
+
+
+mergeContexts : Context -> List Context -> Context
+mergeContexts ctx ctxs =
+  List.foldl Dict.union ctx ctxs

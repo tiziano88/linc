@@ -8,16 +8,16 @@ import Ast
 import Defaults exposing (..)
 import Types exposing (..)
 
-nodeButtons : Model -> Node -> List (Html Msg)
-nodeButtons model node =
+nodeButtons : Model -> Node -> Context -> List (Html Msg)
+nodeButtons model node ctx =
   case node of
-    Expr expr -> expressionButtons model expr
+    Expr expr -> expressionButtons model ctx expr
     VarDef vdef -> variableDefinitionButtons model vdef
     Pat pat -> patternButtons model pat
 
 
-expressionButtons : Model -> Ast.Expression -> List (Html Msg)
-expressionButtons model expr =
+expressionButtons : Model -> Context -> Ast.Expression -> List (Html Msg)
+expressionButtons model ctx expr =
   [ Html.button
     [ onClick <| SetNode 0 <| Expr { expr | value = Ast.IntValue { value = 0 } } ]
     [ Html.text "0" ]
@@ -98,6 +98,8 @@ expressionButtons model expr =
         [ Html.text "append" ]
       ]
     _ -> []
+  ++
+  [ Html.text <| "context: " ++ (toString ctx) ]
 
 
 
