@@ -102,8 +102,29 @@ expressionButtons model ctx expr =
       _ -> []
   )
   ++
-  [ Html.text <| "context: " ++ (toString <| Dict.keys ctx) ]
+  (contextButtons ctx expr)
 
+
+contextButtons : Context -> Ast.Expression -> List (Html Msg)
+contextButtons ctx expr =
+  ctx
+    |> Dict.values
+    |> List.map (refButton expr)
+
+
+refButton : Ast.Expression -> Node -> Html Msg
+refButton expr node =
+  case node of
+    Pat pat ->
+      case pat.pvalue of
+        Ast.LabelValue l ->
+          Html.button
+            [ onClick <| SetNode 1 <| Expr { expr | value = Ast.RefValue { ref = pat.ref } } ]
+            [ Html.text l.name ]
+
+        _ -> Html.text "x"
+
+    _ -> Html.text "x"
 
 
 variableDefinitionButtons : Model -> Ast.VariableDefinition -> List (Html Msg)
