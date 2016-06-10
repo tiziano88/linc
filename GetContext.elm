@@ -17,9 +17,10 @@ getCurrentContext model =
 getContextFile : ExprRef -> Ast.File -> Context
 getContextFile ref file =
   let
-    newCtx = file.variableDefinitions
-      |> List.map (\def -> (def.ref, VarDef def))
-      |> Dict.fromList
+    newCtx =
+      file.variableDefinitions
+        |> List.map (\def -> (def.ref, VarDef def))
+        |> Dict.fromList
   in
     file.variableDefinitions
       |> List.map (getContextVariableDefinition ref newCtx)
@@ -46,7 +47,14 @@ getContextExpression ref ctx expr =
     case expr.value of
       Ast.LambdaValue v ->
         case v.argument of
-          Just a -> getContextPattern a
+          Just a ->
+            case v.body of
+              Just b ->
+                let
+                  newCtx = getContextPattern a
+                in
+                  getContextExpression ref newCtx b
+              _ -> Dict.empty
           _ -> Dict.empty
       _ -> Dict.empty
 
