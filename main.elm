@@ -13,7 +13,7 @@ import Task
 import Time
 
 import Ast
-import Buttons exposing (..)
+import Actions exposing (..)
 import GetNode exposing (..)
 import GetContext exposing (..)
 import Defaults exposing (..)
@@ -158,21 +158,28 @@ view model =
     file = model.file
     node = getCurrentNode model
     context = getCurrentContext model
-    buttons = case node of
+    actions = case node of
       Nothing -> []
-      Just n -> nodeButtons model n context
+      Just n -> nodeActions model n context
   in
     Html.div [] <|
       [ Html.input
         [ onInput Input ]
         []
       ]
-      ++ buttons
+      ++ (List.map actionToButton actions)
       ++
       [ Html.div [] [ Html.text <| toString model ]
       , Html.pre [] [ (htmlFile model node model.file) ]
       , Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
       ]
+
+
+actionToButton : Action -> Html Msg
+actionToButton action =
+  Html.button
+    [ onClick <| action.msg ]
+    [ Html.text action.label ]
 
 
 htmlFile : Model -> Maybe Node -> Ast.File -> Html Msg

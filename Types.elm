@@ -30,3 +30,9 @@ type Node
   = Expr Ast.Expression
   | VarDef Ast.VariableDefinition
   | Pat Ast.Pattern
+
+
+type alias Action =
+  { label : String
+  , msg : Msg
+  }
