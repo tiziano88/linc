@@ -54,7 +54,7 @@ testModel =
     , variableDefinitions =
       [ { ref = 1
         , label = Just
-          { name = "main"
+          { name = "fib"
           }
         , value = Just
           { ref = 12
@@ -76,13 +76,13 @@ testModel =
           }
         , arguments = [
           { ref = 123
-          , pvalue = Ast.LabelValue { name = "yyy" }
+          , pvalue = Ast.LabelValue { name = "n" }
           }
         ]
         }
       , { ref = 2
         , label = Just
-          { name = "mainxxx"
+          { name = "foo"
           }
         , value = Just
           { ref = 23
@@ -177,9 +177,16 @@ view model =
 
 htmlFile : Model -> Maybe Node -> Ast.File -> Html Msg
 htmlFile model node file =
-  let xs = file.variableDefinitions
-    |> List.map (htmlVariableDefinition model node Dict.empty)
-  in Html.div [] xs
+  let
+    newCtx =
+      file.variableDefinitions
+        |> List.map (\def -> (def.ref, VarDef def))
+        |> Dict.fromList
+    xs =
+      file.variableDefinitions
+        |> List.map (htmlVariableDefinition model node newCtx)
+  in
+    Html.div [] xs
 
 
 htmlExpr : Model -> Maybe Node -> Context -> Ast.Expression -> Html Msg
@@ -302,15 +309,15 @@ refStyle =
 
 
 selectedStyle =
-  [ "color" => "red" ]
-
-
-refSourceStyle =
   [ "color" => "blue" ]
 
 
+refSourceStyle =
+  [ "color" => "red" ]
+
+
 refTargetStyle =
-  [ "color" => "green" ]
+  [ "color" => "orange" ]
 
 
 htmlRef : Model -> Maybe Node -> Context -> ExprRef -> Html Msg
@@ -322,8 +329,13 @@ htmlRef model node ctx ref =
       Just n ->
         case n of
           Pat p -> htmlPatternRef model ctx p
+          VarDef def ->
+            case def.label of
+              Just l ->
+                Html.text l.name
+              _ -> Html.text "<<ERROR>>"
           _ -> Html.text "<<ERROR>>"
-      Nothing -> Html.text "<<ERROR>>"
+      _ -> Html.text "<<ERROR>>"
 
 
 (=>) : String -> String -> (String, String)

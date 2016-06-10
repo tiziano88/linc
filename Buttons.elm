@@ -122,14 +122,28 @@ refButton expr node =
             [ onClick <| SetNode 1 <| Expr { expr | value = Ast.RefValue { ref = pat.ref } } ]
             [ Html.text l.name ]
 
-        _ -> Html.text "x"
+        _ -> Html.text ""
 
-    _ -> Html.text "x"
+    VarDef def ->
+      case def.label of
+        Just l ->
+          Html.button
+            [ onClick <| SetNode 1 <| Expr { expr | value = Ast.RefValue { ref = def.ref } } ]
+            [ Html.text l.name ]
+
+        _ -> Html.text ""
+
+    _ -> Html.text ""
 
 
 variableDefinitionButtons : Model -> Ast.VariableDefinition -> List (Html Msg)
 variableDefinitionButtons model def =
   [ Html.button
+    [ onClick
+      <| SetNode 0
+      <| VarDef { def | label = Just { name = model.input } } ]
+    [ Html.text "set name" ]
+  , Html.button
     [ onClick
       <| SetNode 1
       <| VarDef

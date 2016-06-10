@@ -44,19 +44,25 @@ getContextExpression ref ctx expr =
   then
     (Debug.log "ctx" ctx)
   else
-    case expr.value of
-      Ast.LambdaValue v ->
-        case v.argument of
-          Just a ->
-            case v.body of
-              Just b ->
+    let
+      valueCtx =
+        case expr.value of
+          Ast.LambdaValue v ->
+            case (v.argument, v.body) of
+              (Just a, Just b) ->
                 let
                   newCtx = getContextPattern a
                 in
                   getContextExpression ref newCtx b
               _ -> Dict.empty
           _ -> Dict.empty
-      _ -> Dict.empty
+      argsCtx =
+        case expr.arguments of
+          Ast.Args a ->
+            mergeContexts Dict.empty <| List.map (getContextExpression ref ctx) a.values
+          _ -> Dict.empty
+    in
+      Dict.union valueCtx argsCtx
 
 
 getContextPattern : Ast.Pattern -> Context
