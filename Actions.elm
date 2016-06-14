@@ -40,10 +40,16 @@ expressionActions model ctx expr =
       { expr
       | value =
         Ast.IfValue
-          { cond = Just { defaultExpr | ref = model.file.nextRef, value = expr.value }
+          { cond = Just
+            { defaultExpr
+            | ref = model.file.nextRef
+            , value = expr.value
+            , arguments = expr.arguments
+            }
           , true = Just { defaultExpr | ref = model.file.nextRef + 1 }
           , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
           }
+      , arguments = Ast.Args { values = [] }
       }
     }
   , { label = "λ"

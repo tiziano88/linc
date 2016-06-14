@@ -46,6 +46,11 @@ message Expression {
     int64 ref = 1;
   }
 
+  message ExternalRef {
+    string path = 1;
+    string name = 2;
+  }
+
   oneof value {
     int32 empty_value = 9;
     Bool bool_value = 2;
@@ -56,6 +61,7 @@ message Expression {
     If if_value = 7;
     Lambda lambda_value = 10;
     Ref ref_value = 11;
+    ExternalRef external_ref_value = 12;
   }
 
   message Arguments {

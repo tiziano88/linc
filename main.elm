@@ -58,8 +58,9 @@ testModel =
           }
         , value = Just
           { ref = 12
-          , value = Ast.RefValue
-            { ref = 123
+          , value = Ast.ExternalRefValue
+            { path = ""
+            , name = "(==)"
             }
           , arguments = Ast.Args
             { values =
@@ -247,6 +248,10 @@ htmlExpr model node ctx expr =
       Ast.RefValue v ->
         [ htmlRef model node ctx v.ref ]
 
+      Ast.ExternalRefValue ref ->
+        [ htmlExternalRef model node ctx ref ]
+
+
     arguments =
       case expr.arguments of
         Ast.Args a -> List.map (htmlExpr model node ctx) a.values
@@ -343,6 +348,11 @@ htmlRef model node ctx ref =
               _ -> Html.text "<<ERROR>>"
           _ -> Html.text "<<ERROR>>"
       _ -> Html.text "<<ERROR>>"
+
+
+htmlExternalRef : Model -> Maybe Node -> Context -> Ast.Expression_ExternalRef -> Html Msg
+htmlExternalRef model node ctx ref =
+  Html.text (ref.path ++ "." ++ ref.name)
 
 
 (=>) : String -> String -> (String, String)

@@ -47,6 +47,12 @@ getContextExpression ref ctx expr =
     let
       valueCtx =
         case expr.value of
+          Ast.IfValue v ->
+            case (v.cond, v.true, v.false) of
+              (Just c, Just t, Just f) ->
+                mergeContexts Dict.empty <| List.map (getContextExpression ref ctx) [ c, t, f ]
+              _ -> Dict.empty
+
           Ast.LambdaValue v ->
             case (v.argument, v.body) of
               (Just a, Just b) ->

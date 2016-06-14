@@ -120,6 +120,7 @@ type Value
   | IfValue Expression_If
   | LambdaValue Expression_Lambda
   | RefValue Expression_Ref
+  | ExternalRefValue Expression_ExternalRef
 
 
 valueDecoder : JD.Decoder Value
@@ -134,6 +135,7 @@ valueDecoder =
     , JD.map IfValue ("ifValue" := expression_IfDecoder)
     , JD.map LambdaValue ("lambdaValue" := expression_LambdaDecoder)
     , JD.map RefValue ("refValue" := expression_RefDecoder)
+    , JD.map ExternalRefValue ("externalRefValue" := expression_ExternalRefDecoder)
     , JD.succeed ValueUnspecified
     ]
 
@@ -151,6 +153,7 @@ valueEncoder v =
     IfValue x -> Just ("ifValue", expression_IfEncoder x)
     LambdaValue x -> Just ("lambdaValue", expression_LambdaEncoder x)
     RefValue x -> Just ("refValue", expression_RefEncoder x)
+    ExternalRefValue x -> Just ("externalRefValue", expression_ExternalRefEncoder x)
 
 
 type Arguments
@@ -340,6 +343,27 @@ expression_RefEncoder : Expression_Ref -> JE.Value
 expression_RefEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
+    ]
+
+
+type alias Expression_ExternalRef =
+  { path : String -- 1
+  , name : String -- 2
+  }
+
+
+expression_ExternalRefDecoder : JD.Decoder Expression_ExternalRef
+expression_ExternalRefDecoder =
+  Expression_ExternalRef
+    <$> (requiredFieldDecoder "path" "" JD.string)
+    <*> (requiredFieldDecoder "name" "" JD.string)
+
+
+expression_ExternalRefEncoder : Expression_ExternalRef -> JE.Value
+expression_ExternalRefEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (requiredFieldEncoder "path" JE.string "" v.path)
+    , (requiredFieldEncoder "name" JE.string "" v.name)
     ]
 
 
