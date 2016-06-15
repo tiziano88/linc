@@ -31,9 +31,10 @@ getContextFile ref file =
       |> mergeContexts Dict.empty
 
 
+-- TODO: Flip first two arguments to all new* functions?
 newContextVariableDefinition : Context -> Ast.VariableDefinition -> Context
 newContextVariableDefinition ctx def =
-  mergeContexts ctx <| List.map getContextPattern def.arguments
+  List.foldr (flip newContextPattern) ctx def.arguments
 
 
 getContextVariableDefinition : ExprRef -> Context -> Ast.VariableDefinition -> Context
@@ -58,17 +59,17 @@ getContextExpression ref ctx expr =
         case expr.value of
           Ast.IfValue v ->
             case (v.cond, v.true, v.false) of
-              (Just c, Just t, Just f) ->
-                mergeContexts Dict.empty <| List.map (getContextExpression ref ctx) [ c, t, f ]
+              (Just cond, Just true, Just false) ->
+                mergeContexts Dict.empty <| List.map (getContextExpression ref ctx) [ cond, true, false ]
               _ -> Dict.empty
 
           Ast.LambdaValue v ->
             case (v.argument, v.body) of
-              (Just a, Just b) ->
+              (Just argument, Just body) ->
                 let
-                  newCtx = getContextPattern a
+                  newCtx = newContextPattern ctx argument
                 in
-                  getContextExpression ref newCtx b
+                  getContextExpression ref newCtx body
               _ -> Dict.empty
           _ -> Dict.empty
       argsCtx =
@@ -80,12 +81,12 @@ getContextExpression ref ctx expr =
       Dict.union valueCtx argsCtx
 
 
-getContextPattern : Ast.Pattern -> Context
-getContextPattern pat =
+newContextPattern : Context -> Ast.Pattern -> Context
+newContextPattern ctx pat =
   case pat.pvalue of
     Ast.LabelValue _ ->
-      Dict.singleton pat.ref <| Pat pat
-    _ -> Dict.empty
+      Dict.insert pat.ref (Pat pat) ctx
+    _ -> ctx
 
 
 mergeContexts : Context -> List Context -> Context

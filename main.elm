@@ -239,7 +239,7 @@ htmlExpr model node ctx expr =
         case (v.argument, v.body) of
           (Just argument, Just body) ->
             let
-              newCtx = Dict.union ctx <| getContextPattern argument
+              newCtx = newContextPattern ctx argument
             in
               [ Html.text "λ"
               , htmlPattern model node ctx argument
@@ -338,17 +338,13 @@ refTargetStyle =
 htmlRef : Model -> Maybe Node -> Context -> ExprRef -> Html Msg
 htmlRef model node ctx ref =
   let
-    n = Dict.get ref ctx
+    target = Dict.get ref ctx
   in
-    case n of
+    case target of
       Just n ->
         case n of
-          Pat p -> htmlPatternRef model ctx p
-          VarDef def ->
-            case def.label of
-              Just l ->
-                Html.text l.name
-              _ -> Html.text "<<ERROR>>"
+          Pat pat -> htmlPatternRef model ctx pat
+          VarDef def -> htmlVariableDefinitionRef model ctx def
           _ -> Html.text "<<ERROR>>"
       _ -> Html.text "<<ERROR>>"
 
@@ -438,6 +434,16 @@ htmlPatternRef model ctx pat =
       content
 
 
+htmlVariableDefinitionRef : Model -> Context -> Ast.VariableDefinition -> Html Msg
+htmlVariableDefinitionRef model ctx def =
+  case def.label of
+    Just l ->
+      Html.div
+        [ style refStyle ]
+        [ Html.text l.name ]
+    _ -> Html.text "<<ERROR>>"
+
+
 htmlVariableDefinition : Model -> Maybe Node -> Context -> Ast.VariableDefinition -> Html Msg
 htmlVariableDefinition model node ctx v =
   Html.div
@@ -507,5 +513,5 @@ selectElement e =
 onClick' a =
   onWithOptions
     "click"
-    { defaultOptions | stopPropagation = True}
+    { defaultOptions | stopPropagation = True }
     (Json.Decode.succeed a)
