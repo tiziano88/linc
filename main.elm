@@ -186,10 +186,7 @@ actionToButton action =
 htmlFile : Model -> Maybe Node -> Ast.File -> Html Msg
 htmlFile model node file =
   let
-    newCtx =
-      file.variableDefinitions
-        |> List.map (\def -> (def.ref, VarDef def))
-        |> Dict.fromList
+    newCtx = newContextFile file
     xs =
       file.variableDefinitions
         |> List.map (htmlVariableDefinition model node newCtx)
@@ -227,23 +224,29 @@ htmlExpr model node ctx expr =
         [ Html.text "]" ]
 
       Ast.IfValue v ->
-        [ Html.text "if"
-        , htmlExpr model node ctx (Maybe.withDefault defaultExpr v.cond)
-        , Html.text "then"
-        , htmlExpr model node ctx (Maybe.withDefault defaultExpr v.true)
-        , Html.text "else"
-        , htmlExpr model node ctx (Maybe.withDefault defaultExpr v.false)
-        ]
+        case (v.cond, v.true, v.false) of
+          (Just cond, Just true, Just false) ->
+            [ Html.text "if"
+            , htmlExpr model node ctx cond
+            , Html.text "then"
+            , htmlExpr model node ctx true
+            , Html.text "else"
+            , htmlExpr model node ctx false
+            ]
+          _ -> []
 
       Ast.LambdaValue v ->
-        let
-          newCtx = Dict.union ctx <| getContextPattern (Maybe.withDefault defaultPattern v.argument)
-        in
-          [ Html.text "λ"
-          , htmlPattern model node ctx (Maybe.withDefault defaultPattern v.argument)
-          , Html.text "→"
-          , htmlExpr model node newCtx (Maybe.withDefault defaultExpr v.body)
-          ]
+        case (v.argument, v.body) of
+          (Just argument, Just body) ->
+            let
+              newCtx = Dict.union ctx <| getContextPattern argument
+            in
+              [ Html.text "λ"
+              , htmlPattern model node ctx argument
+              , Html.text "→"
+              , htmlExpr model node newCtx body
+              ]
+          _ -> []
 
       Ast.RefValue v ->
         [ htmlRef model node ctx v.ref ]
@@ -371,7 +374,7 @@ htmlFunctionSignature model ctx def =
 htmlFunctionBody : Model -> Maybe Node -> Context -> Ast.VariableDefinition -> Html Msg
 htmlFunctionBody model node ctx def =
   let
-    newCtx = mergeContexts ctx <| List.map getContextPattern def.arguments
+    newCtx = newContextVariableDefinition ctx def
   in
     case def.value of
       Nothing ->

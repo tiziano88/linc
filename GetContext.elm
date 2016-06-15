@@ -14,23 +14,32 @@ getCurrentContext model =
     Just ref -> getContextFile ref model.file
 
 
+newContextFile : Ast.File -> Context
+newContextFile file =
+  file.variableDefinitions
+    |> List.map (\def -> (def.ref, VarDef def))
+    |> Dict.fromList
+
+
 getContextFile : ExprRef -> Ast.File -> Context
 getContextFile ref file =
   let
-    newCtx =
-      file.variableDefinitions
-        |> List.map (\def -> (def.ref, VarDef def))
-        |> Dict.fromList
+    newCtx = newContextFile file
   in
     file.variableDefinitions
       |> List.map (getContextVariableDefinition ref newCtx)
       |> mergeContexts Dict.empty
 
 
+newContextVariableDefinition : Context -> Ast.VariableDefinition -> Context
+newContextVariableDefinition ctx def =
+  mergeContexts ctx <| List.map getContextPattern def.arguments
+
+
 getContextVariableDefinition : ExprRef -> Context -> Ast.VariableDefinition -> Context
 getContextVariableDefinition ref ctx def =
   let
-    newCtx = mergeContexts ctx <| List.map getContextPattern def.arguments
+    newCtx = newContextVariableDefinition ctx def
   in
     case def.value of
       Just v -> getContextExpression ref newCtx v
@@ -82,3 +91,8 @@ getContextPattern pat =
 mergeContexts : Context -> List Context -> Context
 mergeContexts ctx ctxs =
   List.foldl Dict.union ctx ctxs
+
+
+-- mapNode : Node -> (a -> b) ->
+
+-- TODO: traverseWithContext : Context -> Node -> (Context -> Node -> a) -> a
