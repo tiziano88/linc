@@ -59,7 +59,7 @@ testModel =
         , value = Just
           { ref = 12
           , value = Ast.ExternalRefValue
-            { path = ""
+            { path = "Base"
             , name = "(==)"
             }
           , arguments = Ast.Args
@@ -426,21 +426,22 @@ htmlPattern model node ctx pat =
 
 htmlPatternRef : Model -> Context -> Ast.Pattern -> Html Msg
 htmlPatternRef model ctx pat =
-  let
-    content = htmlPatternContent model ctx pat
-  in
-    Html.div
-      [ style refStyle ]
-      content
+  case pat.pvalue of
+    Ast.LabelValue label -> htmlLabelRef label
+    _ -> Html.text "<<ERROR>>"
+
+
+htmlLabelRef : Ast.Label -> Html Msg
+htmlLabelRef label =
+  Html.div
+    [ style refStyle ]
+    [ Html.text label.name ]
 
 
 htmlVariableDefinitionRef : Model -> Context -> Ast.VariableDefinition -> Html Msg
 htmlVariableDefinitionRef model ctx def =
   case def.label of
-    Just l ->
-      Html.div
-        [ style refStyle ]
-        [ Html.text l.name ]
+    Just label -> htmlLabelRef label
     _ -> Html.text "<<ERROR>>"
 
 
