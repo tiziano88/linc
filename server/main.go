@@ -18,7 +18,7 @@ func main() {
 }
 
 func RootHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello"))
+	http.ServeFile(w, r, "./client/out/index.html")
 }
 
 func GetFile(w http.ResponseWriter, r *http.Request) {
