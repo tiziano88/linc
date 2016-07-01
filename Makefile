@@ -10,8 +10,12 @@ SERVER=$(SERVER_DIR)/$(OUT_DIR)/linc
 
 all: $(INDEX) $(SERVER)
 
+client: $(INDEX)
+
 $(INDEX): $(CLIENT_DIR)/*
 	elm make $(CLIENT_DIR)/main.elm --output $(INDEX)
+
+server: $(SERVER)
 
 $(SERVER): $(SERVER_DIR)/* $(SERVER_PROTO)
 	go build -o $(SERVER) $(SERVER_DIR)/main.go

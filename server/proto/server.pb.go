@@ -48,8 +48,6 @@ func init() {
 	proto.RegisterType((*UpdateFileRequest)(nil), "ast.UpdateFileRequest")
 }
 
-func init() { proto.RegisterFile("proto/server.proto", fileDescriptor1) }
-
 var fileDescriptor1 = []byte{
 	// 156 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0x12, 0x2a, 0x28, 0xca, 0x2f,
