@@ -4,7 +4,8 @@ import Array
 import Dict
 import String
 
-import Ast
+import Proto.Ast as Ast
+
 import Types exposing (..)
 
 

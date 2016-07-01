@@ -1,8 +1,5 @@
 #!/bin/sh
 
-set -e
-set -x
-
 while inotifywait -e modify -r ./client; do
   make client
 done

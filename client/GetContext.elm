@@ -2,7 +2,8 @@ module GetContext exposing (..)
 
 import Dict
 
-import Ast
+import Proto.Ast as Ast
+
 import Defaults exposing (..)
 import Types exposing (..)
 

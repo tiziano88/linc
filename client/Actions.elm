@@ -5,7 +5,8 @@ import Html exposing (..)
 import Html.Events exposing (..)
 import String
 
-import Ast
+import Proto.Ast as Ast
+
 import Defaults exposing (..)
 import Types exposing (..)
 

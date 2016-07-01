@@ -3,7 +3,8 @@ module Types exposing (..)
 import Array
 import Dict
 
-import Ast
+import Proto.Ast as Ast
+import Proto.Server as Server
 
 
 type Msg
@@ -11,6 +12,9 @@ type Msg
   | SetCurrentRef ExprRef
   | SetNode Int Node
   | Input String
+  | LoadFile
+  | LoadFileSuccess Server.GetFileResponse
+  | SaveFile
 
 
 type alias ExprRef = Int

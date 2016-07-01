@@ -2,7 +2,8 @@ module GetNode exposing (..)
 
 import Dict
 
-import Ast
+import Proto.Ast as Ast
+
 import Types exposing (..)
 
 

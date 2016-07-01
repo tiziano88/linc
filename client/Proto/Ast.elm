@@ -1,4 +1,4 @@
-module proto.Ast exposing (..)
+module Proto.Ast exposing (..)
 
 
 import Json.Decode as JD exposing ((:=))

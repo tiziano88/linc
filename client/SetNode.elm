@@ -1,6 +1,7 @@
 module SetNode exposing (..)
 
-import Ast
+import Proto.Ast as Ast
+
 import Types exposing (..)
 
 setNodeVariableDefinition : ExprRef -> Node -> Ast.VariableDefinition -> Ast.VariableDefinition

@@ -1,6 +1,6 @@
 module Defaults exposing (..)
 
-import Ast
+import Proto.Ast as Ast
 
 
 defaultExpr : Ast.Expression

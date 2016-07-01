@@ -6,13 +6,16 @@ import Html.App as Html
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Http
 import Json.Decode
 import Json.Encode
 import String
 import Task
 import Time
 
-import Ast
+import Proto.Ast as Ast
+import Proto.Server as Server
+
 import Actions exposing (..)
 import GetNode exposing (..)
 import GetContext exposing (..)
@@ -155,6 +158,22 @@ update action model =
                     }
                   }
 
+      LoadFile ->
+        ( model
+        , Http.get Server.getFileResponseDecoder "/LoadFile"
+          |> Task.perform (always Nop) LoadFileSuccess )
+
+      LoadFileSuccess s -> noEffects <|
+        case Debug.log "c" (Json.Decode.decodeString Ast.fileDecoder (Debug.log "GetFileResponse" s).jsonContent) of
+          Err _ -> model
+          Ok v ->
+            { model
+            | file = v
+            }
+
+      SaveFile -> ( model, Http.getString "/SaveFile" |> Task.perform (always Nop) (always Nop) )
+
+
 view model =
   let
     file = model.file
@@ -172,6 +191,12 @@ view model =
       ++ (List.map actionToButton actions)
       ++
       [ Html.div [] [ Html.text <| toString model ]
+      , Html.button
+        [ onClick LoadFile ]
+        [ Html.text "Load" ]
+      , Html.button
+        [ onClick SaveFile ]
+        [ Html.text "Save" ]
       , Html.pre [] [ (htmlFile model node model.file) ]
       , Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
       ]
