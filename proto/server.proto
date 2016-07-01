@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ast;
+
+message GetFileRequest {
+  string path = 1;
+}
+
+message GetFileResponse {
+  string json_content = 1;
+}
+
+message UpdateFileRequest {
+  string path = 1;
+  string json_content = 2;
+  string elm_content = 3;
+}
