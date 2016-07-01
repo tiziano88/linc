@@ -21,3 +21,6 @@ $(SERVER_PROTO): $(PROTO_DIR)/*.proto
 
 run: $(INDEX) $(SERVER)
 	$(SERVER)
+
+clean:
+	rm -f $(SERVER) $(INDEX)
