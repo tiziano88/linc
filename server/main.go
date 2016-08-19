@@ -43,4 +43,11 @@ func GetFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateFile(w http.ResponseWriter, r *http.Request) {
+	rm := &p.UpdateFileRequest{}
+	jsonpb.Unmarshal(r.Body, rm)
+	rm.Path = "/tmp/src.json"
+	err := ioutil.WriteFile(rm.Path, []byte(rm.JsonContent), 0)
+	if err != nil {
+		panic(err)
+	}
 }

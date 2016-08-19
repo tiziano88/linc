@@ -161,7 +161,8 @@ update action model =
       LoadFile ->
         ( model
         , Http.get Server.getFileResponseDecoder "/LoadFile"
-          |> Task.perform (always Nop) LoadFileSuccess )
+          |> Task.perform (always Nop) LoadFileSuccess
+        )
 
       LoadFileSuccess s -> noEffects <|
         case Debug.log "c" (Json.Decode.decodeString Ast.fileDecoder (Debug.log "GetFileResponse" s).jsonContent) of
@@ -171,7 +172,21 @@ update action model =
             | file = v
             }
 
-      SaveFile -> ( model, Http.getString "/SaveFile" |> Task.perform (always Nop) (always Nop) )
+      SaveFile ->
+        let
+          req =
+            { path = "xx"
+            , jsonContent = (Json.Encode.encode 2 <| Ast.fileEncoder model.file)
+            , elmContent = "zz"
+            }
+        in
+          ( model
+          , Http.post
+            Server.getFileResponseDecoder
+            "/SaveFile"
+            (Http.string <| Json.Encode.encode 2 <| Server.updateFileRequestEncoder req)
+            |> Task.perform (always Nop) (always Nop)
+          )
 
 
 view model =
