@@ -25,7 +25,7 @@ lazy getDecoder =
 optionalDecoder : JD.Decoder a -> JD.Decoder (Maybe a)
 optionalDecoder decoder =
   JD.oneOf
-    [ JD.map Just decoder
+    [ JD.map Just (lazy <| \_ -> decoder)
     , JD.succeed Nothing
     ]
 
@@ -48,7 +48,7 @@ repeatedFieldDecoder name decoder =
 withDefault : a -> JD.Decoder a -> JD.Decoder a
 withDefault default decoder =
   JD.oneOf
-    [ decoder
+    [ lazy <| \_ -> decoder
     , JD.succeed default
     ]
 
@@ -171,7 +171,7 @@ type Arguments
 argumentsDecoder : JD.Decoder Arguments
 argumentsDecoder =
   JD.oneOf
-    [ JD.map Args ("args" := expression_ArgumentsDecoder)
+    [ JD.map Args ("args" := (lazy <| \_ -> expression_ArgumentsDecoder))
     , JD.succeed ArgumentsUnspecified
     ]
 
@@ -187,7 +187,7 @@ expressionDecoder : JD.Decoder Expression
 expressionDecoder =
   Expression
     <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> (lazy <| \_ -> valueDecoder)
+    <*> valueDecoder
     <*> argumentsDecoder
 
 
