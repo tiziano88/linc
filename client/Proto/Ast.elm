@@ -324,7 +324,7 @@ expression_LambdaDecoder : JD.Decoder Expression_Lambda
 expression_LambdaDecoder =
   Expression_Lambda
     <$> (optionalFieldDecoder "argument" patternDecoder)
-    <*> (optionalFieldDecoder "body" expressionDecoder)
+    <*> (optionalFieldDecoder "body" <| lazy <| \_ -> expressionDecoder)
 
 
 expression_LambdaEncoder : Expression_Lambda -> JE.Value

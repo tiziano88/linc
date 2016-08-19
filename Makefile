@@ -21,7 +21,7 @@ $(SERVER): $(SERVER_DIR)/* $(SERVER_PROTO)
 	go build -o $(SERVER) $(SERVER_DIR)/main.go
 
 $(SERVER_PROTO): $(PROTO_DIR)/*.proto
-	protoc --go_out=$(SERVER_DIR) --elm_out=$(CLIENT_DIR) $(PROTO_DIR)/*.proto
+	#protoc --go_out=$(SERVER_DIR) --elm_out=$(CLIENT_DIR) $(PROTO_DIR)/*.proto
 
 run: $(INDEX) $(SERVER)
 	$(SERVER)
