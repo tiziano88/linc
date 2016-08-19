@@ -75,6 +75,13 @@ repeatedFieldEncoder name encoder v =
       Just (name, JE.list <| List.map encoder v)
 
 
+lazy : (() -> JD.Decoder a) -> JD.Decoder a
+lazy getDecoder =
+  JD.customDecoder JD.value
+    <| \rawValue -> 
+      JD.decodeValue (getDecoder ()) rawValue
+
+
 type alias GetFileRequest =
   { path : String -- 1
   }
@@ -82,8 +89,9 @@ type alias GetFileRequest =
 
 getFileRequestDecoder : JD.Decoder GetFileRequest
 getFileRequestDecoder =
-  GetFileRequest
-    <$> (requiredFieldDecoder "path" "" JD.string)
+  lazy <| \_ ->
+    GetFileRequest
+      <$> (requiredFieldDecoder "path" "" JD.string)
 
 
 getFileRequestEncoder : GetFileRequest -> JE.Value
@@ -100,8 +108,9 @@ type alias GetFileResponse =
 
 getFileResponseDecoder : JD.Decoder GetFileResponse
 getFileResponseDecoder =
-  GetFileResponse
-    <$> (requiredFieldDecoder "jsonContent" "" JD.string)
+  lazy <| \_ ->
+    GetFileResponse
+      <$> (requiredFieldDecoder "jsonContent" "" JD.string)
 
 
 getFileResponseEncoder : GetFileResponse -> JE.Value
@@ -120,10 +129,11 @@ type alias UpdateFileRequest =
 
 updateFileRequestDecoder : JD.Decoder UpdateFileRequest
 updateFileRequestDecoder =
-  UpdateFileRequest
-    <$> (requiredFieldDecoder "path" "" JD.string)
-    <*> (requiredFieldDecoder "jsonContent" "" JD.string)
-    <*> (requiredFieldDecoder "elmContent" "" JD.string)
+  lazy <| \_ ->
+    UpdateFileRequest
+      <$> (requiredFieldDecoder "path" "" JD.string)
+      <*> (requiredFieldDecoder "jsonContent" "" JD.string)
+      <*> (requiredFieldDecoder "elmContent" "" JD.string)
 
 
 updateFileRequestEncoder : UpdateFileRequest -> JE.Value
