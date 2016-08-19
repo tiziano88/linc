@@ -187,8 +187,8 @@ expressionDecoder : JD.Decoder Expression
 expressionDecoder =
   Expression
     <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> valueDecoder
-    <*> argumentsDecoder
+    <*> (lazy <| \_ -> valueDecoder)
+    <*> (lazy <| \_ -> argumentsDecoder)
 
 
 expressionEncoder : Expression -> JE.Value
