@@ -5,6 +5,13 @@ import Json.Decode as JD exposing ((:=))
 import Json.Encode as JE
 
 
+lazy : (() -> JD.Decoder a) -> JD.Decoder a
+lazy getDecoder =
+  JD.customDecoder JD.value
+    <| \rawValue ->
+        JD.decodeValue (getDecoder ()) rawValue
+
+
 (<$>) : (a -> b) -> JD.Decoder a -> JD.Decoder b
 (<$>) =
   JD.map
@@ -180,7 +187,7 @@ expressionDecoder : JD.Decoder Expression
 expressionDecoder =
   Expression
     <$> (requiredFieldDecoder "ref" 0 JD.int)
-    <*> valueDecoder
+    <*> (lazy <| \_ -> valueDecoder)
     <*> argumentsDecoder
 
 
