@@ -2,5 +2,7 @@ module Persistence exposing (..)
 
 import Proto.Server as Server
 
+
 save : Int
-save = 8
+save =
+    8
