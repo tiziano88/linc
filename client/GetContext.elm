@@ -10,9 +10,7 @@ import Types exposing (..)
 
 getCurrentContext : Model -> Context
 getCurrentContext model =
-  case model.currentRef of
-    Nothing -> Dict.empty
-    Just ref -> getContextFile ref model.file
+  mergeContexts Dict.empty <| List.map (\ref -> getContextFile ref model.file) model.currentRef
 
 
 newContextFile : Ast.File -> Context

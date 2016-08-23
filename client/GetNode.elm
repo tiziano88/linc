@@ -9,12 +9,12 @@ import Types exposing (..)
 
 getCurrentNode : Model -> Maybe Node
 getCurrentNode model =
-  case model.currentRef of
+  case (List.head model.currentRef) of
     Nothing -> Nothing
     Just ref -> getNode model ref Dict.empty
 
 
-getNode : Model -> Int -> Context -> Maybe Node
+getNode : Model -> ExprRef -> Context -> Maybe Node
 getNode model ref ctx =
   model.file.variableDefinitions
     |> List.filterMap (getNodeVariableDefinition ref)

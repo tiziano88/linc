@@ -108,7 +108,7 @@ testModel =
         }
       ]
     }
-  , currentRef = Nothing
+  , currentRef = []
   , input = ""
   }
 
@@ -129,7 +129,7 @@ update action model =
 
       SetCurrentRef ref -> noEffects
         { model
-        | currentRef = Just ref
+        | currentRef = ref
         }
 
       Input v -> noEffects
@@ -138,7 +138,7 @@ update action model =
         }
 
       SetNode n node ->
-        case model.currentRef of
+        case List.head model.currentRef of
           Nothing -> noEffects model
           Just ref ->
             case Debug.log "current node" (getCurrentNode model) of
@@ -227,17 +227,19 @@ actionToButton action =
 htmlFile : Model -> Maybe Node -> Ast.File -> Html Msg
 htmlFile model node file =
   let
+    newAncestors = []
     newCtx = newContextFile file
     xs =
       file.variableDefinitions
-        |> List.map (htmlVariableDefinition model node newCtx)
+        |> List.map (htmlVariableDefinition model node newCtx newAncestors)
   in
     Html.div [] xs
 
 
-htmlExpr : Model -> Maybe Node -> Context -> Ast.Expression -> Html Msg
-htmlExpr model node ctx expr =
+htmlExpr : Model -> Maybe Node -> Context -> List ExprRef -> Ast.Expression -> Html Msg
+htmlExpr model node ctx ancestors expr =
   let
+    newAncestors = expr.ref :: ancestors
     content = case expr.value of
       Ast.ValueUnspecified ->
         [ Html.text "<<<EMPTY>>>" ]
@@ -260,7 +262,7 @@ htmlExpr model node ctx expr =
       Ast.ListValue ls ->
         [ Html.text "[" ]
         ++
-        (List.map (htmlExpr model node ctx) ls.values |> List.intersperse (Html.text ","))
+        (List.map (htmlExpr model node ctx ancestors) ls.values |> List.intersperse (Html.text ","))
         ++
         [ Html.text "]" ]
 
@@ -268,11 +270,11 @@ htmlExpr model node ctx expr =
         case (v.cond, v.true, v.false) of
           (Just cond, Just true, Just false) ->
             [ Html.text "if"
-            , htmlExpr model node ctx cond
+            , htmlExpr model node ctx newAncestors cond
             , Html.text "then"
-            , htmlExpr model node ctx true
+            , htmlExpr model node ctx newAncestors true
             , Html.text "else"
-            , htmlExpr model node ctx false
+            , htmlExpr model node ctx newAncestors false
             ]
           _ -> []
 
@@ -283,22 +285,22 @@ htmlExpr model node ctx expr =
               newCtx = newContextPattern ctx argument
             in
               [ Html.text "λ"
-              , htmlPattern model node ctx argument
+              , htmlPattern model node ctx newAncestors argument
               , Html.text "→"
-              , htmlExpr model node newCtx body
+              , htmlExpr model node newCtx newAncestors body
               ]
           _ -> []
 
       Ast.RefValue v ->
-        [ htmlRef model node ctx v.ref ]
+        [ htmlRef model node ctx newAncestors v.ref ]
 
       Ast.ExternalRefValue ref ->
-        [ htmlExternalRef model node ctx ref ]
+        [ htmlExternalRef model node ctx newAncestors ref ]
 
 
     arguments =
       case expr.arguments of
-        Ast.Args a -> List.map (htmlExpr model node ctx) a.values
+        Ast.Args a -> List.map (htmlExpr model node ctx newAncestors) a.values
         _ -> []
 
   in
@@ -307,7 +309,7 @@ htmlExpr model node ctx expr =
         nodeStyle
         ++
         (if
-          Just expr.ref == model.currentRef
+          Just expr.ref == List.head model.currentRef
         then
           selectedStyle
         else
@@ -319,7 +321,7 @@ htmlExpr model node ctx expr =
           refSourceStyle
         else
           [])
-      , onClick' (SetCurrentRef expr.ref)
+      , onClick' (SetCurrentRef newAncestors)
       ]
       ( case arguments of
           [] ->
@@ -376,8 +378,8 @@ refTargetStyle =
   [ "color" => "orange" ]
 
 
-htmlRef : Model -> Maybe Node -> Context -> ExprRef -> Html Msg
-htmlRef model node ctx ref =
+htmlRef : Model -> Maybe Node -> Context -> List ExprRef -> ExprRef -> Html Msg
+htmlRef model node ctx ancestors ref =
   let
     target = Dict.get ref ctx
   in
@@ -390,8 +392,8 @@ htmlRef model node ctx ref =
       _ -> Html.text "<<ERROR>>"
 
 
-htmlExternalRef : Model -> Maybe Node -> Context -> Ast.Expression_ExternalRef -> Html Msg
-htmlExternalRef model node ctx ref =
+htmlExternalRef : Model -> Maybe Node -> Context -> List ExprRef -> Ast.Expression_ExternalRef -> Html Msg
+htmlExternalRef model node ctx ancestors ref =
   Html.text (ref.path ++ "." ++ ref.name)
 
 
@@ -399,8 +401,8 @@ htmlExternalRef model node ctx ref =
 (=>) = (,)
 
 
-htmlFunctionSignature : Model -> Context -> Ast.VariableDefinition -> Html Msg
-htmlFunctionSignature model ctx def =
+htmlFunctionSignature : Model -> Context -> List ExprRef -> Ast.VariableDefinition -> Html Msg
+htmlFunctionSignature model ctx ancestors def =
   Html.div []
     [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label
     , Html.text " : "
@@ -408,9 +410,10 @@ htmlFunctionSignature model ctx def =
     ]
 
 
-htmlFunctionBody : Model -> Maybe Node -> Context -> Ast.VariableDefinition -> Html Msg
-htmlFunctionBody model node ctx def =
+htmlFunctionBody : Model -> Maybe Node -> Context -> List ExprRef -> Ast.VariableDefinition -> Html Msg
+htmlFunctionBody model node ctx ancestors def =
   let
+    newAncestors = def.ref :: ancestors
     newCtx = newContextVariableDefinition ctx def
   in
     case def.value of
@@ -421,10 +424,10 @@ htmlFunctionBody model node ctx def =
         Html.div [] <|
           [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label ]
           ++
-          (List.map (htmlPattern model node newCtx) def.arguments)
+          (List.map (htmlPattern model node newCtx newAncestors) def.arguments)
           ++
           [ Html.text "="
-          , htmlExpr model node newCtx expr
+          , htmlExpr model node newCtx newAncestors expr
           ]
 
 
@@ -438,8 +441,8 @@ htmlPatternContent model ctx pat =
     Ast.PvalueUnspecified -> []
 
 
-htmlPattern : Model -> Maybe Node -> Context -> Ast.Pattern -> Html Msg
-htmlPattern model node ctx pat =
+htmlPattern : Model -> Maybe Node -> Context -> List ExprRef -> Ast.Pattern -> Html Msg
+htmlPattern model node ctx ancestors pat =
   let
     content = htmlPatternContent model ctx pat
   in
@@ -448,7 +451,7 @@ htmlPattern model node ctx pat =
         nodeStyle
         ++
         (if
-          Just pat.ref == model.currentRef
+          Just pat.ref == List.head model.currentRef
         then
           selectedStyle
         else
@@ -460,7 +463,7 @@ htmlPattern model node ctx pat =
           refTargetStyle
         else
           [])
-      , onClick' (SetCurrentRef pat.ref)
+      , onClick' (SetCurrentRef (pat.ref :: ancestors))
       ]
       content
 
@@ -486,23 +489,23 @@ htmlVariableDefinitionRef model ctx def =
     _ -> Html.text "<<ERROR>>"
 
 
-htmlVariableDefinition : Model -> Maybe Node -> Context -> Ast.VariableDefinition -> Html Msg
-htmlVariableDefinition model node ctx v =
+htmlVariableDefinition : Model -> Maybe Node -> Context -> List ExprRef -> Ast.VariableDefinition -> Html Msg
+htmlVariableDefinition model node ctx ancestors def =
   Html.div
     [ style <|
       [ "border" => "solid"
       , "margin" => "5px"
       ] ++
       (if
-        Just v.ref == model.currentRef
+        Just def.ref == List.head model.currentRef
       then
         selectedStyle
       else
         [])
-    , onClick' (SetCurrentRef v.ref)
+    , onClick' (SetCurrentRef (def.ref :: ancestors))
     ]
-    [ htmlFunctionSignature model ctx v
-    , htmlFunctionBody model node ctx v
+    [ htmlFunctionSignature model ctx ancestors def
+    , htmlFunctionBody model node ctx ancestors def
     ]
 
 

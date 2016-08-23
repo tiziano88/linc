@@ -9,7 +9,7 @@ import Proto.Server as Server
 
 type Msg
   = Nop
-  | SetCurrentRef ExprRef
+  | SetCurrentRef (List ExprRef)
   | SetNode Int Node
   | Input String
   | LoadFile
@@ -25,7 +25,8 @@ type alias Context = Dict.Dict ExprRef Node
 
 type alias Model =
   { file : Ast.File
-  , currentRef : Maybe ExprRef
+  -- Head is the current ref.
+  , currentRef : List ExprRef
   , input : String
   }
 
