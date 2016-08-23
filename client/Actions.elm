@@ -12,10 +12,28 @@ import Types exposing (..)
 
 nodeActions : Model -> Node -> Context -> List Action
 nodeActions model node ctx =
-  case node of
-    Expr expr -> expressionActions model ctx expr
-    VarDef vdef -> variableDefinitionActions model vdef
-    Pat pat -> patternActions model pat
+  let
+    a =
+      case node of
+        Expr expr -> expressionActions model ctx expr
+        VarDef vdef -> variableDefinitionActions model vdef
+        Pat pat -> patternActions model pat
+    b =
+      [ { label = "↑"
+        , msg = Nop
+        }
+      , { label = "↓"
+        , msg = Nop
+        }
+      , { label = "←"
+        , msg = Nop
+        }
+      , { label = "→"
+        , msg = Nop
+        }
+      ]
+  in
+    a ++ b
 
 
 expressionActions : Model -> Context -> Ast.Expression -> List Action
