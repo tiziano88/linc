@@ -20,7 +20,7 @@ nodeActions model node ctx =
         Pat pat -> patternActions model pat
     b =
       [ { label = "↑"
-        , msg = Nop
+        , msg = SetCurrentRef <| List.drop 1 model.currentRef
         }
       , { label = "↓"
         , msg = Nop
