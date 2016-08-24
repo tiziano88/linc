@@ -1,114 +1,66 @@
 module GetContext exposing (..)
 
-import Dict
 import Proto.Ast as Ast
 import Defaults exposing (..)
 import Types exposing (..)
 
 
+-- TODO: Use refPath and file context.
+
+
 getCurrentContext : Model -> Context
 getCurrentContext model =
-    mergeContexts Dict.empty <| List.map (\ref -> getContextFile ref model.file) model.refPath
+    []
 
 
-newContextFile : Ast.File -> Context
-newContextFile file =
-    file.variableDefinitions
-        |> List.map (\def -> ( def.ref, VarDef def ))
-        |> Dict.fromList
+getContextFile : Ast.File -> Context
+getContextFile file =
+    List.map (\def -> ( def.ref, VarDef def )) file.variableDefinitions
 
 
-getContextFile : ExprRef -> Ast.File -> Context
-getContextFile ref file =
-    let
-        newCtx =
-            newContextFile file
-    in
-        file.variableDefinitions
-            |> List.map (getContextVariableDefinition ref newCtx)
-            |> mergeContexts Dict.empty
-
-
-
--- TODO: Flip first two arguments to all new* functions?
-
-
-newContextVariableDefinition : Context -> Ast.VariableDefinition -> Context
-newContextVariableDefinition ctx def =
-    List.foldr (flip newContextPattern) ctx def.arguments
-
-
-getContextVariableDefinition : ExprRef -> Context -> Ast.VariableDefinition -> Context
-getContextVariableDefinition ref ctx def =
-    let
-        newCtx =
-            newContextVariableDefinition ctx def
-    in
-        case def.value of
-            Just v ->
-                getContextExpression ref newCtx v
-
-            _ ->
-                Dict.empty
-
-
-getContextExpression : ExprRef -> Context -> Ast.Expression -> Context
-getContextExpression ref ctx expr =
-    if (Debug.log "eref" expr.ref) == (Debug.log "ref" ref) then
-        (Debug.log "ctx" ctx)
-    else
-        let
-            valueCtx =
-                case expr.value of
-                    Ast.IfValue v ->
-                        case ( v.cond, v.true, v.false ) of
-                            ( Just cond, Just true, Just false ) ->
-                                mergeContexts Dict.empty <| List.map (getContextExpression ref ctx) [ cond, true, false ]
-
-                            _ ->
-                                Dict.empty
-
-                    Ast.LambdaValue v ->
-                        case ( v.argument, v.body ) of
-                            ( Just argument, Just body ) ->
-                                let
-                                    newCtx =
-                                        newContextPattern ctx argument
-                                in
-                                    getContextExpression ref newCtx body
-
-                            _ ->
-                                Dict.empty
-
-                    _ ->
-                        Dict.empty
-
-            argsCtx =
-                case expr.arguments of
-                    Ast.Args a ->
-                        mergeContexts Dict.empty <| List.map (getContextExpression ref ctx) a.values
-
-                    _ ->
-                        Dict.empty
-        in
-            Dict.union valueCtx argsCtx
-
-
-newContextPattern : Context -> Ast.Pattern -> Context
-newContextPattern ctx pat =
-    case pat.pvalue of
-        Ast.LabelValue _ ->
-            Dict.insert pat.ref (Pat pat) ctx
+getContextVariableDefinition : Ast.VariableDefinition -> Context
+getContextVariableDefinition def =
+    case def.value of
+        Just v ->
+            getContextExpression v
 
         _ ->
-            ctx
+            []
 
 
-mergeContexts : Context -> List Context -> Context
-mergeContexts ctx ctxs =
-    List.foldl Dict.union ctx ctxs
+getContextExpression : Ast.Expression -> Context
+getContextExpression expr =
+    case expr.value of
+        Ast.LambdaValue v ->
+            case v.argument of
+                Just argument ->
+                    getContextPattern argument
+
+                _ ->
+                    []
+
+        _ ->
+            []
+
+
+getContextPattern : Ast.Pattern -> Context
+getContextPattern pat =
+    case pat.pvalue of
+        Ast.LabelValue _ ->
+            [ ( pat.ref, Pat pat ) ]
+
+        _ ->
+            []
+
+
+lookupContext : Context -> ExprRef -> Maybe Node
+lookupContext ctx ref =
+    List.head <| List.map (\( r, n ) -> n) <| List.filter (\( r, n ) -> r == ref) ctx
 
 
 
+--mergeContexts : Context -> List Context -> Context
+--mergeContexts ctx ctxs =
+--List.foldl Dict.union ctx ctxs
 -- mapNode : Node -> (a -> b) ->
 -- TODO: traverseWithContext : Context -> Node -> (Context -> Node -> a) -> a

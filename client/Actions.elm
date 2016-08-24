@@ -1,6 +1,5 @@
 module Actions exposing (..)
 
-import Dict
 import Html exposing (..)
 import Html.Events exposing (..)
 import String
@@ -144,9 +143,7 @@ expressionActions model ctx expr =
 
 contextActions : Context -> Ast.Expression -> List Action
 contextActions ctx expr =
-    ctx
-        |> Dict.values
-        |> List.concatMap (refActions expr)
+    List.concatMap (refActions expr) <| List.map (\( r, n ) -> n) <| ctx
 
 
 refActions : Ast.Expression -> Node -> List Action

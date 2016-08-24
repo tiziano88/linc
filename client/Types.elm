@@ -21,7 +21,7 @@ type alias ExprRef =
 
 
 type alias Context =
-    Dict.Dict ExprRef Node
+    List ( ExprRef, Node )
 
 
 type alias Model =

@@ -1,6 +1,5 @@
 module GetNode exposing (..)
 
-import Dict
 import Proto.Ast as Ast
 import Types exposing (..)
 
@@ -12,7 +11,7 @@ getCurrentNode model =
             Nothing
 
         Just ref ->
-            getNode model ref Dict.empty
+            getNode model ref []
 
 
 getNode : Model -> ExprRef -> Context -> Maybe Node

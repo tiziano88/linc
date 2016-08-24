@@ -1,7 +1,6 @@
 module Main exposing (..)
 
 import Array
-import Dict
 import Html.App as Html
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -263,7 +262,7 @@ htmlFile model node file =
             []
 
         newCtx =
-            newContextFile file
+            getContextFile file
 
         xs =
             file.variableDefinitions
@@ -277,6 +276,9 @@ htmlExpr model node ctx ancestors expr =
     let
         newAncestors =
             expr.ref :: ancestors
+
+        newCtx =
+            List.append (getContextExpression expr) ctx
 
         content =
             case expr.value of
@@ -300,18 +302,18 @@ htmlExpr model node ctx ancestors expr =
 
                 Ast.ListValue ls ->
                     [ Html.text "[" ]
-                        ++ (List.map (htmlExpr model node ctx ancestors) ls.values |> List.intersperse (Html.text ","))
+                        ++ (List.map (htmlExpr model node newCtx ancestors) ls.values |> List.intersperse (Html.text ","))
                         ++ [ Html.text "]" ]
 
                 Ast.IfValue v ->
                     case ( v.cond, v.true, v.false ) of
                         ( Just cond, Just true, Just false ) ->
                             [ Html.text "if"
-                            , htmlExpr model node ctx newAncestors cond
+                            , htmlExpr model node newCtx newAncestors cond
                             , Html.text "then"
-                            , htmlExpr model node ctx newAncestors true
+                            , htmlExpr model node newCtx newAncestors true
                             , Html.text "else"
-                            , htmlExpr model node ctx newAncestors false
+                            , htmlExpr model node newCtx newAncestors false
                             ]
 
                         _ ->
@@ -320,29 +322,25 @@ htmlExpr model node ctx ancestors expr =
                 Ast.LambdaValue v ->
                     case ( v.argument, v.body ) of
                         ( Just argument, Just body ) ->
-                            let
-                                newCtx =
-                                    newContextPattern ctx argument
-                            in
-                                [ Html.text "λ"
-                                , htmlPattern model node ctx newAncestors argument
-                                , Html.text "→"
-                                , htmlExpr model node newCtx newAncestors body
-                                ]
+                            [ Html.text "λ"
+                            , htmlPattern model node newCtx newAncestors argument
+                            , Html.text "→"
+                            , htmlExpr model node newCtx newAncestors body
+                            ]
 
                         _ ->
                             []
 
                 Ast.RefValue v ->
-                    [ htmlRef model node ctx newAncestors v.ref ]
+                    [ htmlRef model node newCtx newAncestors v.ref ]
 
                 Ast.ExternalRefValue ref ->
-                    [ htmlExternalRef model node ctx newAncestors ref ]
+                    [ htmlExternalRef model node newCtx newAncestors ref ]
 
         arguments =
             case expr.arguments of
                 Ast.Args a ->
-                    List.map (htmlExpr model node ctx newAncestors) a.values
+                    List.map (htmlExpr model node newCtx newAncestors) a.values
 
                 _ ->
                     []
@@ -428,7 +426,7 @@ htmlRef : Model -> Maybe Node -> Context -> List ExprRef -> ExprRef -> Html Msg
 htmlRef model node ctx ancestors ref =
     let
         target =
-            Dict.get ref ctx
+            lookupContext ctx ref
     in
         case target of
             Just n ->
@@ -472,7 +470,7 @@ htmlFunctionBody model node ctx ancestors def =
             def.ref :: ancestors
 
         newCtx =
-            newContextVariableDefinition ctx def
+            List.append (getContextVariableDefinition def) ctx
     in
         case def.value of
             Nothing ->
