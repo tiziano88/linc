@@ -278,7 +278,7 @@ htmlExpr model node ctx ancestors expr =
             expr.ref :: ancestors
 
         newCtx =
-            List.append (getContextExpression expr) ctx
+            (getContextExpression expr) ++ ctx
 
         content =
             case expr.value of
@@ -470,7 +470,7 @@ htmlFunctionBody model node ctx ancestors def =
             def.ref :: ancestors
 
         newCtx =
-            List.append (getContextVariableDefinition def) ctx
+            (getContextVariableDefinition def) ++ ctx
     in
         case def.value of
             Nothing ->
@@ -554,21 +554,25 @@ htmlVariableDefinitionRef model ctx def =
 
 htmlVariableDefinition : Model -> Maybe Node -> Context -> List ExprRef -> Ast.VariableDefinition -> Html Msg
 htmlVariableDefinition model node ctx ancestors def =
-    Html.div
-        [ style <|
-            [ "border" => "solid"
-            , "margin" => "5px"
+    let
+        newCtx =
+            (List.concat <| List.map getContextPattern def.arguments) ++ ctx
+    in
+        Html.div
+            [ style <|
+                [ "border" => "solid"
+                , "margin" => "5px"
+                ]
+                    ++ (if Just def.ref == List.head model.refPath then
+                            selectedStyle
+                        else
+                            []
+                       )
+            , onClick' (SetRefPath (def.ref :: ancestors))
             ]
-                ++ (if Just def.ref == List.head model.refPath then
-                        selectedStyle
-                    else
-                        []
-                   )
-        , onClick' (SetRefPath (def.ref :: ancestors))
-        ]
-        [ htmlFunctionSignature model ctx ancestors def
-        , htmlFunctionBody model node ctx ancestors def
-        ]
+            [ htmlFunctionSignature model newCtx ancestors def
+            , htmlFunctionBody model node newCtx ancestors def
+            ]
 
 
 
