@@ -3,6 +3,7 @@ module GetContext exposing (..)
 import Proto.Ast as Ast
 import Defaults exposing (..)
 import Types exposing (..)
+import GetNode exposing (..)
 
 
 -- TODO: Use refPath and file context.
@@ -10,12 +11,23 @@ import Types exposing (..)
 
 getCurrentContext : Model -> Context
 getCurrentContext model =
-    []
+    let
+        a =
+            List.concat <| List.map getContextNode <| List.filterMap (getNode model) <| List.drop 1 model.refPath
+
+        b =
+            (getContextFile model.file)
+    in
+        a ++ b
 
 
 getContextFile : Ast.File -> Context
 getContextFile file =
-    List.map (\def -> ( def.ref, VarDef def )) file.variableDefinitions
+    let
+        a =
+            List.map (\def -> ( def.ref, VarDef def )) file.variableDefinitions
+    in
+        a
 
 
 getContextVariableDefinition : Ast.VariableDefinition -> Context
@@ -51,6 +63,20 @@ getContextPattern pat =
 
         _ ->
             []
+
+
+getContextNode : Node -> Context
+getContextNode node =
+    case node of
+        Expr expr ->
+            getContextExpression expr
+
+        VarDef def ->
+            List.concat <| List.map getContextPattern def.arguments
+
+        --getContextVariableDefinition def
+        Pat pat ->
+            getContextPattern pat
 
 
 lookupContext : Context -> ExprRef -> Maybe Node

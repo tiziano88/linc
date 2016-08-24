@@ -11,11 +11,11 @@ getCurrentNode model =
             Nothing
 
         Just ref ->
-            getNode model ref []
+            getNode model ref
 
 
-getNode : Model -> ExprRef -> Context -> Maybe Node
-getNode model ref ctx =
+getNode : Model -> ExprRef -> Maybe Node
+getNode model ref =
     model.file.variableDefinitions
         |> List.filterMap (getNodeVariableDefinition ref)
         |> List.head
