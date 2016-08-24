@@ -7,7 +7,7 @@ import Types exposing (..)
 
 getCurrentNode : Model -> Maybe Node
 getCurrentNode model =
-    case (List.head model.currentRef) of
+    case (List.head model.refPath) of
         Nothing ->
             Nothing
 

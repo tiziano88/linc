@@ -25,7 +25,7 @@ nodeActions model node ctx =
 
         b =
             [ { label = "↑"
-              , msg = SetCurrentRef <| List.drop 1 model.currentRef
+              , msg = SetRefPath <| List.drop 1 model.refPath
               }
             , { label = "↓"
               , msg = Nop

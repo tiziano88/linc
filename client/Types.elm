@@ -8,7 +8,7 @@ import Proto.Server as Server
 
 type Msg
     = Nop
-    | SetCurrentRef (List ExprRef)
+    | SetRefPath (List ExprRef)
     | SetNode Int Node
     | Input String
     | LoadFile
@@ -25,10 +25,10 @@ type alias Context =
 
 
 type alias Model =
-    { file :
-        Ast.File
+    { file : Ast.File
+    , refPath :
+        List ExprRef
         -- Head is the current ref.
-    , currentRef : List ExprRef
     , input : String
     }
 

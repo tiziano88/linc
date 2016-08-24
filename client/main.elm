@@ -116,7 +116,7 @@ testModel =
               }
             ]
         }
-    , currentRef = []
+    , refPath = []
     , input = ""
     }
 
@@ -139,10 +139,10 @@ update action model =
             Nop ->
                 noEffects model
 
-            SetCurrentRef ref ->
+            SetRefPath refPath ->
                 noEffects
                     { model
-                        | currentRef = ref
+                        | refPath = refPath
                     }
 
             Input v ->
@@ -152,7 +152,7 @@ update action model =
                     }
 
             SetNode n node ->
-                case List.head model.currentRef of
+                case List.head model.refPath of
                     Nothing ->
                         noEffects model
 
@@ -350,7 +350,7 @@ htmlExpr model node ctx ancestors expr =
         Html.span
             [ style <|
                 nodeStyle
-                    ++ (if Just expr.ref == List.head model.currentRef then
+                    ++ (if Just expr.ref == List.head model.refPath then
                             selectedStyle
                         else
                             []
@@ -360,7 +360,7 @@ htmlExpr model node ctx ancestors expr =
                         else
                             []
                        )
-            , onClick' (SetCurrentRef newAncestors)
+            , onClick' (SetRefPath newAncestors)
             ]
             (case arguments of
                 [] ->
@@ -512,7 +512,7 @@ htmlPattern model node ctx ancestors pat =
         Html.div
             [ style <|
                 nodeStyle
-                    ++ (if Just pat.ref == List.head model.currentRef then
+                    ++ (if Just pat.ref == List.head model.refPath then
                             selectedStyle
                         else
                             []
@@ -522,7 +522,7 @@ htmlPattern model node ctx ancestors pat =
                         else
                             []
                        )
-            , onClick' (SetCurrentRef (pat.ref :: ancestors))
+            , onClick' (SetRefPath (pat.ref :: ancestors))
             ]
             content
 
@@ -561,12 +561,12 @@ htmlVariableDefinition model node ctx ancestors def =
             [ "border" => "solid"
             , "margin" => "5px"
             ]
-                ++ (if Just def.ref == List.head model.currentRef then
+                ++ (if Just def.ref == List.head model.refPath then
                         selectedStyle
                     else
                         []
                    )
-        , onClick' (SetCurrentRef (def.ref :: ancestors))
+        , onClick' (SetRefPath (def.ref :: ancestors))
         ]
         [ htmlFunctionSignature model ctx ancestors def
         , htmlFunctionBody model node ctx ancestors def

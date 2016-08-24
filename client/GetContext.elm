@@ -8,7 +8,7 @@ import Types exposing (..)
 
 getCurrentContext : Model -> Context
 getCurrentContext model =
-    mergeContexts Dict.empty <| List.map (\ref -> getContextFile ref model.file) model.currentRef
+    mergeContexts Dict.empty <| List.map (\ref -> getContextFile ref model.file) model.refPath
 
 
 newContextFile : Ast.File -> Context
