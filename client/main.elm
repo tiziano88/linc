@@ -344,6 +344,8 @@ htmlExpr model node ctx ancestors expr =
 
                 _ ->
                     []
+
+        infix = (List.length arguments == 2) -- TODO: Only if it is actually an operator.
     in
         Html.span
             [ style <|
@@ -364,8 +366,16 @@ htmlExpr model node ctx ancestors expr =
                 [] ->
                     content
 
-                _ ->
+                [a1, a2] ->
+                  if
+                    infix
+                  then
+                    [ Html.text "(" ] ++ [ a1 ] ++ content ++ [ a2 ] ++ [ Html.text ")" ]
+                  else
                     [ Html.text "(" ] ++ content ++ arguments ++ [ Html.text ")" ]
+
+                _ ->
+                  [ Html.text "(" ] ++ content ++ arguments ++ [ Html.text ")" ]
             )
 
 

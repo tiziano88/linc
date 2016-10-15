@@ -181,7 +181,24 @@ expressionActions model ctx expr =
                                     Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
                     }
       }
-    , { label = "◆" -- TODO
+    , { label = "◆ ◇" -- TODO
+      , msg =
+            SetNode 1 <|
+                Expr
+                    { expr
+                        | arguments =
+                            case expr.arguments of
+                                Ast.Args a ->
+                                    Ast.Args { values = a.values ++ [ { defaultExpr | ref = model.file.nextRef } ] }
+
+                                Ast.ArgumentsUnspecified ->
+                                    Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
+                    }
+      }
+    , { label = "◆"
+      , msg = SetNode 0 <| Expr defaultExpr
+      }
+    , { label = "⌧" -- TODO: Delete node entirely.
       , msg = SetNode 0 <| Expr expr
       }
     , { label = "\"" ++ model.input ++ "\" (String) "
