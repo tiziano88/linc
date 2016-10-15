@@ -283,10 +283,10 @@ htmlExpr model node ctx ancestors expr =
         content =
             case expr.value of
                 Ast.ValueUnspecified ->
-                    [ Html.text "<<<EMPTY>>>" ]
+                    [ Html.text "◆" ]
 
                 Ast.EmptyValue _ ->
-                    [ Html.text "<<<EMPTY>>>" ]
+                    [ Html.text "◆" ]
 
                 Ast.IntValue v ->
                     [ Html.text <| toString v.value ]

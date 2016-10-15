@@ -55,12 +55,37 @@ expressionActions model ctx expr =
                     { expr
                         | value =
                             Ast.ListValue
+                                { values = []
+                                }
+                    }
+      }
+    , { label = "[◇]"
+      , msg =
+            SetNode 1 <|
+                Expr
+                    { expr
+                        | value =
+                            Ast.ListValue
                                 { values =
                                     [ { defaultExpr | ref = model.file.nextRef, value = expr.value } ]
                                 }
                     }
       }
-    , { label = "if"
+    , { label = "if ◆ then ◆ else ◆"
+      , msg =
+            SetNode 3 <|
+                Expr
+                    { expr
+                        | value =
+                            Ast.IfValue
+                                { cond = Just { defaultExpr | ref = model.file.nextRef }
+                                , true = Just { defaultExpr | ref = model.file.nextRef + 1 }
+                                , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
+                                }
+                        , arguments = Ast.Args { values = [] }
+                    }
+      }
+    , { label = "if ◇ then ◆ else ◆"
       , msg =
             SetNode 3 <|
                 Expr
@@ -80,7 +105,57 @@ expressionActions model ctx expr =
                         , arguments = Ast.Args { values = [] }
                     }
       }
-    , { label = "λ"
+    , { label = "if ◆ then ◇ else ◆"
+      , msg =
+            SetNode 3 <|
+                Expr
+                    { expr
+                        | value =
+                            Ast.IfValue
+                                { cond = Just { defaultExpr | ref = model.file.nextRef }
+                                , true = Just
+                                        { defaultExpr
+                                            | ref = model.file.nextRef + 1 
+                                            , value = expr.value
+                                            , arguments = expr.arguments
+                                        }
+                                , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
+                                }
+                        , arguments = Ast.Args { values = [] }
+                    }
+      }
+    , { label = "if ◆ then ◆ else ◇"
+      , msg =
+            SetNode 3 <|
+                Expr
+                    { expr
+                        | value =
+                            Ast.IfValue
+                                { cond = Just { defaultExpr | ref = model.file.nextRef }
+                                , true = Just { defaultExpr | ref = model.file.nextRef + 1 }
+                                , false = Just
+                                        { defaultExpr
+                                            | ref = model.file.nextRef + 2
+                                            , value = expr.value
+                                            , arguments = expr.arguments
+                                        }
+                                }
+                        , arguments = Ast.Args { values = [] }
+                    }
+      }
+    , { label = "λ ◆ → ◆"
+      , msg =
+            SetNode 2 <|
+                Expr
+                    { expr
+                        | value =
+                            Ast.LambdaValue
+                                { argument = Just { defaultPattern | ref = model.file.nextRef }
+                                , body = Just { defaultExpr | ref = model.file.nextRef + 1 }
+                                }
+                    }
+      }
+    , { label = "λ ◆ → ◇"
       , msg =
             SetNode 2 <|
                 Expr
@@ -92,7 +167,7 @@ expressionActions model ctx expr =
                                 }
                     }
       }
-    , { label = "arg"
+    , { label = "◇ ◆"
       , msg =
             SetNode 1 <|
                 Expr
@@ -106,7 +181,7 @@ expressionActions model ctx expr =
                                     Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
                     }
       }
-    , { label = "x"
+    , { label = "◆" -- TODO
       , msg = SetNode 0 <| Expr expr
       }
     , { label = "\"" ++ model.input ++ "\" (String) "
