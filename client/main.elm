@@ -134,7 +134,7 @@ update action model =
         currentContext =
             Debug.log "previous context" <| getCurrentContext model
     in
-        case action of
+        case Debug.log "action" action of
             Nop ->
                 noEffects model
 
@@ -553,8 +553,25 @@ htmlPattern model node ctx ancestors pat =
                             []
                        )
             , onClick' (SetRefPath (pat.ref :: ancestors))
+            , contenteditable True
+            , on "input" (Json.Decode.map (rename pat) targetValue)
             ]
             content
+
+
+-- TODO: Fix cursor jumping.
+rename : Ast.Pattern -> String -> Msg
+rename pat n =
+    case pat.pvalue of
+        Ast.LabelValue v ->
+            SetNode 0 <| Pat { pat | pvalue = Ast.LabelValue { v | name = n } }
+        _ ->
+            Nop
+
+
+targetValue : Json.Decode.Decoder String
+targetValue =
+    Json.Decode.at ["target", "innerText"] Json.Decode.string
 
 
 htmlPatternRef : Model -> Context -> Ast.Pattern -> Html Msg
