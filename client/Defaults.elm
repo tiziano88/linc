@@ -11,6 +11,15 @@ defaultExpr =
     }
 
 
+defaultVariableDefinition : Ast.VariableDefinition
+defaultVariableDefinition =
+    { ref = -1
+    , label = Just { name = "◆" }
+    , value = Nothing
+    , arguments = []
+    }
+
+
 defaultPattern : Ast.Pattern
 defaultPattern =
     { ref = -1

@@ -35,6 +35,9 @@ nodeActions model node ctx =
             , { label = "→"
               , msg = Nop
               }
+            , { label = "Create function"
+              , msg = CreateFunction
+              }
             ]
     in
         a ++ b

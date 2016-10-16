@@ -10,6 +10,7 @@ type Msg
     = Nop
     | SetRefPath (List ExprRef)
     | SetNode Int Node
+    | CreateFunction
     | Input String
     | LoadFile
     | LoadFileSuccess Server.GetFileResponse

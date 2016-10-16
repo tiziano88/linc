@@ -177,6 +177,23 @@ update action model =
                                                 }
                                         }
 
+            CreateFunction ->
+                noEffects <|
+                  let
+                      fi = model.file
+                  in
+                      { model
+                          | file =
+                              { fi
+                                  | variableDefinitions = fi.variableDefinitions ++ [
+                                        { defaultVariableDefinition | ref = fi.nextRef
+                                        , value = Just { defaultExpr | ref = fi.nextRef + 1}
+                                        }
+                                    ]
+                                  , nextRef = fi.nextRef + 2
+                              }
+                      }
+
             LoadFile ->
                 ( model
                 , Http.get Server.getFileResponseDecoder "/LoadFile"
