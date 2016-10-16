@@ -89,9 +89,8 @@ type alias GetFileRequest =
 
 getFileRequestDecoder : JD.Decoder GetFileRequest
 getFileRequestDecoder =
-  lazy <| \_ ->
-    GetFileRequest
-      <$> (requiredFieldDecoder "path" "" JD.string)
+  lazy <| \_ -> GetFileRequest
+    <$> (requiredFieldDecoder "path" "" JD.string)
 
 
 getFileRequestEncoder : GetFileRequest -> JE.Value
@@ -108,9 +107,8 @@ type alias GetFileResponse =
 
 getFileResponseDecoder : JD.Decoder GetFileResponse
 getFileResponseDecoder =
-  lazy <| \_ ->
-    GetFileResponse
-      <$> (requiredFieldDecoder "jsonContent" "" JD.string)
+  lazy <| \_ -> GetFileResponse
+    <$> (requiredFieldDecoder "jsonContent" "" JD.string)
 
 
 getFileResponseEncoder : GetFileResponse -> JE.Value
@@ -129,11 +127,10 @@ type alias UpdateFileRequest =
 
 updateFileRequestDecoder : JD.Decoder UpdateFileRequest
 updateFileRequestDecoder =
-  lazy <| \_ ->
-    UpdateFileRequest
-      <$> (requiredFieldDecoder "path" "" JD.string)
-      <*> (requiredFieldDecoder "jsonContent" "" JD.string)
-      <*> (requiredFieldDecoder "elmContent" "" JD.string)
+  lazy <| \_ -> UpdateFileRequest
+    <$> (requiredFieldDecoder "path" "" JD.string)
+    <*> (requiredFieldDecoder "jsonContent" "" JD.string)
+    <*> (requiredFieldDecoder "elmContent" "" JD.string)
 
 
 updateFileRequestEncoder : UpdateFileRequest -> JE.Value

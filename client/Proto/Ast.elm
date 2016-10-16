@@ -92,12 +92,11 @@ type alias File =
 
 fileDecoder : JD.Decoder File
 fileDecoder =
-  lazy <| \_ ->
-    File
-      <$> (requiredFieldDecoder "nextRef" 0 JD.int)
-      <*> (requiredFieldDecoder "name" "" JD.string)
-      <*> (repeatedFieldDecoder "typeAliases" typeAliasDecoder)
-      <*> (repeatedFieldDecoder "variableDefinitions" variableDefinitionDecoder)
+  lazy <| \_ -> File
+    <$> (requiredFieldDecoder "nextRef" 0 JD.int)
+    <*> (requiredFieldDecoder "name" "" JD.string)
+    <*> (repeatedFieldDecoder "typeAliases" typeAliasDecoder)
+    <*> (repeatedFieldDecoder "variableDefinitions" variableDefinitionDecoder)
 
 
 fileEncoder : File -> JE.Value
@@ -133,20 +132,19 @@ type Value
 
 valueDecoder : JD.Decoder Value
 valueDecoder =
-  lazy <| \_ ->
-    JD.oneOf
-      [ JD.map EmptyValue ("emptyValue" := JD.int)
-      , JD.map BoolValue ("boolValue" := expression_BoolDecoder)
-      , JD.map IntValue ("intValue" := expression_IntDecoder)
-      , JD.map FloatValue ("floatValue" := expression_FloatDecoder)
-      , JD.map StringValue ("stringValue" := expression_StringDecoder)
-      , JD.map ListValue ("listValue" := expression_ListDecoder)
-      , JD.map IfValue ("ifValue" := expression_IfDecoder)
-      , JD.map LambdaValue ("lambdaValue" := expression_LambdaDecoder)
-      , JD.map RefValue ("refValue" := expression_RefDecoder)
-      , JD.map ExternalRefValue ("externalRefValue" := expression_ExternalRefDecoder)
-      , JD.succeed ValueUnspecified
-      ]
+  lazy <| \_ -> JD.oneOf
+    [ JD.map EmptyValue ("emptyValue" := JD.int)
+    , JD.map BoolValue ("boolValue" := expression_BoolDecoder)
+    , JD.map IntValue ("intValue" := expression_IntDecoder)
+    , JD.map FloatValue ("floatValue" := expression_FloatDecoder)
+    , JD.map StringValue ("stringValue" := expression_StringDecoder)
+    , JD.map ListValue ("listValue" := expression_ListDecoder)
+    , JD.map IfValue ("ifValue" := expression_IfDecoder)
+    , JD.map LambdaValue ("lambdaValue" := expression_LambdaDecoder)
+    , JD.map RefValue ("refValue" := expression_RefDecoder)
+    , JD.map ExternalRefValue ("externalRefValue" := expression_ExternalRefDecoder)
+    , JD.succeed ValueUnspecified
+    ]
 
 
 valueEncoder : Value -> Maybe (String, JE.Value)
@@ -172,11 +170,10 @@ type Arguments
 
 argumentsDecoder : JD.Decoder Arguments
 argumentsDecoder =
-  lazy <| \_ ->
-    JD.oneOf
-      [ JD.map Args ("args" := expression_ArgumentsDecoder)
-      , JD.succeed ArgumentsUnspecified
-      ]
+  lazy <| \_ -> JD.oneOf
+    [ JD.map Args ("args" := expression_ArgumentsDecoder)
+    , JD.succeed ArgumentsUnspecified
+    ]
 
 
 argumentsEncoder : Arguments -> Maybe (String, JE.Value)
@@ -188,11 +185,10 @@ argumentsEncoder v =
 
 expressionDecoder : JD.Decoder Expression
 expressionDecoder =
-  lazy <| \_ ->
-    Expression
-      <$> (requiredFieldDecoder "ref" 0 JD.int)
-      <*> valueDecoder
-      <*> argumentsDecoder
+  lazy <| \_ -> Expression
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> valueDecoder
+    <*> argumentsDecoder
 
 
 expressionEncoder : Expression -> JE.Value
@@ -211,9 +207,8 @@ type alias Expression_Bool =
 
 expression_BoolDecoder : JD.Decoder Expression_Bool
 expression_BoolDecoder =
-  lazy <| \_ ->
-    Expression_Bool
-      <$> (requiredFieldDecoder "value" False JD.bool)
+  lazy <| \_ -> Expression_Bool
+    <$> (requiredFieldDecoder "value" False JD.bool)
 
 
 expression_BoolEncoder : Expression_Bool -> JE.Value
@@ -230,9 +225,8 @@ type alias Expression_Int =
 
 expression_IntDecoder : JD.Decoder Expression_Int
 expression_IntDecoder =
-  lazy <| \_ ->
-    Expression_Int
-      <$> (requiredFieldDecoder "value" 0 JD.int)
+  lazy <| \_ -> Expression_Int
+    <$> (requiredFieldDecoder "value" 0 JD.int)
 
 
 expression_IntEncoder : Expression_Int -> JE.Value
@@ -249,9 +243,8 @@ type alias Expression_Float =
 
 expression_FloatDecoder : JD.Decoder Expression_Float
 expression_FloatDecoder =
-  lazy <| \_ ->
-    Expression_Float
-      <$> (requiredFieldDecoder "value" 0.0 JD.float)
+  lazy <| \_ -> Expression_Float
+    <$> (requiredFieldDecoder "value" 0.0 JD.float)
 
 
 expression_FloatEncoder : Expression_Float -> JE.Value
@@ -268,9 +261,8 @@ type alias Expression_String =
 
 expression_StringDecoder : JD.Decoder Expression_String
 expression_StringDecoder =
-  lazy <| \_ ->
-    Expression_String
-      <$> (requiredFieldDecoder "value" "" JD.string)
+  lazy <| \_ -> Expression_String
+    <$> (requiredFieldDecoder "value" "" JD.string)
 
 
 expression_StringEncoder : Expression_String -> JE.Value
@@ -287,9 +279,8 @@ type alias Expression_List =
 
 expression_ListDecoder : JD.Decoder Expression_List
 expression_ListDecoder =
-  lazy <| \_ ->
-    Expression_List
-      <$> (repeatedFieldDecoder "values" expressionDecoder)
+  lazy <| \_ -> Expression_List
+    <$> (repeatedFieldDecoder "values" expressionDecoder)
 
 
 expression_ListEncoder : Expression_List -> JE.Value
@@ -308,11 +299,10 @@ type alias Expression_If =
 
 expression_IfDecoder : JD.Decoder Expression_If
 expression_IfDecoder =
-  lazy <| \_ ->
-    Expression_If
-      <$> (optionalFieldDecoder "cond" expressionDecoder)
-      <*> (optionalFieldDecoder "true" expressionDecoder)
-      <*> (optionalFieldDecoder "false" expressionDecoder)
+  lazy <| \_ -> Expression_If
+    <$> (optionalFieldDecoder "cond" expressionDecoder)
+    <*> (optionalFieldDecoder "true" expressionDecoder)
+    <*> (optionalFieldDecoder "false" expressionDecoder)
 
 
 expression_IfEncoder : Expression_If -> JE.Value
@@ -332,10 +322,9 @@ type alias Expression_Lambda =
 
 expression_LambdaDecoder : JD.Decoder Expression_Lambda
 expression_LambdaDecoder =
-  lazy <| \_ ->
-    Expression_Lambda
-      <$> (optionalFieldDecoder "argument" patternDecoder)
-      <*> (optionalFieldDecoder "body" expressionDecoder)
+  lazy <| \_ -> Expression_Lambda
+    <$> (optionalFieldDecoder "argument" patternDecoder)
+    <*> (optionalFieldDecoder "body" expressionDecoder)
 
 
 expression_LambdaEncoder : Expression_Lambda -> JE.Value
@@ -353,9 +342,8 @@ type alias Expression_Ref =
 
 expression_RefDecoder : JD.Decoder Expression_Ref
 expression_RefDecoder =
-  lazy <| \_ ->
-    Expression_Ref
-      <$> (requiredFieldDecoder "ref" 0 JD.int)
+  lazy <| \_ -> Expression_Ref
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
 
 
 expression_RefEncoder : Expression_Ref -> JE.Value
@@ -373,10 +361,9 @@ type alias Expression_ExternalRef =
 
 expression_ExternalRefDecoder : JD.Decoder Expression_ExternalRef
 expression_ExternalRefDecoder =
-  lazy <| \_ ->
-    Expression_ExternalRef
-      <$> (requiredFieldDecoder "path" "" JD.string)
-      <*> (requiredFieldDecoder "name" "" JD.string)
+  lazy <| \_ -> Expression_ExternalRef
+    <$> (requiredFieldDecoder "path" "" JD.string)
+    <*> (requiredFieldDecoder "name" "" JD.string)
 
 
 expression_ExternalRefEncoder : Expression_ExternalRef -> JE.Value
@@ -394,9 +381,8 @@ type alias Expression_Arguments =
 
 expression_ArgumentsDecoder : JD.Decoder Expression_Arguments
 expression_ArgumentsDecoder =
-  lazy <| \_ ->
-    Expression_Arguments
-      <$> (repeatedFieldDecoder "values" expressionDecoder)
+  lazy <| \_ -> Expression_Arguments
+    <$> (repeatedFieldDecoder "values" expressionDecoder)
 
 
 expression_ArgumentsEncoder : Expression_Arguments -> JE.Value
@@ -416,12 +402,11 @@ type alias VariableDefinition =
 
 variableDefinitionDecoder : JD.Decoder VariableDefinition
 variableDefinitionDecoder =
-  lazy <| \_ ->
-    VariableDefinition
-      <$> (requiredFieldDecoder "ref" 0 JD.int)
-      <*> (optionalFieldDecoder "label" labelDecoder)
-      <*> (optionalFieldDecoder "value" expressionDecoder)
-      <*> (repeatedFieldDecoder "arguments" patternDecoder)
+  lazy <| \_ -> VariableDefinition
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> (optionalFieldDecoder "label" labelDecoder)
+    <*> (optionalFieldDecoder "value" expressionDecoder)
+    <*> (repeatedFieldDecoder "arguments" patternDecoder)
 
 
 variableDefinitionEncoder : VariableDefinition -> JE.Value
@@ -443,11 +428,10 @@ type alias TypeAlias =
 
 typeAliasDecoder : JD.Decoder TypeAlias
 typeAliasDecoder =
-  lazy <| \_ ->
-    TypeAlias
-      <$> (requiredFieldDecoder "ref" 0 JD.int)
-      <*> (optionalFieldDecoder "label" labelDecoder)
-      <*> (optionalFieldDecoder "type1" typeDecoder)
+  lazy <| \_ -> TypeAlias
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> (optionalFieldDecoder "label" labelDecoder)
+    <*> (optionalFieldDecoder "type1" typeDecoder)
 
 
 typeAliasEncoder : TypeAlias -> JE.Value
@@ -474,13 +458,12 @@ type Tvalue
 
 tvalueDecoder : JD.Decoder Tvalue
 tvalueDecoder =
-  lazy <| \_ ->
-    JD.oneOf
-      [ JD.map Primitive ("primitive" := type_PrimitiveTypeDecoder)
-      , JD.map Compound ("compound" := type_CompoundTypeDecoder)
-      , JD.map RefType ("refType" := type_RefTypeDecoder)
-      , JD.succeed TvalueUnspecified
-      ]
+  lazy <| \_ -> JD.oneOf
+    [ JD.map Primitive ("primitive" := type_PrimitiveTypeDecoder)
+    , JD.map Compound ("compound" := type_CompoundTypeDecoder)
+    , JD.map RefType ("refType" := type_RefTypeDecoder)
+    , JD.succeed TvalueUnspecified
+    ]
 
 
 tvalueEncoder : Tvalue -> Maybe (String, JE.Value)
@@ -500,10 +483,9 @@ type Type_PrimitiveType
 
 typeDecoder : JD.Decoder Type
 typeDecoder =
-  lazy <| \_ ->
-    Type
-      <$> (requiredFieldDecoder "ref" 0 JD.int)
-      <*> tvalueDecoder
+  lazy <| \_ -> Type
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> tvalueDecoder
 
 
 type_PrimitiveTypeDecoder : JD.Decoder Type_PrimitiveType
@@ -548,9 +530,8 @@ type alias Type_RefType =
 
 type_RefTypeDecoder : JD.Decoder Type_RefType
 type_RefTypeDecoder =
-  lazy <| \_ ->
-    Type_RefType
-      <$> (requiredFieldDecoder "ref" 0 JD.int)
+  lazy <| \_ -> Type_RefType
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
 
 
 type_RefTypeEncoder : Type_RefType -> JE.Value
@@ -567,9 +548,8 @@ type alias Type_OpaqueType =
 
 type_OpaqueTypeDecoder : JD.Decoder Type_OpaqueType
 type_OpaqueTypeDecoder =
-  lazy <| \_ ->
-    Type_OpaqueType
-      <$> (requiredFieldDecoder "name" "" JD.string)
+  lazy <| \_ -> Type_OpaqueType
+    <$> (requiredFieldDecoder "name" "" JD.string)
 
 
 type_OpaqueTypeEncoder : Type_OpaqueType -> JE.Value
@@ -587,10 +567,9 @@ type alias Type_CompoundType =
 
 type_CompoundTypeDecoder : JD.Decoder Type_CompoundType
 type_CompoundTypeDecoder =
-  lazy <| \_ ->
-    Type_CompoundType
-      <$> (optionalFieldDecoder "x" typeDecoder)
-      <*> (optionalFieldDecoder "y" typeDecoder)
+  lazy <| \_ -> Type_CompoundType
+    <$> (optionalFieldDecoder "x" typeDecoder)
+    <*> (optionalFieldDecoder "y" typeDecoder)
 
 
 type_CompoundTypeEncoder : Type_CompoundType -> JE.Value
@@ -609,10 +588,9 @@ type alias TypeConstructor =
 
 typeConstructorDecoder : JD.Decoder TypeConstructor
 typeConstructorDecoder =
-  lazy <| \_ ->
-    TypeConstructor
-      <$> (requiredFieldDecoder "ref" 0 JD.int)
-      <*> (optionalFieldDecoder "label" labelDecoder)
+  lazy <| \_ -> TypeConstructor
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> (optionalFieldDecoder "label" labelDecoder)
 
 
 typeConstructorEncoder : TypeConstructor -> JE.Value
@@ -638,13 +616,12 @@ type Pvalue
 
 pvalueDecoder : JD.Decoder Pvalue
 pvalueDecoder =
-  lazy <| \_ ->
-    JD.oneOf
-      [ JD.map TypeConstructorValue ("typeConstructorValue" := typeConstructorDecoder)
-      , JD.map LabelValue ("labelValue" := labelDecoder)
-      , JD.map PatternValue ("patternValue" := patternDecoder)
-      , JD.succeed PvalueUnspecified
-      ]
+  lazy <| \_ -> JD.oneOf
+    [ JD.map TypeConstructorValue ("typeConstructorValue" := typeConstructorDecoder)
+    , JD.map LabelValue ("labelValue" := labelDecoder)
+    , JD.map PatternValue ("patternValue" := patternDecoder)
+    , JD.succeed PvalueUnspecified
+    ]
 
 
 pvalueEncoder : Pvalue -> Maybe (String, JE.Value)
@@ -658,10 +635,9 @@ pvalueEncoder v =
 
 patternDecoder : JD.Decoder Pattern
 patternDecoder =
-  lazy <| \_ ->
-    Pattern
-      <$> (requiredFieldDecoder "ref" 0 JD.int)
-      <*> pvalueDecoder
+  lazy <| \_ -> Pattern
+    <$> (requiredFieldDecoder "ref" 0 JD.int)
+    <*> pvalueDecoder
 
 
 patternEncoder : Pattern -> JE.Value
@@ -679,9 +655,8 @@ type alias Label =
 
 labelDecoder : JD.Decoder Label
 labelDecoder =
-  lazy <| \_ ->
-    Label
-      <$> (requiredFieldDecoder "name" "" JD.string)
+  lazy <| \_ -> Label
+    <$> (requiredFieldDecoder "name" "" JD.string)
 
 
 labelEncoder : Label -> JE.Value
