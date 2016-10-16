@@ -8957,36 +8957,12 @@ var _user$project$Proto_Ast$expressionEncoder = function (v) {
 			_elm_lang$core$Native_List.fromArray(
 				[
 					A4(_user$project$Proto_Ast$requiredFieldEncoder, 'ref', _elm_lang$core$Json_Encode$int, 0, v.ref),
-					_user$project$Proto_Ast$valueEncoder(v.value),
-					_user$project$Proto_Ast$argumentsEncoder(v.$arguments)
-				])));
-};
-var _user$project$Proto_Ast$argumentsEncoder = function (v) {
-	var _p5 = v;
-	if (_p5.ctor === 'ArgumentsUnspecified') {
-		return _elm_lang$core$Maybe$Nothing;
-	} else {
-		return _elm_lang$core$Maybe$Just(
-			{
-				ctor: '_Tuple2',
-				_0: 'args',
-				_1: _user$project$Proto_Ast$expression_ArgumentsEncoder(_p5._0)
-			});
-	}
-};
-var _user$project$Proto_Ast$expression_ArgumentsEncoder = function (v) {
-	return _elm_lang$core$Json_Encode$object(
-		A2(
-			_elm_lang$core$List$filterMap,
-			_elm_lang$core$Basics$identity,
-			_elm_lang$core$Native_List.fromArray(
-				[
-					A3(_user$project$Proto_Ast$repeatedFieldEncoder, 'values', _user$project$Proto_Ast$expressionEncoder, v.values)
+					_user$project$Proto_Ast$valueEncoder(v.value)
 				])));
 };
 var _user$project$Proto_Ast$valueEncoder = function (v) {
-	var _p6 = v;
-	switch (_p6.ctor) {
+	var _p5 = v;
+	switch (_p5.ctor) {
 		case 'ValueUnspecified':
 			return _elm_lang$core$Maybe$Nothing;
 		case 'EmptyValue':
@@ -8994,72 +8970,90 @@ var _user$project$Proto_Ast$valueEncoder = function (v) {
 				{
 					ctor: '_Tuple2',
 					_0: 'emptyValue',
-					_1: _elm_lang$core$Json_Encode$int(_p6._0)
+					_1: _elm_lang$core$Json_Encode$int(_p5._0)
 				});
 		case 'BoolValue':
 			return _elm_lang$core$Maybe$Just(
 				{
 					ctor: '_Tuple2',
 					_0: 'boolValue',
-					_1: _user$project$Proto_Ast$expression_BoolEncoder(_p6._0)
+					_1: _user$project$Proto_Ast$expression_BoolEncoder(_p5._0)
 				});
 		case 'IntValue':
 			return _elm_lang$core$Maybe$Just(
 				{
 					ctor: '_Tuple2',
 					_0: 'intValue',
-					_1: _user$project$Proto_Ast$expression_IntEncoder(_p6._0)
+					_1: _user$project$Proto_Ast$expression_IntEncoder(_p5._0)
 				});
 		case 'FloatValue':
 			return _elm_lang$core$Maybe$Just(
 				{
 					ctor: '_Tuple2',
 					_0: 'floatValue',
-					_1: _user$project$Proto_Ast$expression_FloatEncoder(_p6._0)
+					_1: _user$project$Proto_Ast$expression_FloatEncoder(_p5._0)
 				});
 		case 'StringValue':
 			return _elm_lang$core$Maybe$Just(
 				{
 					ctor: '_Tuple2',
 					_0: 'stringValue',
-					_1: _user$project$Proto_Ast$expression_StringEncoder(_p6._0)
+					_1: _user$project$Proto_Ast$expression_StringEncoder(_p5._0)
 				});
 		case 'ListValue':
 			return _elm_lang$core$Maybe$Just(
 				{
 					ctor: '_Tuple2',
 					_0: 'listValue',
-					_1: _user$project$Proto_Ast$expression_ListEncoder(_p6._0)
+					_1: _user$project$Proto_Ast$expression_ListEncoder(_p5._0)
 				});
 		case 'IfValue':
 			return _elm_lang$core$Maybe$Just(
 				{
 					ctor: '_Tuple2',
 					_0: 'ifValue',
-					_1: _user$project$Proto_Ast$expression_IfEncoder(_p6._0)
+					_1: _user$project$Proto_Ast$expression_IfEncoder(_p5._0)
 				});
 		case 'LambdaValue':
 			return _elm_lang$core$Maybe$Just(
 				{
 					ctor: '_Tuple2',
 					_0: 'lambdaValue',
-					_1: _user$project$Proto_Ast$expression_LambdaEncoder(_p6._0)
+					_1: _user$project$Proto_Ast$expression_LambdaEncoder(_p5._0)
+				});
+		case 'ApplicationValue':
+			return _elm_lang$core$Maybe$Just(
+				{
+					ctor: '_Tuple2',
+					_0: 'applicationValue',
+					_1: _user$project$Proto_Ast$expression_ApplicationEncoder(_p5._0)
 				});
 		case 'RefValue':
 			return _elm_lang$core$Maybe$Just(
 				{
 					ctor: '_Tuple2',
 					_0: 'refValue',
-					_1: _user$project$Proto_Ast$expression_RefEncoder(_p6._0)
+					_1: _user$project$Proto_Ast$expression_RefEncoder(_p5._0)
 				});
 		default:
 			return _elm_lang$core$Maybe$Just(
 				{
 					ctor: '_Tuple2',
 					_0: 'externalRefValue',
-					_1: _user$project$Proto_Ast$expression_ExternalRefEncoder(_p6._0)
+					_1: _user$project$Proto_Ast$expression_ExternalRefEncoder(_p5._0)
 				});
 	}
+};
+var _user$project$Proto_Ast$expression_ApplicationEncoder = function (v) {
+	return _elm_lang$core$Json_Encode$object(
+		A2(
+			_elm_lang$core$List$filterMap,
+			_elm_lang$core$Basics$identity,
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A3(_user$project$Proto_Ast$optionalEncoder, 'left', _user$project$Proto_Ast$expressionEncoder, v.left),
+					A3(_user$project$Proto_Ast$optionalEncoder, 'right', _user$project$Proto_Ast$expressionEncoder, v.right)
+				])));
 };
 var _user$project$Proto_Ast$expression_IfEncoder = function (v) {
 	return _elm_lang$core$Json_Encode$object(
@@ -9165,15 +9159,15 @@ var _user$project$Proto_Ast$File = F4(
 	function (a, b, c, d) {
 		return {nextRef: a, name: b, typeAliases: c, variableDefinitions: d};
 	});
-var _user$project$Proto_Ast$Expression = F3(
-	function (a, b, c) {
-		return {ref: a, value: b, $arguments: c};
+var _user$project$Proto_Ast$Expression = F2(
+	function (a, b) {
+		return {ref: a, value: b};
 	});
 var _user$project$Proto_Ast$Expression_Bool = function (a) {
 	return {value: a};
 };
 var _user$project$Proto_Ast$expression_BoolDecoder = _user$project$Proto_Ast$lazy(
-	function (_p7) {
+	function (_p6) {
 		return A2(
 			_user$project$Proto_Ast_ops['<$>'],
 			_user$project$Proto_Ast$Expression_Bool,
@@ -9183,7 +9177,7 @@ var _user$project$Proto_Ast$Expression_Int = function (a) {
 	return {value: a};
 };
 var _user$project$Proto_Ast$expression_IntDecoder = _user$project$Proto_Ast$lazy(
-	function (_p8) {
+	function (_p7) {
 		return A2(
 			_user$project$Proto_Ast_ops['<$>'],
 			_user$project$Proto_Ast$Expression_Int,
@@ -9193,7 +9187,7 @@ var _user$project$Proto_Ast$Expression_Float = function (a) {
 	return {value: a};
 };
 var _user$project$Proto_Ast$expression_FloatDecoder = _user$project$Proto_Ast$lazy(
-	function (_p9) {
+	function (_p8) {
 		return A2(
 			_user$project$Proto_Ast_ops['<$>'],
 			_user$project$Proto_Ast$Expression_Float,
@@ -9203,7 +9197,7 @@ var _user$project$Proto_Ast$Expression_String = function (a) {
 	return {value: a};
 };
 var _user$project$Proto_Ast$expression_StringDecoder = _user$project$Proto_Ast$lazy(
-	function (_p10) {
+	function (_p9) {
 		return A2(
 			_user$project$Proto_Ast_ops['<$>'],
 			_user$project$Proto_Ast$Expression_String,
@@ -9220,11 +9214,15 @@ var _user$project$Proto_Ast$Expression_Lambda = F2(
 	function (a, b) {
 		return {argument: a, body: b};
 	});
+var _user$project$Proto_Ast$Expression_Application = F2(
+	function (a, b) {
+		return {left: a, right: b};
+	});
 var _user$project$Proto_Ast$Expression_Ref = function (a) {
 	return {ref: a};
 };
 var _user$project$Proto_Ast$expression_RefDecoder = _user$project$Proto_Ast$lazy(
-	function (_p11) {
+	function (_p10) {
 		return A2(
 			_user$project$Proto_Ast_ops['<$>'],
 			_user$project$Proto_Ast$Expression_Ref,
@@ -9235,7 +9233,7 @@ var _user$project$Proto_Ast$Expression_ExternalRef = F2(
 		return {path: a, name: b};
 	});
 var _user$project$Proto_Ast$expression_ExternalRefDecoder = _user$project$Proto_Ast$lazy(
-	function (_p12) {
+	function (_p11) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9244,9 +9242,6 @@ var _user$project$Proto_Ast$expression_ExternalRefDecoder = _user$project$Proto_
 				A3(_user$project$Proto_Ast$requiredFieldDecoder, 'path', '', _elm_lang$core$Json_Decode$string)),
 			A3(_user$project$Proto_Ast$requiredFieldDecoder, 'name', '', _elm_lang$core$Json_Decode$string));
 	});
-var _user$project$Proto_Ast$Expression_Arguments = function (a) {
-	return {values: a};
-};
 var _user$project$Proto_Ast$VariableDefinition = F4(
 	function (a, b, c, d) {
 		return {ref: a, label: b, value: c, $arguments: d};
@@ -9263,7 +9258,7 @@ var _user$project$Proto_Ast$Type_RefType = function (a) {
 	return {ref: a};
 };
 var _user$project$Proto_Ast$type_RefTypeDecoder = _user$project$Proto_Ast$lazy(
-	function (_p13) {
+	function (_p12) {
 		return A2(
 			_user$project$Proto_Ast_ops['<$>'],
 			_user$project$Proto_Ast$Type_RefType,
@@ -9273,7 +9268,7 @@ var _user$project$Proto_Ast$Type_OpaqueType = function (a) {
 	return {name: a};
 };
 var _user$project$Proto_Ast$type_OpaqueTypeDecoder = _user$project$Proto_Ast$lazy(
-	function (_p14) {
+	function (_p13) {
 		return A2(
 			_user$project$Proto_Ast_ops['<$>'],
 			_user$project$Proto_Ast$Type_OpaqueType,
@@ -9295,14 +9290,14 @@ var _user$project$Proto_Ast$Label = function (a) {
 	return {name: a};
 };
 var _user$project$Proto_Ast$labelDecoder = _user$project$Proto_Ast$lazy(
-	function (_p15) {
+	function (_p14) {
 		return A2(
 			_user$project$Proto_Ast_ops['<$>'],
 			_user$project$Proto_Ast$Label,
 			A3(_user$project$Proto_Ast$requiredFieldDecoder, 'name', '', _elm_lang$core$Json_Decode$string));
 	});
 var _user$project$Proto_Ast$typeConstructorDecoder = _user$project$Proto_Ast$lazy(
-	function (_p16) {
+	function (_p15) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9316,6 +9311,9 @@ var _user$project$Proto_Ast$ExternalRefValue = function (a) {
 };
 var _user$project$Proto_Ast$RefValue = function (a) {
 	return {ctor: 'RefValue', _0: a};
+};
+var _user$project$Proto_Ast$ApplicationValue = function (a) {
+	return {ctor: 'ApplicationValue', _0: a};
 };
 var _user$project$Proto_Ast$LambdaValue = function (a) {
 	return {ctor: 'LambdaValue', _0: a};
@@ -9342,10 +9340,6 @@ var _user$project$Proto_Ast$EmptyValue = function (a) {
 	return {ctor: 'EmptyValue', _0: a};
 };
 var _user$project$Proto_Ast$ValueUnspecified = {ctor: 'ValueUnspecified'};
-var _user$project$Proto_Ast$Args = function (a) {
-	return {ctor: 'Args', _0: a};
-};
-var _user$project$Proto_Ast$ArgumentsUnspecified = {ctor: 'ArgumentsUnspecified'};
 var _user$project$Proto_Ast$RefType = function (a) {
 	return {ctor: 'RefType', _0: a};
 };
@@ -9361,8 +9355,8 @@ var _user$project$Proto_Ast$Type_Int = {ctor: 'Type_Int'};
 var _user$project$Proto_Ast$Type_PrimitiveTypeUnspecified = {ctor: 'Type_PrimitiveTypeUnspecified'};
 var _user$project$Proto_Ast$type_PrimitiveTypeDecoder = function () {
 	var lookup = function (s) {
-		var _p17 = s;
-		switch (_p17) {
+		var _p16 = s;
+		switch (_p16) {
 			case 'PRIMITIVE_TYPE_UNSPECIFIED':
 				return _user$project$Proto_Ast$Type_PrimitiveTypeUnspecified;
 			case 'INT':
@@ -9376,7 +9370,7 @@ var _user$project$Proto_Ast$type_PrimitiveTypeDecoder = function () {
 	return A2(_elm_lang$core$Json_Decode$map, lookup, _elm_lang$core$Json_Decode$string);
 }();
 var _user$project$Proto_Ast$tvalueDecoder = _user$project$Proto_Ast$lazy(
-	function (_p18) {
+	function (_p17) {
 		return _elm_lang$core$Json_Decode$oneOf(
 			_elm_lang$core$Native_List.fromArray(
 				[
@@ -9396,7 +9390,7 @@ var _user$project$Proto_Ast$tvalueDecoder = _user$project$Proto_Ast$lazy(
 				]));
 	});
 var _user$project$Proto_Ast$type_CompoundTypeDecoder = _user$project$Proto_Ast$lazy(
-	function (_p19) {
+	function (_p18) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9406,7 +9400,7 @@ var _user$project$Proto_Ast$type_CompoundTypeDecoder = _user$project$Proto_Ast$l
 			A2(_user$project$Proto_Ast$optionalFieldDecoder, 'y', _user$project$Proto_Ast$typeDecoder));
 	});
 var _user$project$Proto_Ast$typeDecoder = _user$project$Proto_Ast$lazy(
-	function (_p20) {
+	function (_p19) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9416,7 +9410,7 @@ var _user$project$Proto_Ast$typeDecoder = _user$project$Proto_Ast$lazy(
 			_user$project$Proto_Ast$tvalueDecoder);
 	});
 var _user$project$Proto_Ast$typeAliasDecoder = _user$project$Proto_Ast$lazy(
-	function (_p21) {
+	function (_p20) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9440,7 +9434,7 @@ var _user$project$Proto_Ast$TypeConstructorValue = function (a) {
 };
 var _user$project$Proto_Ast$PvalueUnspecified = {ctor: 'PvalueUnspecified'};
 var _user$project$Proto_Ast$pvalueDecoder = _user$project$Proto_Ast$lazy(
-	function (_p22) {
+	function (_p21) {
 		return _elm_lang$core$Json_Decode$oneOf(
 			_elm_lang$core$Native_List.fromArray(
 				[
@@ -9460,7 +9454,7 @@ var _user$project$Proto_Ast$pvalueDecoder = _user$project$Proto_Ast$lazy(
 				]));
 	});
 var _user$project$Proto_Ast$patternDecoder = _user$project$Proto_Ast$lazy(
-	function (_p23) {
+	function (_p22) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9470,7 +9464,7 @@ var _user$project$Proto_Ast$patternDecoder = _user$project$Proto_Ast$lazy(
 			_user$project$Proto_Ast$pvalueDecoder);
 	});
 var _user$project$Proto_Ast$expression_LambdaDecoder = _user$project$Proto_Ast$lazy(
-	function (_p24) {
+	function (_p23) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9480,39 +9474,17 @@ var _user$project$Proto_Ast$expression_LambdaDecoder = _user$project$Proto_Ast$l
 			A2(_user$project$Proto_Ast$optionalFieldDecoder, 'body', _user$project$Proto_Ast$expressionDecoder));
 	});
 var _user$project$Proto_Ast$expressionDecoder = _user$project$Proto_Ast$lazy(
-	function (_p25) {
+	function (_p24) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
-				_user$project$Proto_Ast_ops['<*>'],
-				A2(
-					_user$project$Proto_Ast_ops['<$>'],
-					_user$project$Proto_Ast$Expression,
-					A3(_user$project$Proto_Ast$requiredFieldDecoder, 'ref', 0, _elm_lang$core$Json_Decode$int)),
-				_user$project$Proto_Ast$valueDecoder),
-			_user$project$Proto_Ast$argumentsDecoder);
-	});
-var _user$project$Proto_Ast$argumentsDecoder = _user$project$Proto_Ast$lazy(
-	function (_p26) {
-		return _elm_lang$core$Json_Decode$oneOf(
-			_elm_lang$core$Native_List.fromArray(
-				[
-					A2(
-					_elm_lang$core$Json_Decode$map,
-					_user$project$Proto_Ast$Args,
-					A2(_elm_lang$core$Json_Decode_ops[':='], 'args', _user$project$Proto_Ast$expression_ArgumentsDecoder)),
-					_elm_lang$core$Json_Decode$succeed(_user$project$Proto_Ast$ArgumentsUnspecified)
-				]));
-	});
-var _user$project$Proto_Ast$expression_ArgumentsDecoder = _user$project$Proto_Ast$lazy(
-	function (_p27) {
-		return A2(
-			_user$project$Proto_Ast_ops['<$>'],
-			_user$project$Proto_Ast$Expression_Arguments,
-			A2(_user$project$Proto_Ast$repeatedFieldDecoder, 'values', _user$project$Proto_Ast$expressionDecoder));
+				_user$project$Proto_Ast_ops['<$>'],
+				_user$project$Proto_Ast$Expression,
+				A3(_user$project$Proto_Ast$requiredFieldDecoder, 'ref', 0, _elm_lang$core$Json_Decode$int)),
+			_user$project$Proto_Ast$valueDecoder);
 	});
 var _user$project$Proto_Ast$valueDecoder = _user$project$Proto_Ast$lazy(
-	function (_p28) {
+	function (_p25) {
 		return _elm_lang$core$Json_Decode$oneOf(
 			_elm_lang$core$Native_List.fromArray(
 				[
@@ -9550,6 +9522,10 @@ var _user$project$Proto_Ast$valueDecoder = _user$project$Proto_Ast$lazy(
 					A2(_elm_lang$core$Json_Decode_ops[':='], 'lambdaValue', _user$project$Proto_Ast$expression_LambdaDecoder)),
 					A2(
 					_elm_lang$core$Json_Decode$map,
+					_user$project$Proto_Ast$ApplicationValue,
+					A2(_elm_lang$core$Json_Decode_ops[':='], 'applicationValue', _user$project$Proto_Ast$expression_ApplicationDecoder)),
+					A2(
+					_elm_lang$core$Json_Decode$map,
 					_user$project$Proto_Ast$RefValue,
 					A2(_elm_lang$core$Json_Decode_ops[':='], 'refValue', _user$project$Proto_Ast$expression_RefDecoder)),
 					A2(
@@ -9559,8 +9535,18 @@ var _user$project$Proto_Ast$valueDecoder = _user$project$Proto_Ast$lazy(
 					_elm_lang$core$Json_Decode$succeed(_user$project$Proto_Ast$ValueUnspecified)
 				]));
 	});
+var _user$project$Proto_Ast$expression_ApplicationDecoder = _user$project$Proto_Ast$lazy(
+	function (_p26) {
+		return A2(
+			_user$project$Proto_Ast_ops['<*>'],
+			A2(
+				_user$project$Proto_Ast_ops['<$>'],
+				_user$project$Proto_Ast$Expression_Application,
+				A2(_user$project$Proto_Ast$optionalFieldDecoder, 'left', _user$project$Proto_Ast$expressionDecoder)),
+			A2(_user$project$Proto_Ast$optionalFieldDecoder, 'right', _user$project$Proto_Ast$expressionDecoder));
+	});
 var _user$project$Proto_Ast$expression_IfDecoder = _user$project$Proto_Ast$lazy(
-	function (_p29) {
+	function (_p27) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9573,14 +9559,14 @@ var _user$project$Proto_Ast$expression_IfDecoder = _user$project$Proto_Ast$lazy(
 			A2(_user$project$Proto_Ast$optionalFieldDecoder, 'false', _user$project$Proto_Ast$expressionDecoder));
 	});
 var _user$project$Proto_Ast$expression_ListDecoder = _user$project$Proto_Ast$lazy(
-	function (_p30) {
+	function (_p28) {
 		return A2(
 			_user$project$Proto_Ast_ops['<$>'],
 			_user$project$Proto_Ast$Expression_List,
 			A2(_user$project$Proto_Ast$repeatedFieldDecoder, 'values', _user$project$Proto_Ast$expressionDecoder));
 	});
 var _user$project$Proto_Ast$variableDefinitionDecoder = _user$project$Proto_Ast$lazy(
-	function (_p31) {
+	function (_p29) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9596,7 +9582,7 @@ var _user$project$Proto_Ast$variableDefinitionDecoder = _user$project$Proto_Ast$
 			A2(_user$project$Proto_Ast$repeatedFieldDecoder, 'arguments', _user$project$Proto_Ast$patternDecoder));
 	});
 var _user$project$Proto_Ast$fileDecoder = _user$project$Proto_Ast$lazy(
-	function (_p32) {
+	function (_p30) {
 		return A2(
 			_user$project$Proto_Ast_ops['<*>'],
 			A2(
@@ -9626,12 +9612,7 @@ var _user$project$Defaults$defaultVariableDefinition = {
 };
 var _user$project$Defaults$defaultExpr = {
 	ref: -1,
-	value: _user$project$Proto_Ast$EmptyValue(41),
-	$arguments: _user$project$Proto_Ast$Args(
-		{
-			values: _elm_lang$core$Native_List.fromArray(
-				[])
-		})
+	value: _user$project$Proto_Ast$EmptyValue(41)
 };
 var _user$project$Proto_Server$lazy = function (getDecoder) {
 	return A2(
@@ -10125,11 +10106,6 @@ var _user$project$Actions$expressionActions = F3(
 												_elm_lang$core$Native_Utils.update(
 													_user$project$Defaults$defaultExpr,
 													{ref: model.file.nextRef + 2}))
-										}),
-									$arguments: _user$project$Proto_Ast$Args(
-										{
-											values: _elm_lang$core$Native_List.fromArray(
-												[])
 										})
 								})))
 				},
@@ -10147,7 +10123,7 @@ var _user$project$Actions$expressionActions = F3(
 											cond: _elm_lang$core$Maybe$Just(
 												_elm_lang$core$Native_Utils.update(
 													_user$project$Defaults$defaultExpr,
-													{ref: model.file.nextRef, value: expr.value, $arguments: expr.$arguments})),
+													{ref: model.file.nextRef, value: expr.value})),
 											$true: _elm_lang$core$Maybe$Just(
 												_elm_lang$core$Native_Utils.update(
 													_user$project$Defaults$defaultExpr,
@@ -10156,11 +10132,6 @@ var _user$project$Actions$expressionActions = F3(
 												_elm_lang$core$Native_Utils.update(
 													_user$project$Defaults$defaultExpr,
 													{ref: model.file.nextRef + 2}))
-										}),
-									$arguments: _user$project$Proto_Ast$Args(
-										{
-											values: _elm_lang$core$Native_List.fromArray(
-												[])
 										})
 								})))
 				},
@@ -10182,16 +10153,11 @@ var _user$project$Actions$expressionActions = F3(
 											$true: _elm_lang$core$Maybe$Just(
 												_elm_lang$core$Native_Utils.update(
 													_user$project$Defaults$defaultExpr,
-													{ref: model.file.nextRef + 1, value: expr.value, $arguments: expr.$arguments})),
+													{ref: model.file.nextRef + 1, value: expr.value})),
 											$false: _elm_lang$core$Maybe$Just(
 												_elm_lang$core$Native_Utils.update(
 													_user$project$Defaults$defaultExpr,
 													{ref: model.file.nextRef + 2}))
-										}),
-									$arguments: _user$project$Proto_Ast$Args(
-										{
-											values: _elm_lang$core$Native_List.fromArray(
-												[])
 										})
 								})))
 				},
@@ -10217,12 +10183,7 @@ var _user$project$Actions$expressionActions = F3(
 											$false: _elm_lang$core$Maybe$Just(
 												_elm_lang$core$Native_Utils.update(
 													_user$project$Defaults$defaultExpr,
-													{ref: model.file.nextRef + 2, value: expr.value, $arguments: expr.$arguments}))
-										}),
-									$arguments: _user$project$Proto_Ast$Args(
-										{
-											values: _elm_lang$core$Native_List.fromArray(
-												[])
+													{ref: model.file.nextRef + 2, value: expr.value}))
 										})
 								})))
 				},
@@ -10274,77 +10235,37 @@ var _user$project$Actions$expressionActions = F3(
 					label: '◇ ◆',
 					msg: A2(
 						_user$project$Types$SetNode,
-						1,
+						2,
 						_user$project$Types$Expr(
-							_elm_lang$core$Native_Utils.update(
-								expr,
-								{
-									$arguments: function () {
-										var _p12 = expr.$arguments;
-										if (_p12.ctor === 'Args') {
-											return _user$project$Proto_Ast$Args(
-												{
-													values: A2(
-														_elm_lang$core$Basics_ops['++'],
-														_p12._0.values,
-														_elm_lang$core$Native_List.fromArray(
-															[
-																_elm_lang$core$Native_Utils.update(
-																_user$project$Defaults$defaultExpr,
-																{ref: model.file.nextRef})
-															]))
-												});
-										} else {
-											return _user$project$Proto_Ast$Args(
-												{
-													values: _elm_lang$core$Native_List.fromArray(
-														[
-															_elm_lang$core$Native_Utils.update(
-															_user$project$Defaults$defaultExpr,
-															{ref: model.file.nextRef})
-														])
-												});
-										}
-									}()
-								})))
+							{
+								ref: model.file.nextRef,
+								value: _user$project$Proto_Ast$ApplicationValue(
+									{
+										left: _elm_lang$core$Maybe$Just(expr),
+										right: _elm_lang$core$Maybe$Just(
+											_elm_lang$core$Native_Utils.update(
+												_user$project$Defaults$defaultExpr,
+												{ref: model.file.nextRef + 1}))
+									})
+							}))
 				},
 					{
 					label: '◆ ◇',
 					msg: A2(
 						_user$project$Types$SetNode,
-						1,
+						2,
 						_user$project$Types$Expr(
-							_elm_lang$core$Native_Utils.update(
-								expr,
-								{
-									$arguments: function () {
-										var _p13 = expr.$arguments;
-										if (_p13.ctor === 'Args') {
-											return _user$project$Proto_Ast$Args(
-												{
-													values: A2(
-														_elm_lang$core$Basics_ops['++'],
-														_p13._0.values,
-														_elm_lang$core$Native_List.fromArray(
-															[
-																_elm_lang$core$Native_Utils.update(
-																_user$project$Defaults$defaultExpr,
-																{ref: model.file.nextRef})
-															]))
-												});
-										} else {
-											return _user$project$Proto_Ast$Args(
-												{
-													values: _elm_lang$core$Native_List.fromArray(
-														[
-															_elm_lang$core$Native_Utils.update(
-															_user$project$Defaults$defaultExpr,
-															{ref: model.file.nextRef})
-														])
-												});
-										}
-									}()
-								})))
+							{
+								ref: model.file.nextRef,
+								value: _user$project$Proto_Ast$ApplicationValue(
+									{
+										left: _elm_lang$core$Maybe$Just(
+											_elm_lang$core$Native_Utils.update(
+												_user$project$Defaults$defaultExpr,
+												{ref: model.file.nextRef + 1})),
+										right: _elm_lang$core$Maybe$Just(expr)
+									})
+							}))
 				},
 					{
 					label: '◆',
@@ -10380,10 +10301,10 @@ var _user$project$Actions$expressionActions = F3(
 			A2(
 				_elm_lang$core$Basics_ops['++'],
 				function () {
-					var _p14 = expr.value;
-					switch (_p14.ctor) {
+					var _p12 = expr.value;
+					switch (_p12.ctor) {
 						case 'IntValue':
-							var _p15 = _p14._0;
+							var _p13 = _p12._0;
 							return _elm_lang$core$Native_List.fromArray(
 								[
 									{
@@ -10396,7 +10317,7 @@ var _user$project$Actions$expressionActions = F3(
 												expr,
 												{
 													value: _user$project$Proto_Ast$IntValue(
-														{value: _p15.value - 1})
+														{value: _p13.value - 1})
 												})))
 								},
 									{
@@ -10409,7 +10330,7 @@ var _user$project$Actions$expressionActions = F3(
 												expr,
 												{
 													value: _user$project$Proto_Ast$IntValue(
-														{value: _p15.value + 1})
+														{value: _p13.value + 1})
 												})))
 								}
 								]);
@@ -10427,7 +10348,7 @@ var _user$project$Actions$expressionActions = F3(
 												{
 													value: _user$project$Proto_Ast$BoolValue(
 														{
-															value: _elm_lang$core$Basics$not(_p14._0.value)
+															value: _elm_lang$core$Basics$not(_p12._0.value)
 														})
 												})))
 								}
@@ -10448,7 +10369,7 @@ var _user$project$Actions$expressionActions = F3(
 														{
 															values: A2(
 																_elm_lang$core$Basics_ops['++'],
-																_p14._0.values,
+																_p12._0.values,
 																_elm_lang$core$Native_List.fromArray(
 																	[
 																		_elm_lang$core$Native_Utils.update(
@@ -10481,14 +10402,14 @@ var _user$project$Actions$nodeActions = F3(
 				{label: 'Create function', msg: _user$project$Types$CreateFunction}
 			]);
 		var a = function () {
-			var _p16 = node;
-			switch (_p16.ctor) {
+			var _p14 = node;
+			switch (_p14.ctor) {
 				case 'Expr':
-					return A3(_user$project$Actions$expressionActions, model, ctx, _p16._0);
+					return A3(_user$project$Actions$expressionActions, model, ctx, _p14._0);
 				case 'VarDef':
-					return A2(_user$project$Actions$variableDefinitionActions, model, _p16._0);
+					return A2(_user$project$Actions$variableDefinitionActions, model, _p14._0);
 				default:
-					return A2(_user$project$Actions$patternActions, model, _p16._0);
+					return A2(_user$project$Actions$patternActions, model, _p14._0);
 			}
 		}();
 		return A2(_elm_lang$core$Basics_ops['++'], a, b);
@@ -10504,38 +10425,26 @@ var _user$project$GetNode$getNodeExpression = F2(
 			return _elm_lang$core$Maybe$Just(
 				_user$project$Types$Expr(expr));
 		} else {
-			var aNodes = function () {
-				var _p0 = expr.$arguments;
-				if (_p0.ctor === 'Args') {
-					return A2(
-						_elm_lang$core$List$map,
-						_user$project$GetNode$getNodeExpression(ref),
-						_p0._0.values);
-				} else {
-					return _elm_lang$core$Native_List.fromArray(
-						[]);
-				}
-			}();
 			var vNode = function () {
-				var _p1 = expr.value;
-				switch (_p1.ctor) {
+				var _p0 = expr.value;
+				switch (_p0.ctor) {
 					case 'ListValue':
 						return _elm_lang$core$List$head(
 							A2(
 								_elm_lang$core$List$filterMap,
 								_user$project$GetNode$getNodeExpression(ref),
-								_p1._0.values));
+								_p0._0.values));
 					case 'IfValue':
-						var _p2 = _p1._0;
+						var _p1 = _p0._0;
 						return _elm_lang$core$Maybe$oneOf(
 							A2(
 								_elm_lang$core$List$filterMap,
 								_elm_lang$core$Maybe$map(
 									_user$project$GetNode$getNodeExpression(ref)),
 								_elm_lang$core$Native_List.fromArray(
-									[_p2.cond, _p2.$true, _p2.$false])));
+									[_p1.cond, _p1.$true, _p1.$false])));
 					case 'LambdaValue':
-						var _p3 = _p1._0;
+						var _p2 = _p0._0;
 						return _elm_lang$core$Maybe$oneOf(
 							A2(
 								_elm_lang$core$Basics_ops['++'],
@@ -10544,23 +10453,29 @@ var _user$project$GetNode$getNodeExpression = F2(
 									_elm_lang$core$Maybe$map(
 										_user$project$GetNode$getNodeExpression(ref)),
 									_elm_lang$core$Native_List.fromArray(
-										[_p3.body])),
+										[_p2.body])),
 								A2(
 									_elm_lang$core$List$filterMap,
 									_elm_lang$core$Maybe$map(
 										_user$project$GetNode$getNodePattern(ref)),
 									_elm_lang$core$Native_List.fromArray(
-										[_p3.argument]))));
+										[_p2.argument]))));
+					case 'ApplicationValue':
+						var _p3 = _p0._0;
+						return _elm_lang$core$Maybe$oneOf(
+							A2(
+								_elm_lang$core$List$filterMap,
+								_elm_lang$core$Maybe$map(
+									_user$project$GetNode$getNodeExpression(ref)),
+								_elm_lang$core$Native_List.fromArray(
+									[_p3.left, _p3.right])));
 					default:
 						return _elm_lang$core$Maybe$Nothing;
 				}
 			}();
 			return _elm_lang$core$Maybe$oneOf(
-				A2(
-					_elm_lang$core$Basics_ops['++'],
-					_elm_lang$core$Native_List.fromArray(
-						[vNode]),
-					aNodes));
+				_elm_lang$core$Native_List.fromArray(
+					[vNode]));
 		}
 	});
 var _user$project$GetNode$getNodeVariableDefinition = F2(
@@ -10623,8 +10538,8 @@ var _user$project$GetNode$getNode = F2(
 				model.file.variableDefinitions));
 	});
 var _user$project$GetNode$getCurrentNode = function (model) {
-	var _p8 = _elm_lang$core$List$head(model.refPath);
-	if (_p8.ctor === 'Nothing') {
+	var _p8 = model.refPath;
+	if (_p8.ctor === '[]') {
 		return _elm_lang$core$Maybe$Nothing;
 	} else {
 		return A2(_user$project$GetNode$getNode, model, _p8._0);
@@ -10778,37 +10693,25 @@ var _user$project$SetNode$setNodeExpression = F3(
 				return expr;
 			}
 		} else {
-			var newArgs = function () {
-				var _p2 = expr.$arguments;
-				if (_p2.ctor === 'Args') {
-					return A2(
-						_elm_lang$core$List$map,
-						A2(_user$project$SetNode$setNodeExpression, ref, node),
-						_p2._0.values);
-				} else {
-					return _elm_lang$core$Native_List.fromArray(
-						[]);
-				}
-			}();
 			var newValue = function () {
-				var _p3 = expr.value;
-				switch (_p3.ctor) {
+				var _p2 = expr.value;
+				switch (_p2.ctor) {
 					case 'IfValue':
-						var _p4 = _p3._0;
+						var _p3 = _p2._0;
 						return _user$project$Proto_Ast$IfValue(
 							{
 								cond: A2(
 									_elm_lang$core$Maybe$map,
 									A2(_user$project$SetNode$setNodeExpression, ref, node),
-									_p4.cond),
+									_p3.cond),
 								$true: A2(
 									_elm_lang$core$Maybe$map,
 									A2(_user$project$SetNode$setNodeExpression, ref, node),
-									_p4.$true),
+									_p3.$true),
 								$false: A2(
 									_elm_lang$core$Maybe$map,
 									A2(_user$project$SetNode$setNodeExpression, ref, node),
-									_p4.$false)
+									_p3.$false)
 							});
 					case 'ListValue':
 						return _user$project$Proto_Ast$ListValue(
@@ -10816,22 +10719,37 @@ var _user$project$SetNode$setNodeExpression = F3(
 								values: A2(
 									_elm_lang$core$List$map,
 									A2(_user$project$SetNode$setNodeExpression, ref, node),
-									_p3._0.values)
+									_p2._0.values)
 							});
 					case 'LambdaValue':
-						var _p5 = _p3._0;
+						var _p4 = _p2._0;
 						return _user$project$Proto_Ast$LambdaValue(
 							_elm_lang$core$Native_Utils.update(
-								_p5,
+								_p4,
 								{
 									argument: A2(
 										_elm_lang$core$Maybe$map,
 										A2(_user$project$SetNode$setNodePattern, ref, node),
-										_p5.argument),
+										_p4.argument),
 									body: A2(
 										_elm_lang$core$Maybe$map,
 										A2(_user$project$SetNode$setNodeExpression, ref, node),
-										_p5.body)
+										_p4.body)
+								}));
+					case 'ApplicationValue':
+						var _p5 = _p2._0;
+						return _user$project$Proto_Ast$ApplicationValue(
+							_elm_lang$core$Native_Utils.update(
+								_p5,
+								{
+									left: A2(
+										_elm_lang$core$Maybe$map,
+										A2(_user$project$SetNode$setNodeExpression, ref, node),
+										_p5.left),
+									right: A2(
+										_elm_lang$core$Maybe$map,
+										A2(_user$project$SetNode$setNodeExpression, ref, node),
+										_p5.right)
 								}));
 					default:
 						return expr.value;
@@ -10839,11 +10757,7 @@ var _user$project$SetNode$setNodeExpression = F3(
 			}();
 			return _elm_lang$core$Native_Utils.update(
 				expr,
-				{
-					value: newValue,
-					$arguments: _user$project$Proto_Ast$Args(
-						{values: newArgs})
-				});
+				{value: newValue});
 		}
 	});
 var _user$project$SetNode$setNodeVariableDefinition = F3(
@@ -10862,11 +10776,7 @@ var _user$project$SetNode$setNodeVariableDefinition = F3(
 					value: A2(
 						_elm_lang$core$Maybe$map,
 						A2(_user$project$SetNode$setNodeExpression, ref, node),
-						def.value),
-					$arguments: A2(
-						_elm_lang$core$List$map,
-						A2(_user$project$SetNode$setNodePattern, ref, node),
-						def.$arguments)
+						def.value)
 				});
 		}
 	});
@@ -10880,14 +10790,39 @@ var _user$project$Main$onClick$ = function (a) {
 		_elm_lang$core$Json_Decode$succeed(a));
 };
 var _user$project$Main$colorscheme = {background: '#fdf6e3', foreground: '#657b83', yellow: '#b58900', orange: '#cb4b16', red: '#dc322f', magenta: '#d33682', violet: '#6c71c4', blue: '#268bd2', cyan: '#2aa198', green: '#859900'};
+var _user$project$Main$targetValue = A2(
+	_elm_lang$core$Json_Decode$at,
+	_elm_lang$core$Native_List.fromArray(
+		['target', 'innerText']),
+	_elm_lang$core$Json_Decode$string);
+var _user$project$Main$rename = F2(
+	function (pat, n) {
+		var _p0 = pat.pvalue;
+		if (_p0.ctor === 'LabelValue') {
+			return A2(
+				_user$project$Types$SetNode,
+				0,
+				_user$project$Types$Pat(
+					_elm_lang$core$Native_Utils.update(
+						pat,
+						{
+							pvalue: _user$project$Proto_Ast$LabelValue(
+								_elm_lang$core$Native_Utils.update(
+									_p0._0,
+									{name: n}))
+						})));
+		} else {
+			return _user$project$Types$Nop;
+		}
+	});
 var _user$project$Main$htmlPatternContent = F3(
 	function (model, ctx, pat) {
-		var _p0 = pat.pvalue;
-		switch (_p0.ctor) {
+		var _p1 = pat.pvalue;
+		switch (_p1.ctor) {
 			case 'LabelValue':
 				return _elm_lang$core$Native_List.fromArray(
 					[
-						_elm_lang$html$Html$text(_p0._0.name)
+						_elm_lang$html$Html$text(_p1._0.name)
 					]);
 			case 'TypeConstructorValue':
 				return _elm_lang$core$Native_List.fromArray(
@@ -11003,18 +10938,18 @@ var _user$project$Main$htmlLabelRef = function (label) {
 };
 var _user$project$Main$htmlPatternRef = F3(
 	function (model, ctx, pat) {
-		var _p1 = pat.pvalue;
-		if (_p1.ctor === 'LabelValue') {
-			return _user$project$Main$htmlLabelRef(_p1._0);
+		var _p2 = pat.pvalue;
+		if (_p2.ctor === 'LabelValue') {
+			return _user$project$Main$htmlLabelRef(_p2._0);
 		} else {
 			return _elm_lang$html$Html$text('<<ERROR>>');
 		}
 	});
 var _user$project$Main$htmlVariableDefinitionRef = F3(
 	function (model, ctx, def) {
-		var _p2 = def.label;
-		if (_p2.ctor === 'Just') {
-			return _user$project$Main$htmlLabelRef(_p2._0);
+		var _p3 = def.label;
+		if (_p3.ctor === 'Just') {
+			return _user$project$Main$htmlLabelRef(_p3._0);
 		} else {
 			return _elm_lang$html$Html$text('<<ERROR>>');
 		}
@@ -11022,14 +10957,14 @@ var _user$project$Main$htmlVariableDefinitionRef = F3(
 var _user$project$Main$htmlRef = F5(
 	function (model, node, ctx, ancestors, ref) {
 		var target = A2(_user$project$GetContext$lookupContext, ctx, ref);
-		var _p3 = target;
-		if (_p3.ctor === 'Just') {
-			var _p4 = _p3._0;
-			switch (_p4.ctor) {
+		var _p4 = target;
+		if (_p4.ctor === 'Just') {
+			var _p5 = _p4._0;
+			switch (_p5.ctor) {
 				case 'Pat':
-					return A3(_user$project$Main$htmlPatternRef, model, ctx, _p4._0);
+					return A3(_user$project$Main$htmlPatternRef, model, ctx, _p5._0);
 				case 'VarDef':
-					return A3(_user$project$Main$htmlVariableDefinitionRef, model, ctx, _p4._0);
+					return A3(_user$project$Main$htmlVariableDefinitionRef, model, ctx, _p5._0);
 				default:
 					return _elm_lang$html$Html$text('<<ERROR>>');
 			}
@@ -11046,13 +10981,13 @@ var _user$project$Main$nodeStyle = _elm_lang$core$Native_List.fromArray(
 	]);
 var _user$project$Main$isRefTarget = F2(
 	function (node, ref) {
-		var _p5 = node;
-		if (_p5.ctor === 'Just') {
-			var _p6 = _p5._0;
-			if (_p6.ctor === 'Expr') {
-				var _p7 = _p6._0.value;
-				if (_p7.ctor === 'RefValue') {
-					return _elm_lang$core$Native_Utils.eq(ref, _p7._0.ref);
+		var _p6 = node;
+		if (_p6.ctor === 'Just') {
+			var _p7 = _p6._0;
+			if (_p7.ctor === 'Expr') {
+				var _p8 = _p7._0.value;
+				if (_p8.ctor === 'RefValue') {
+					return _elm_lang$core$Native_Utils.eq(ref, _p8._0.ref);
 				} else {
 					return false;
 				}
@@ -11084,7 +11019,15 @@ var _user$project$Main$htmlPattern = F5(
 								[])))),
 					_user$project$Main$onClick$(
 					_user$project$Types$SetRefPath(
-						A2(_elm_lang$core$List_ops['::'], pat.ref, ancestors)))
+						A2(_elm_lang$core$List_ops['::'], pat.ref, ancestors))),
+					_elm_lang$html$Html_Attributes$contenteditable(true),
+					A2(
+					_elm_lang$html$Html_Events$on,
+					'input',
+					A2(
+						_elm_lang$core$Json_Decode$map,
+						_user$project$Main$rename(pat),
+						_user$project$Main$targetValue))
 				]),
 			content);
 	});
@@ -11094,14 +11037,15 @@ var _user$project$Main$isRefSource = F2(
 	});
 var _user$project$Main$htmlExpr = F5(
 	function (model, node, ctx, ancestors, expr) {
+		var infix = false;
 		var newCtx = A2(
 			_elm_lang$core$Basics_ops['++'],
 			_user$project$GetContext$getContextExpression(expr),
 			ctx);
 		var newAncestors = A2(_elm_lang$core$List_ops['::'], expr.ref, ancestors);
 		var content = function () {
-			var _p8 = expr.value;
-			switch (_p8.ctor) {
+			var _p9 = expr.value;
+			switch (_p9.ctor) {
 				case 'ValueUnspecified':
 					return _elm_lang$core$Native_List.fromArray(
 						[
@@ -11116,19 +11060,19 @@ var _user$project$Main$htmlExpr = F5(
 					return _elm_lang$core$Native_List.fromArray(
 						[
 							_elm_lang$html$Html$text(
-							_elm_lang$core$Basics$toString(_p8._0.value))
+							_elm_lang$core$Basics$toString(_p9._0.value))
 						]);
 				case 'FloatValue':
 					return _elm_lang$core$Native_List.fromArray(
 						[
 							_elm_lang$html$Html$text(
-							_elm_lang$core$Basics$toString(_p8._0.value))
+							_elm_lang$core$Basics$toString(_p9._0.value))
 						]);
 				case 'BoolValue':
 					return _elm_lang$core$Native_List.fromArray(
 						[
 							_elm_lang$html$Html$text(
-							_elm_lang$core$Basics$toString(_p8._0.value))
+							_elm_lang$core$Basics$toString(_p9._0.value))
 						]);
 				case 'StringValue':
 					return _elm_lang$core$Native_List.fromArray(
@@ -11137,7 +11081,7 @@ var _user$project$Main$htmlExpr = F5(
 							A2(
 								_elm_lang$core$Basics_ops['++'],
 								'\"',
-								A2(_elm_lang$core$Basics_ops['++'], _p8._0.value, '\"')))
+								A2(_elm_lang$core$Basics_ops['++'], _p9._0.value, '\"')))
 						]);
 				case 'ListValue':
 					return A2(
@@ -11154,38 +11098,54 @@ var _user$project$Main$htmlExpr = F5(
 								A2(
 									_elm_lang$core$List$map,
 									A4(_user$project$Main$htmlExpr, model, node, newCtx, ancestors),
-									_p8._0.values)),
+									_p9._0.values)),
 							_elm_lang$core$Native_List.fromArray(
 								[
 									_elm_lang$html$Html$text(']')
 								])));
 				case 'IfValue':
-					var _p10 = _p8._0;
-					var _p9 = {ctor: '_Tuple3', _0: _p10.cond, _1: _p10.$true, _2: _p10.$false};
-					if ((((_p9.ctor === '_Tuple3') && (_p9._0.ctor === 'Just')) && (_p9._1.ctor === 'Just')) && (_p9._2.ctor === 'Just')) {
+					var _p11 = _p9._0;
+					var _p10 = {ctor: '_Tuple3', _0: _p11.cond, _1: _p11.$true, _2: _p11.$false};
+					if ((((_p10.ctor === '_Tuple3') && (_p10._0.ctor === 'Just')) && (_p10._1.ctor === 'Just')) && (_p10._2.ctor === 'Just')) {
 						return _elm_lang$core$Native_List.fromArray(
 							[
 								_elm_lang$html$Html$text('if'),
-								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p9._0._0),
+								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p10._0._0),
 								_elm_lang$html$Html$text('then'),
-								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p9._1._0),
+								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p10._1._0),
 								_elm_lang$html$Html$text('else'),
-								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p9._2._0)
+								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p10._2._0)
 							]);
 					} else {
 						return _elm_lang$core$Native_List.fromArray(
 							[]);
 					}
 				case 'LambdaValue':
-					var _p12 = _p8._0;
-					var _p11 = {ctor: '_Tuple2', _0: _p12.argument, _1: _p12.body};
-					if (((_p11.ctor === '_Tuple2') && (_p11._0.ctor === 'Just')) && (_p11._1.ctor === 'Just')) {
+					var _p13 = _p9._0;
+					var _p12 = {ctor: '_Tuple2', _0: _p13.argument, _1: _p13.body};
+					if (((_p12.ctor === '_Tuple2') && (_p12._0.ctor === 'Just')) && (_p12._1.ctor === 'Just')) {
 						return _elm_lang$core$Native_List.fromArray(
 							[
 								_elm_lang$html$Html$text('λ'),
-								A5(_user$project$Main$htmlPattern, model, node, newCtx, newAncestors, _p11._0._0),
+								A5(_user$project$Main$htmlPattern, model, node, newCtx, newAncestors, _p12._0._0),
 								_elm_lang$html$Html$text('→'),
-								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p11._1._0)
+								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p12._1._0)
+							]);
+					} else {
+						return _elm_lang$core$Native_List.fromArray(
+							[]);
+					}
+				case 'ApplicationValue':
+					var _p15 = _p9._0;
+					var _p14 = {ctor: '_Tuple2', _0: _p15.left, _1: _p15.right};
+					if (((_p14.ctor === '_Tuple2') && (_p14._0.ctor === 'Just')) && (_p14._1.ctor === 'Just')) {
+						return _elm_lang$core$Native_List.fromArray(
+							[
+								_elm_lang$html$Html$text('('),
+								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p14._0._0),
+								_elm_lang$html$Html$text(' '),
+								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p14._1._0),
+								_elm_lang$html$Html$text(')')
 							]);
 					} else {
 						return _elm_lang$core$Native_List.fromArray(
@@ -11194,30 +11154,15 @@ var _user$project$Main$htmlExpr = F5(
 				case 'RefValue':
 					return _elm_lang$core$Native_List.fromArray(
 						[
-							A5(_user$project$Main$htmlRef, model, node, newCtx, newAncestors, _p8._0.ref)
+							A5(_user$project$Main$htmlRef, model, node, newCtx, newAncestors, _p9._0.ref)
 						]);
 				default:
 					return _elm_lang$core$Native_List.fromArray(
 						[
-							A5(_user$project$Main$htmlExternalRef, model, node, newCtx, newAncestors, _p8._0)
+							A5(_user$project$Main$htmlExternalRef, model, node, newCtx, newAncestors, _p9._0)
 						]);
 			}
 		}();
-		var $arguments = function () {
-			var _p13 = expr.$arguments;
-			if (_p13.ctor === 'Args') {
-				return A2(
-					_elm_lang$core$List$map,
-					A4(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors),
-					_p13._0.values);
-			} else {
-				return _elm_lang$core$Native_List.fromArray(
-					[]);
-			}
-		}();
-		var infix = _elm_lang$core$Native_Utils.eq(
-			_elm_lang$core$List$length($arguments),
-			2);
 		return A2(
 			_elm_lang$html$Html$span,
 			_elm_lang$core$Native_List.fromArray(
@@ -11237,68 +11182,7 @@ var _user$project$Main$htmlExpr = F5(
 					_user$project$Main$onClick$(
 					_user$project$Types$SetRefPath(newAncestors))
 				]),
-			function () {
-				var _p14 = $arguments;
-				if (_p14.ctor === '[]') {
-					return content;
-				} else {
-					if ((_p14._1.ctor === '::') && (_p14._1._1.ctor === '[]')) {
-						return infix ? A2(
-							_elm_lang$core$Basics_ops['++'],
-							_elm_lang$core$Native_List.fromArray(
-								[
-									_elm_lang$html$Html$text('(')
-								]),
-							A2(
-								_elm_lang$core$Basics_ops['++'],
-								_elm_lang$core$Native_List.fromArray(
-									[_p14._0]),
-								A2(
-									_elm_lang$core$Basics_ops['++'],
-									content,
-									A2(
-										_elm_lang$core$Basics_ops['++'],
-										_elm_lang$core$Native_List.fromArray(
-											[_p14._1._0]),
-										_elm_lang$core$Native_List.fromArray(
-											[
-												_elm_lang$html$Html$text(')')
-											]))))) : A2(
-							_elm_lang$core$Basics_ops['++'],
-							_elm_lang$core$Native_List.fromArray(
-								[
-									_elm_lang$html$Html$text('(')
-								]),
-							A2(
-								_elm_lang$core$Basics_ops['++'],
-								content,
-								A2(
-									_elm_lang$core$Basics_ops['++'],
-									$arguments,
-									_elm_lang$core$Native_List.fromArray(
-										[
-											_elm_lang$html$Html$text(')')
-										]))));
-					} else {
-						return A2(
-							_elm_lang$core$Basics_ops['++'],
-							_elm_lang$core$Native_List.fromArray(
-								[
-									_elm_lang$html$Html$text('(')
-								]),
-							A2(
-								_elm_lang$core$Basics_ops['++'],
-								content,
-								A2(
-									_elm_lang$core$Basics_ops['++'],
-									$arguments,
-									_elm_lang$core$Native_List.fromArray(
-										[
-											_elm_lang$html$Html$text(')')
-										]))));
-					}
-				}
-			}());
+			content);
 	});
 var _user$project$Main$htmlFunctionBody = F5(
 	function (model, node, ctx, ancestors, def) {
@@ -11307,8 +11191,8 @@ var _user$project$Main$htmlFunctionBody = F5(
 			_user$project$GetContext$getContextVariableDefinition(def),
 			ctx);
 		var newAncestors = A2(_elm_lang$core$List_ops['::'], def.ref, ancestors);
-		var _p15 = def.value;
-		if (_p15.ctor === 'Nothing') {
+		var _p16 = def.value;
+		if (_p16.ctor === 'Nothing') {
 			return _elm_lang$html$Html$text('<<<ERROR>>>');
 		} else {
 			return A2(
@@ -11334,7 +11218,7 @@ var _user$project$Main$htmlFunctionBody = F5(
 						_elm_lang$core$Native_List.fromArray(
 							[
 								_elm_lang$html$Html$text('='),
-								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p15._0)
+								A5(_user$project$Main$htmlExpr, model, node, newCtx, newAncestors, _p16._0)
 							]))));
 		}
 	});
@@ -11402,12 +11286,12 @@ var _user$project$Main$view = function (model) {
 	var context = _user$project$GetContext$getCurrentContext(model);
 	var node = _user$project$GetNode$getCurrentNode(model);
 	var actions = function () {
-		var _p16 = node;
-		if (_p16.ctor === 'Nothing') {
+		var _p17 = node;
+		if (_p17.ctor === 'Nothing') {
 			return _elm_lang$core$Native_List.fromArray(
 				[]);
 		} else {
-			return A3(_user$project$Actions$nodeActions, model, _p16._0, context);
+			return A3(_user$project$Actions$nodeActions, model, _p17._0, context);
 		}
 	}();
 	var file = model.file;
@@ -11498,14 +11382,14 @@ var _user$project$Main$update = F2(
 			_elm_lang$core$Debug$log,
 			'previous node',
 			_user$project$GetNode$getCurrentNode(model));
-		var _p17 = action;
-		switch (_p17.ctor) {
+		var _p18 = A2(_elm_lang$core$Debug$log, 'action', action);
+		switch (_p18.ctor) {
 			case 'Nop':
 				return _user$project$Main$noEffects(model);
 			case 'SetRefPath':
 				var m1 = _elm_lang$core$Native_Utils.update(
 					model,
-					{refPath: _p17._0});
+					{refPath: _p18._0});
 				var newNode = _user$project$GetNode$getCurrentNode(m1);
 				return _user$project$Main$noEffects(
 					_elm_lang$core$Native_Utils.update(
@@ -11520,17 +11404,17 @@ var _user$project$Main$update = F2(
 				return _user$project$Main$noEffects(
 					_elm_lang$core$Native_Utils.update(
 						model,
-						{input: _p17._0}));
+						{input: _p18._0}));
 			case 'SetNode':
-				var _p18 = _elm_lang$core$List$head(model.refPath);
-				if (_p18.ctor === 'Nothing') {
+				var _p19 = _elm_lang$core$List$head(model.refPath);
+				if (_p19.ctor === 'Nothing') {
 					return _user$project$Main$noEffects(model);
 				} else {
-					var _p19 = A2(
+					var _p20 = A2(
 						_elm_lang$core$Debug$log,
 						'current node',
 						_user$project$GetNode$getCurrentNode(model));
-					if (_p19.ctor === 'Nothing') {
+					if (_p20.ctor === 'Nothing') {
 						return _user$project$Main$noEffects(model);
 					} else {
 						return _user$project$Main$noEffects(
@@ -11544,9 +11428,9 @@ var _user$project$Main$update = F2(
 											{
 												variableDefinitions: A2(
 													_elm_lang$core$List$map,
-													A2(_user$project$SetNode$setNodeVariableDefinition, _p18._0, _p17._1),
+													A2(_user$project$SetNode$setNodeVariableDefinition, _p19._0, _p18._1),
 													fi.variableDefinitions),
-												nextRef: fi.nextRef + _p17._0
+												nextRef: fi.nextRef + _p18._0
 											})
 									});
 							}());
@@ -11594,19 +11478,19 @@ var _user$project$Main$update = F2(
 			case 'LoadFileSuccess':
 				return _user$project$Main$noEffects(
 					function () {
-						var _p20 = A2(
+						var _p21 = A2(
 							_elm_lang$core$Debug$log,
 							'c',
 							A2(
 								_elm_lang$core$Json_Decode$decodeString,
 								_user$project$Proto_Ast$fileDecoder,
-								A2(_elm_lang$core$Debug$log, 'GetFileResponse', _p17._0).jsonContent));
-						if (_p20.ctor === 'Err') {
+								A2(_elm_lang$core$Debug$log, 'GetFileResponse', _p18._0).jsonContent));
+						if (_p21.ctor === 'Err') {
 							return model;
 						} else {
 							return _elm_lang$core$Native_Utils.update(
 								model,
-								{file: _p20._0});
+								{file: _p21._0});
 						}
 					}());
 			default:
@@ -11662,33 +11546,20 @@ var _user$project$Main$testModel = {
 				value: _elm_lang$core$Maybe$Just(
 					{
 						ref: 12,
-						value: _user$project$Proto_Ast$ExternalRefValue(
-							{path: 'Base', name: '(==)'}),
-						$arguments: _user$project$Proto_Ast$Args(
+						value: _user$project$Proto_Ast$ApplicationValue(
 							{
-								values: _elm_lang$core$Native_List.fromArray(
-									[
-										{
-										ref: 13,
+								left: _elm_lang$core$Maybe$Just(
+									{
+										ref: 2222,
+										value: _user$project$Proto_Ast$ExternalRefValue(
+											{path: 'Base', name: '(==)'})
+									}),
+								right: _elm_lang$core$Maybe$Just(
+									{
+										ref: 22223,
 										value: _user$project$Proto_Ast$IntValue(
-											{value: 42}),
-										$arguments: _user$project$Proto_Ast$Args(
-											{
-												values: _elm_lang$core$Native_List.fromArray(
-													[])
-											})
-									},
-										{
-										ref: 14,
-										value: _user$project$Proto_Ast$RefValue(
-											{ref: 2}),
-										$arguments: _user$project$Proto_Ast$Args(
-											{
-												values: _elm_lang$core$Native_List.fromArray(
-													[])
-											})
-									}
-									])
+											{value: 42})
+									})
 							})
 					}),
 				$arguments: _elm_lang$core$Native_List.fromArray(
@@ -11719,18 +11590,8 @@ var _user$project$Main$testModel = {
 									{
 										ref: 42,
 										value: _user$project$Proto_Ast$RefValue(
-											{ref: 24}),
-										$arguments: _user$project$Proto_Ast$Args(
-											{
-												values: _elm_lang$core$Native_List.fromArray(
-													[])
-											})
+											{ref: 24})
 									})
-							}),
-						$arguments: _user$project$Proto_Ast$Args(
-							{
-								values: _elm_lang$core$Native_List.fromArray(
-									[])
 							})
 					}),
 				$arguments: _elm_lang$core$Native_List.fromArray(
