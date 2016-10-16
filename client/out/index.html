@@ -9616,6 +9616,14 @@ var _user$project$Defaults$defaultPattern = {
 	pvalue: _user$project$Proto_Ast$LabelValue(
 		{name: '◆'})
 };
+var _user$project$Defaults$defaultVariableDefinition = {
+	ref: -1,
+	label: _elm_lang$core$Maybe$Just(
+		{name: '◆'}),
+	value: _elm_lang$core$Maybe$Nothing,
+	$arguments: _elm_lang$core$Native_List.fromArray(
+		[])
+};
 var _user$project$Defaults$defaultExpr = {
 	ref: -1,
 	value: _user$project$Proto_Ast$EmptyValue(41),
@@ -9812,6 +9820,7 @@ var _user$project$Types$LoadFile = {ctor: 'LoadFile'};
 var _user$project$Types$Input = function (a) {
 	return {ctor: 'Input', _0: a};
 };
+var _user$project$Types$CreateFunction = {ctor: 'CreateFunction'};
 var _user$project$Types$SetNode = F2(
 	function (a, b) {
 		return {ctor: 'SetNode', _0: a, _1: b};
@@ -10468,7 +10477,8 @@ var _user$project$Actions$nodeActions = F3(
 			},
 				{label: '↓', msg: _user$project$Types$Nop},
 				{label: '←', msg: _user$project$Types$Nop},
-				{label: '→', msg: _user$project$Types$Nop}
+				{label: '→', msg: _user$project$Types$Nop},
+				{label: 'Create function', msg: _user$project$Types$CreateFunction}
 			]);
 		var a = function () {
 			var _p16 = node;
@@ -10571,6 +10581,39 @@ var _user$project$GetNode$getNodeVariableDefinition = F2(
 					_user$project$GetNode$getNodePattern(ref),
 					def.$arguments)));
 	});
+var _user$project$GetNode$getNodeName = function (node) {
+	var _p4 = node;
+	switch (_p4.ctor) {
+		case 'Expr':
+			var _p5 = _p4._0.value;
+			switch (_p5.ctor) {
+				case 'IntValue':
+					return _elm_lang$core$Basics$toString(_p5._0.value);
+				case 'FloatValue':
+					return _elm_lang$core$Basics$toString(_p5._0.value);
+				case 'StringValue':
+					return _p5._0.value;
+				case 'ExternalRefValue':
+					return _p5._0.name;
+				default:
+					return '';
+			}
+		case 'VarDef':
+			var _p6 = _p4._0.label;
+			if (_p6.ctor === 'Just') {
+				return _p6._0.name;
+			} else {
+				return '';
+			}
+		default:
+			var _p7 = _p4._0.pvalue;
+			if (_p7.ctor === 'LabelValue') {
+				return _p7._0.name;
+			} else {
+				return '';
+			}
+	}
+};
 var _user$project$GetNode$getNode = F2(
 	function (model, ref) {
 		return _elm_lang$core$List$head(
@@ -10580,11 +10623,11 @@ var _user$project$GetNode$getNode = F2(
 				model.file.variableDefinitions));
 	});
 var _user$project$GetNode$getCurrentNode = function (model) {
-	var _p4 = _elm_lang$core$List$head(model.refPath);
-	if (_p4.ctor === 'Nothing') {
+	var _p8 = _elm_lang$core$List$head(model.refPath);
+	if (_p8.ctor === 'Nothing') {
 		return _elm_lang$core$Maybe$Nothing;
 	} else {
-		return A2(_user$project$GetNode$getNode, model, _p4._0);
+		return A2(_user$project$GetNode$getNode, model, _p8._0);
 	}
 };
 var _user$project$GetContext$lookupContext = F2(
@@ -11380,7 +11423,8 @@ var _user$project$Main$view = function (model) {
 					_elm_lang$html$Html$input,
 					_elm_lang$core$Native_List.fromArray(
 						[
-							_elm_lang$html$Html_Events$onInput(_user$project$Types$Input)
+							_elm_lang$html$Html_Events$onInput(_user$project$Types$Input),
+							_elm_lang$html$Html_Attributes$value(model.input)
 						]),
 					_elm_lang$core$Native_List.fromArray(
 						[]))
@@ -11459,10 +11503,19 @@ var _user$project$Main$update = F2(
 			case 'Nop':
 				return _user$project$Main$noEffects(model);
 			case 'SetRefPath':
+				var m1 = _elm_lang$core$Native_Utils.update(
+					model,
+					{refPath: _p17._0});
+				var newNode = _user$project$GetNode$getCurrentNode(m1);
 				return _user$project$Main$noEffects(
 					_elm_lang$core$Native_Utils.update(
-						model,
-						{refPath: _p17._0}));
+						m1,
+						{
+							input: A2(
+								_elm_lang$core$Maybe$withDefault,
+								'',
+								A2(_elm_lang$core$Maybe$map, _user$project$GetNode$getNodeName, newNode))
+						}));
 			case 'Input':
 				return _user$project$Main$noEffects(
 					_elm_lang$core$Native_Utils.update(
@@ -11499,6 +11552,35 @@ var _user$project$Main$update = F2(
 							}());
 					}
 				}
+			case 'CreateFunction':
+				return _user$project$Main$noEffects(
+					function () {
+						var fi = model.file;
+						return _elm_lang$core$Native_Utils.update(
+							model,
+							{
+								file: _elm_lang$core$Native_Utils.update(
+									fi,
+									{
+										variableDefinitions: A2(
+											_elm_lang$core$Basics_ops['++'],
+											fi.variableDefinitions,
+											_elm_lang$core$Native_List.fromArray(
+												[
+													_elm_lang$core$Native_Utils.update(
+													_user$project$Defaults$defaultVariableDefinition,
+													{
+														ref: fi.nextRef,
+														value: _elm_lang$core$Maybe$Just(
+															_elm_lang$core$Native_Utils.update(
+																_user$project$Defaults$defaultExpr,
+																{ref: fi.nextRef + 1}))
+													})
+												])),
+										nextRef: fi.nextRef + 2
+									})
+							});
+					}());
 			case 'LoadFile':
 				return {
 					ctor: '_Tuple2',
