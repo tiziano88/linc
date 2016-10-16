@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/gorilla/mux"
@@ -46,7 +47,7 @@ func UpdateFile(w http.ResponseWriter, r *http.Request) {
 	rm := &p.UpdateFileRequest{}
 	jsonpb.Unmarshal(r.Body, rm)
 	rm.Path = "/tmp/src.json"
-	err := ioutil.WriteFile(rm.Path, []byte(rm.JsonContent), 0)
+	err := ioutil.WriteFile(rm.Path, []byte(rm.JsonContent), os.ModePerm)
 	if err != nil {
 		panic(err)
 	}

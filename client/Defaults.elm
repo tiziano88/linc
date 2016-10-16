@@ -7,7 +7,6 @@ defaultExpr : Ast.Expression
 defaultExpr =
     { ref = -1
     , value = Ast.EmptyValue 41
-    , arguments = Ast.Args { values = [] }
     }
 
 

@@ -6,11 +6,11 @@ import Types exposing (..)
 
 getCurrentNode : Model -> Maybe Node
 getCurrentNode model =
-    case (List.head model.refPath) of
-        Nothing ->
+    case model.refPath of
+        [] ->
             Nothing
 
-        Just ref ->
+        ref :: _ ->
             getNode model ref
 
 
@@ -73,18 +73,14 @@ getNodeExpression ref expr =
                             (List.filterMap (Maybe.map <| getNodeExpression ref) [ v.body ])
                                 ++ (List.filterMap (Maybe.map <| getNodePattern ref) [ v.argument ])
 
+                    Ast.ApplicationValue v ->
+                        Maybe.oneOf <|
+                            (List.filterMap (Maybe.map <| getNodeExpression ref) [ v.left, v.right ])
+
                     _ ->
                         Nothing
-
-            aNodes =
-                case expr.arguments of
-                    Ast.Args args ->
-                        List.map (getNodeExpression ref) args.values
-
-                    _ ->
-                        []
         in
-            Maybe.oneOf <| [ vNode ] ++ aNodes
+            Maybe.oneOf <| [ vNode ]
 
 
 getNodePattern : ExprRef -> Ast.Pattern -> Maybe Node

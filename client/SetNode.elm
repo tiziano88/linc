@@ -16,7 +16,6 @@ setNodeVariableDefinition ref node def =
     else
         { def
             | value = Maybe.map (setNodeExpression ref node) def.value
-            , arguments = List.map (setNodePattern ref node) def.arguments
         }
 
 
@@ -52,20 +51,18 @@ setNodeExpression ref node expr =
                                 , body = Maybe.map (setNodeExpression ref node) v1.body
                             }
 
+                    Ast.ApplicationValue v1 ->
+                        Ast.ApplicationValue
+                            { v1
+                                | left = Maybe.map (setNodeExpression ref node) v1.left
+                                , right = Maybe.map (setNodeExpression ref node) v1.right
+                            }
+
                     _ ->
                         expr.value
-
-            newArgs =
-                case expr.arguments of
-                    Ast.Args args ->
-                        List.map (setNodeExpression ref node) args.values
-
-                    _ ->
-                        []
         in
             { expr
                 | value = newValue
-                , arguments = Ast.Args { values = newArgs }
             }
 
 

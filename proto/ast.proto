@@ -42,6 +42,11 @@ message Expression {
     Expression body = 2;
   }
 
+  message Application {
+    Expression left = 1;
+    Expression right = 2;
+  }
+
   message Ref {
     int64 ref = 1;
   }
@@ -60,16 +65,9 @@ message Expression {
     List list_value = 6;
     If if_value = 7;
     Lambda lambda_value = 10;
-    Ref ref_value = 11;
-    ExternalRef external_ref_value = 12;
-  }
-
-  message Arguments {
-    repeated Expression values = 1;
-  }
-
-  oneof arguments {
-    Arguments args = 50;
+    Application application_value = 11;
+    Ref ref_value = 12;
+    ExternalRef external_ref_value = 13;
   }
 }
 

@@ -85,7 +85,6 @@ expressionActions model ctx expr =
                                 , true = Just { defaultExpr | ref = model.file.nextRef + 1 }
                                 , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
                                 }
-                        , arguments = Ast.Args { values = [] }
                     }
       }
     , { label = "if ◇ then ◆ else ◆"
@@ -100,12 +99,10 @@ expressionActions model ctx expr =
                                         { defaultExpr
                                             | ref = model.file.nextRef
                                             , value = expr.value
-                                            , arguments = expr.arguments
                                         }
                                 , true = Just { defaultExpr | ref = model.file.nextRef + 1 }
                                 , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
                                 }
-                        , arguments = Ast.Args { values = [] }
                     }
       }
     , { label = "if ◆ then ◇ else ◆"
@@ -120,11 +117,9 @@ expressionActions model ctx expr =
                                         { defaultExpr
                                             | ref = model.file.nextRef + 1 
                                             , value = expr.value
-                                            , arguments = expr.arguments
                                         }
                                 , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
                                 }
-                        , arguments = Ast.Args { values = [] }
                     }
       }
     , { label = "if ◆ then ◆ else ◇"
@@ -140,10 +135,8 @@ expressionActions model ctx expr =
                                         { defaultExpr
                                             | ref = model.file.nextRef + 2
                                             , value = expr.value
-                                            , arguments = expr.arguments
                                         }
                                 }
-                        , arguments = Ast.Args { values = [] }
                     }
       }
     , { label = "λ ◆ → ◆"
@@ -172,36 +165,30 @@ expressionActions model ctx expr =
       }
     , { label = "◇ ◆"
       , msg =
-            SetNode 1 <|
+            SetNode 2 <|
                 Expr
-                    { expr
-                        | arguments =
-                            case expr.arguments of
-                                Ast.Args a ->
-                                    Ast.Args { values = a.values ++ [ { defaultExpr | ref = model.file.nextRef } ] }
-
-                                Ast.ArgumentsUnspecified ->
-                                    Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
+                  { ref = model.file.nextRef
+                  , value = Ast.ApplicationValue
+                    { left = Just expr
+                    , right = Just { defaultExpr | ref = model.file.nextRef + 1 }
                     }
+                  }
       }
     , { label = "◆ ◇" -- TODO
       , msg =
-            SetNode 1 <|
+            SetNode 2 <|
                 Expr
-                    { expr
-                        | arguments =
-                            case expr.arguments of
-                                Ast.Args a ->
-                                    Ast.Args { values = a.values ++ [ { defaultExpr | ref = model.file.nextRef } ] }
-
-                                Ast.ArgumentsUnspecified ->
-                                    Ast.Args { values = [ { defaultExpr | ref = model.file.nextRef } ] }
+                  { ref = model.file.nextRef
+                  , value = Ast.ApplicationValue
+                    { left = Just { defaultExpr | ref = model.file.nextRef + 1 }
+                    , right = Just expr
                     }
+                  }
       }
     , { label = "◆"
       , msg = SetNode 0 <| Expr defaultExpr
       }
-    , { label = "⌧" -- TODO: Delete node entirely.
+    , { label = "⌧" -- TODO: Delete node "intelligently".
       , msg = SetNode 0 <| Expr expr
       }
     , { label = "\"" ++ model.input ++ "\" (String) "
