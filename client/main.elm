@@ -63,22 +63,21 @@ testModel =
                     Just
                         { ref = 12
                         , value =
-                            Ast.ExternalRefValue
-                                { path = "Base"
-                                , name = "(==)"
-                                }
-                        , arguments =
-                            Ast.Args
-                                { values =
-                                    [ { ref = 13
-                                      , value = Ast.IntValue { value = 42 }
-                                      , arguments = Ast.Args { values = [] }
-                                      }
-                                    , { ref = 14
-                                      , value = Ast.RefValue { ref = 2 }
-                                      , arguments = Ast.Args { values = [] }
-                                      }
-                                    ]
+                            Ast.ApplicationValue
+                                { left =
+                                  Just
+                                    { ref = 2222
+                                    , value =
+                                      Ast.ExternalRefValue
+                                        { path = "Base"
+                                        , name = "(==)"
+                                        }
+                                    }
+                                , right =
+                                  Just
+                                    { ref = 22223
+                                    , value = Ast.IntValue { value = 42 }
+                                    }
                                 }
                         }
               , arguments =
@@ -106,10 +105,8 @@ testModel =
                                     Just
                                         { ref = 42
                                         , value = Ast.RefValue { ref = 24 }
-                                        , arguments = Ast.Args { values = [] }
                                         }
                                 }
-                        , arguments = Ast.Args { values = [] }
                         }
               , arguments = []
               }
@@ -353,21 +350,26 @@ htmlExpr model node ctx ancestors expr =
                         _ ->
                             []
 
+                Ast.ApplicationValue v ->
+                    case ( v.left, v.right ) of
+                        ( Just left, Just right ) ->
+                            [ Html.text "("
+                            , htmlExpr model node newCtx newAncestors left
+                            , Html.text " "
+                            , htmlExpr model node newCtx newAncestors right
+                            , Html.text ")"
+                            ]
+
+                        _ ->
+                            []
+
                 Ast.RefValue v ->
                     [ htmlRef model node newCtx newAncestors v.ref ]
 
                 Ast.ExternalRefValue ref ->
                     [ htmlExternalRef model node newCtx newAncestors ref ]
 
-        arguments =
-            case expr.arguments of
-                Ast.Args a ->
-                    List.map (htmlExpr model node newCtx newAncestors) a.values
-
-                _ ->
-                    []
-
-        infix = (List.length arguments == 2) -- TODO: Only if it is actually an operator.
+        infix = False -- TODO: Only if it is actually an operator.
     in
         Html.span
             [ style <|
@@ -384,21 +386,7 @@ htmlExpr model node ctx ancestors expr =
                        )
             , onClick' (SetRefPath newAncestors)
             ]
-            (case arguments of
-                [] ->
-                    content
-
-                [a1, a2] ->
-                  if
-                    infix
-                  then
-                    [ Html.text "(" ] ++ [ a1 ] ++ content ++ [ a2 ] ++ [ Html.text ")" ]
-                  else
-                    [ Html.text "(" ] ++ content ++ arguments ++ [ Html.text ")" ]
-
-                _ ->
-                  [ Html.text "(" ] ++ content ++ arguments ++ [ Html.text ")" ]
-            )
+            content
 
 
 isRefSource : Maybe Node -> ExprRef -> Bool

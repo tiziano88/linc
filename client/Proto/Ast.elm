@@ -112,7 +112,6 @@ fileEncoder v =
 type alias Expression =
   { ref : Int -- 1
   , value : Value
-  , arguments : Arguments
   }
 
 
@@ -126,6 +125,7 @@ type Value
   | ListValue Expression_List
   | IfValue Expression_If
   | LambdaValue Expression_Lambda
+  | ApplicationValue Expression_Application
   | RefValue Expression_Ref
   | ExternalRefValue Expression_ExternalRef
 
@@ -141,6 +141,7 @@ valueDecoder =
     , JD.map ListValue ("listValue" := expression_ListDecoder)
     , JD.map IfValue ("ifValue" := expression_IfDecoder)
     , JD.map LambdaValue ("lambdaValue" := expression_LambdaDecoder)
+    , JD.map ApplicationValue ("applicationValue" := expression_ApplicationDecoder)
     , JD.map RefValue ("refValue" := expression_RefDecoder)
     , JD.map ExternalRefValue ("externalRefValue" := expression_ExternalRefDecoder)
     , JD.succeed ValueUnspecified
@@ -159,28 +160,9 @@ valueEncoder v =
     ListValue x -> Just ("listValue", expression_ListEncoder x)
     IfValue x -> Just ("ifValue", expression_IfEncoder x)
     LambdaValue x -> Just ("lambdaValue", expression_LambdaEncoder x)
+    ApplicationValue x -> Just ("applicationValue", expression_ApplicationEncoder x)
     RefValue x -> Just ("refValue", expression_RefEncoder x)
     ExternalRefValue x -> Just ("externalRefValue", expression_ExternalRefEncoder x)
-
-
-type Arguments
-  = ArgumentsUnspecified
-  | Args Expression_Arguments
-
-
-argumentsDecoder : JD.Decoder Arguments
-argumentsDecoder =
-  lazy <| \_ -> JD.oneOf
-    [ JD.map Args ("args" := expression_ArgumentsDecoder)
-    , JD.succeed ArgumentsUnspecified
-    ]
-
-
-argumentsEncoder : Arguments -> Maybe (String, JE.Value)
-argumentsEncoder v =
-  case v of
-    ArgumentsUnspecified -> Nothing
-    Args x -> Just ("args", expression_ArgumentsEncoder x)
 
 
 expressionDecoder : JD.Decoder Expression
@@ -188,7 +170,6 @@ expressionDecoder =
   lazy <| \_ -> Expression
     <$> (requiredFieldDecoder "ref" 0 JD.int)
     <*> valueDecoder
-    <*> argumentsDecoder
 
 
 expressionEncoder : Expression -> JE.Value
@@ -196,7 +177,6 @@ expressionEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "ref" JE.int 0 v.ref)
     , (valueEncoder v.value)
-    , (argumentsEncoder v.arguments)
     ]
 
 
@@ -335,6 +315,27 @@ expression_LambdaEncoder v =
     ]
 
 
+type alias Expression_Application =
+  { left : Maybe Expression -- 1
+  , right : Maybe Expression -- 2
+  }
+
+
+expression_ApplicationDecoder : JD.Decoder Expression_Application
+expression_ApplicationDecoder =
+  lazy <| \_ -> Expression_Application
+    <$> (optionalFieldDecoder "left" expressionDecoder)
+    <*> (optionalFieldDecoder "right" expressionDecoder)
+
+
+expression_ApplicationEncoder : Expression_Application -> JE.Value
+expression_ApplicationEncoder v =
+  JE.object <| List.filterMap identity <|
+    [ (optionalEncoder "left" expressionEncoder v.left)
+    , (optionalEncoder "right" expressionEncoder v.right)
+    ]
+
+
 type alias Expression_Ref =
   { ref : Int -- 1
   }
@@ -371,24 +372,6 @@ expression_ExternalRefEncoder v =
   JE.object <| List.filterMap identity <|
     [ (requiredFieldEncoder "path" JE.string "" v.path)
     , (requiredFieldEncoder "name" JE.string "" v.name)
-    ]
-
-
-type alias Expression_Arguments =
-  { values : List Expression -- 1
-  }
-
-
-expression_ArgumentsDecoder : JD.Decoder Expression_Arguments
-expression_ArgumentsDecoder =
-  lazy <| \_ -> Expression_Arguments
-    <$> (repeatedFieldDecoder "values" expressionDecoder)
-
-
-expression_ArgumentsEncoder : Expression_Arguments -> JE.Value
-expression_ArgumentsEncoder v =
-  JE.object <| List.filterMap identity <|
-    [ (repeatedFieldEncoder "values" expressionEncoder v.values)
     ]
 
 
