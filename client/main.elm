@@ -139,9 +139,13 @@ update action model =
                 noEffects model
 
             SetRefPath refPath ->
+              let
+                  m1 = { model | refPath = refPath }
+                  newNode = getCurrentNode m1
+              in
                 noEffects
-                    { model
-                        | refPath = refPath
+                    { m1
+                        | input = Maybe.withDefault "" <| Maybe.map getNodeName newNode
                     }
 
             Input v ->
@@ -249,7 +253,8 @@ view model =
     in
         Html.div [] <|
             [ Html.input
-                [ onInput Input ]
+                [ onInput Input
+                , value model.input ]
                 []
             ]
                 ++ (List.map actionToButton actions)
