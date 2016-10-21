@@ -10,6 +10,7 @@ type Msg
     = Nop
     | SetRefPath (List ExprRef)
     | SetNode Int Node
+    | DeleteNode
     | CreateFunction
     | Input String
     | LoadFile

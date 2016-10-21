@@ -178,6 +178,32 @@ update action model =
                                                 }
                                         }
 
+            DeleteNode ->
+                case List.head model.refPath of
+                    Nothing ->
+                        noEffects model
+
+                    Just ref ->
+                        case Debug.log "current node" (getCurrentNode model) of
+                            Nothing ->
+                                noEffects model
+
+                            Just v ->
+                                noEffects <|
+                                    let
+                                        fi =
+                                            model.file
+                                    in
+                                        { model
+                                            | file =
+                                                { fi
+                                                    | variableDefinitions =
+                                                        List.map
+                                                            (deleteNodeVariableDefinition ref)
+                                                            fi.variableDefinitions
+                                                }
+                                        }
+
             CreateFunction ->
                 noEffects <|
                   let

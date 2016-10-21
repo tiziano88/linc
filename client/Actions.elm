@@ -188,8 +188,8 @@ expressionActions model ctx expr =
     , { label = "◆"
       , msg = SetNode 0 <| Expr defaultExpr
       }
-    , { label = "⌧" -- TODO: Delete node "intelligently".
-      , msg = SetNode 0 <| Expr expr
+    , { label = "⌧"
+      , msg = DeleteNode
       }
     , { label = "\"" ++ model.input ++ "\" (String) "
       , msg = SetNode 0 <| Expr { expr | value = Ast.StringValue { value = model.input } }
