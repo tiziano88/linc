@@ -419,7 +419,7 @@ htmlExpr model node ctx ancestors expr =
                         else
                             []
                        )
-            , onClick' (SetRefPath newAncestors)
+            , onClick_ (SetRefPath newAncestors)
             ]
             content
 
@@ -575,7 +575,7 @@ htmlPattern model node ctx ancestors pat =
                         else
                             []
                        )
-            , onClick' (SetRefPath (pat.ref :: ancestors))
+            , onClick_ (SetRefPath (pat.ref :: ancestors))
             , contenteditable True
             , on "input" (Json.Decode.map (rename pat) targetValue)
             ]
@@ -644,7 +644,7 @@ htmlVariableDefinition model node ctx ancestors def =
                         else
                             []
                        )
-            , onClick' (SetRefPath (def.ref :: ancestors))
+            , onClick_ (SetRefPath (def.ref :: ancestors))
             ]
             [ htmlFunctionSignature model newCtx ancestors def
             , htmlFunctionBody model node newCtx ancestors def
@@ -700,7 +700,7 @@ selectElement e =
         ]
 
 
-onClick' a =
+onClick_ a =
     onWithOptions
         "click"
         { defaultOptions | stopPropagation = True }
