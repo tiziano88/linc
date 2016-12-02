@@ -22,7 +22,7 @@ import SetNode exposing (..)
 import Types exposing (..)
 
 
-main : Program Never
+main : Program Never Model Msg
 main =
     Html.program
         { init = init
@@ -228,8 +228,16 @@ update action model =
 
             LoadFile ->
                 ( model
-                , Http.get Server.getFileResponseDecoder "/LoadFile"
-                    |> Task.perform (always Nop) LoadFileSuccess
+                , Http.send
+                    (\res ->
+                        case res of
+                            Ok r ->
+                                LoadFileSuccess r
+
+                            Err _ ->
+                                Nop
+                    )
+                    (Http.get "/LoadFile" Server.getFileResponseDecoder)
                 )
 
             LoadFileSuccess s ->
@@ -254,11 +262,11 @@ update action model =
                     ( model
                     , Http.send
                         (always Nop)
-                        (Http.post "/SaveFile" (Http.jsonBody <| Server.updateFileRequestEncoder req))
-                      --Server.getFileResponseDecoder
-                      --"/SaveFile"
-                      --(Http.string <| Json.Encode.encode 2 <| Server.updateFileRequestEncoder req)
-                      --|> Task.perform (always Nop) (always Nop)
+                        (Http.post
+                            "/SaveFile"
+                            (Http.jsonBody <| Server.updateFileRequestEncoder req)
+                            (Json.Decode.string)
+                        )
                     )
 
 
