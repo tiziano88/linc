@@ -23,6 +23,8 @@ $(SERVER): $(SERVER_DIR)/* $(SERVER_PROTO)
 $(SERVER_PROTO): $(PROTO_DIR)/*.proto
 	protoc --go_out=$(SERVER_DIR) --elm_out=$(CLIENT_DIR) $(PROTO_DIR)/*.proto
 
+proto: $(SERVER_PROTO)
+
 run: $(INDEX) $(SERVER)
 	$(SERVER)
 

@@ -1,7 +1,6 @@
 module Main exposing (..)
 
 import Array
-import Html.App as Html
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
