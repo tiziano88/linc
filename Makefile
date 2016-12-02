@@ -17,6 +17,9 @@ $(INDEX): $(CLIENT_DIR)/*
 
 server: $(SERVER)
 
+get:
+	go get -u github.com/tiziano88/linc/server
+
 $(SERVER): $(SERVER_DIR)/* $(SERVER_PROTO)
 	go build -o $(SERVER) $(SERVER_DIR)/main.go
 
