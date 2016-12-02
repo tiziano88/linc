@@ -252,11 +252,13 @@ update action model =
                         }
                 in
                     ( model
-                    , Http.post
-                        Server.getFileResponseDecoder
-                        "/SaveFile"
-                        (Http.string <| Json.Encode.encode 2 <| Server.updateFileRequestEncoder req)
-                        |> Task.perform (always Nop) (always Nop)
+                    , Http.send
+                        (always Nop)
+                        (Http.post "/SaveFile" (Http.jsonBody <| Server.updateFileRequestEncoder req))
+                      --Server.getFileResponseDecoder
+                      --"/SaveFile"
+                      --(Http.string <| Json.Encode.encode 2 <| Server.updateFileRequestEncoder req)
+                      --|> Task.perform (always Nop) (always Nop)
                     )
 
 
