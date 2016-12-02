@@ -23,23 +23,39 @@ getNode model ref =
 
 getNodeName : Node -> String
 getNodeName node =
-  case node of
-    Expr expr ->
-      case expr.value of
-        Ast.IntValue v -> toString v.value
-        Ast.FloatValue v -> toString v.value
-        Ast.StringValue v -> v.value
-        Ast.ExternalRefValue v -> v.name
-        _ -> ""
-    VarDef varDef ->
-      case varDef.label of
-        Just l -> l.name
-        Nothing -> ""
-    Pat pat ->
-      case pat.pvalue of
-        Ast.LabelValue l -> l.name
-        _ -> ""
+    case node of
+        Expr expr ->
+            case expr.value of
+                Ast.IntValue v ->
+                    toString v.value
 
+                Ast.FloatValue v ->
+                    toString v.value
+
+                Ast.StringValue v ->
+                    v.value
+
+                Ast.ExternalRefValue v ->
+                    v.name
+
+                _ ->
+                    ""
+
+        VarDef varDef ->
+            case varDef.label of
+                Just l ->
+                    l.name
+
+                Nothing ->
+                    ""
+
+        Pat pat ->
+            case pat.pvalue of
+                Ast.LabelValue l ->
+                    l.name
+
+                _ ->
+                    ""
 
 
 getNodeVariableDefinition : ExprRef -> Ast.VariableDefinition -> Maybe Node

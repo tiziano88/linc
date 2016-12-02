@@ -94,34 +94,34 @@ deleteNodeExpression ref expr =
                 Ast.IfValue v1 ->
                     Ast.IfValue
                         { v1
-                        | cond = Maybe.map (deleteNodeExpression ref) v1.cond
-                        , true = Maybe.map (deleteNodeExpression ref) v1.true
-                        , false = Maybe.map (deleteNodeExpression ref) v1.false
+                            | cond = Maybe.map (deleteNodeExpression ref) v1.cond
+                            , true = Maybe.map (deleteNodeExpression ref) v1.true
+                            , false = Maybe.map (deleteNodeExpression ref) v1.false
                         }
 
                 Ast.ListValue v1 ->
                     Ast.ListValue
                         { v1
-                        | values =
-                              List.map (deleteNodeExpression ref)
-                                <| List.filter (\x -> x.ref /= ref) v1.values
+                            | values =
+                                List.map (deleteNodeExpression ref) <|
+                                    List.filter (\x -> x.ref /= ref) v1.values
                         }
 
                 Ast.LambdaValue v1 ->
                     Ast.LambdaValue
                         { v1
                             | body = Maybe.map (deleteNodeExpression ref) v1.body
-                            }
+                        }
 
                 Ast.ApplicationValue v1 ->
                     Ast.ApplicationValue
                         { v1
                             | left = Maybe.map (deleteNodeExpression ref) v1.left
                             , right = Maybe.map (deleteNodeExpression ref) v1.right
-                            }
+                        }
 
                 _ ->
-                  expr.value
+                    expr.value
     in
         { expr
             | value = newValue

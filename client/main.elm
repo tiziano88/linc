@@ -65,19 +65,19 @@ testModel =
                         , value =
                             Ast.ApplicationValue
                                 { left =
-                                  Just
-                                    { ref = 2222
-                                    , value =
-                                      Ast.ExternalRefValue
-                                        { path = "Base"
-                                        , name = "(==)"
+                                    Just
+                                        { ref = 2222
+                                        , value =
+                                            Ast.ExternalRefValue
+                                                { path = "Base"
+                                                , name = "(==)"
+                                                }
                                         }
-                                    }
                                 , right =
-                                  Just
-                                    { ref = 22223
-                                    , value = Ast.IntValue { value = 42 }
-                                    }
+                                    Just
+                                        { ref = 22223
+                                        , value = Ast.IntValue { value = 42 }
+                                        }
                                 }
                         }
               , arguments =
@@ -136,14 +136,17 @@ update action model =
                 noEffects model
 
             SetRefPath refPath ->
-              let
-                  m1 = { model | refPath = refPath }
-                  newNode = getCurrentNode m1
-              in
-                noEffects
-                    { m1
-                        | input = Maybe.withDefault "" <| Maybe.map getNodeName newNode
-                    }
+                let
+                    m1 =
+                        { model | refPath = refPath }
+
+                    newNode =
+                        getCurrentNode m1
+                in
+                    noEffects
+                        { m1
+                            | input = Maybe.withDefault "" <| Maybe.map getNodeName newNode
+                        }
 
             Input v ->
                 noEffects
@@ -206,20 +209,23 @@ update action model =
 
             CreateFunction ->
                 noEffects <|
-                  let
-                      fi = model.file
-                  in
-                      { model
-                          | file =
-                              { fi
-                                  | variableDefinitions = fi.variableDefinitions ++ [
-                                        { defaultVariableDefinition | ref = fi.nextRef
-                                        , value = Just { defaultExpr | ref = fi.nextRef + 1}
-                                        }
-                                    ]
-                                  , nextRef = fi.nextRef + 2
-                              }
-                      }
+                    let
+                        fi =
+                            model.file
+                    in
+                        { model
+                            | file =
+                                { fi
+                                    | variableDefinitions =
+                                        fi.variableDefinitions
+                                            ++ [ { defaultVariableDefinition
+                                                    | ref = fi.nextRef
+                                                    , value = Just { defaultExpr | ref = fi.nextRef + 1 }
+                                                 }
+                                               ]
+                                    , nextRef = fi.nextRef + 2
+                                }
+                        }
 
             LoadFile ->
                 ( model
@@ -277,7 +283,8 @@ view model =
         Html.div [] <|
             [ Html.input
                 [ onInput Input
-                , value model.input ]
+                , value model.input
+                ]
                 []
             ]
                 ++ (List.map actionToButton actions)
@@ -395,7 +402,10 @@ htmlExpr model node ctx ancestors expr =
                 Ast.ExternalRefValue ref ->
                     [ htmlExternalRef model node newCtx newAncestors ref ]
 
-        infix = False -- TODO: Only if it is actually an operator.
+        infix =
+            False
+
+        -- TODO: Only if it is actually an operator.
     in
         Html.span
             [ style <|
@@ -573,19 +583,23 @@ htmlPattern model node ctx ancestors pat =
             content
 
 
+
 -- TODO: Fix cursor jumping.
+
+
 rename : Ast.Pattern -> String -> Msg
 rename pat n =
     case pat.pvalue of
         Ast.LabelValue v ->
             SetNode 0 <| Pat { pat | pvalue = Ast.LabelValue { v | name = n } }
+
         _ ->
             Nop
 
 
 targetValue : Json.Decode.Decoder String
 targetValue =
-    Json.Decode.at ["target", "innerText"] Json.Decode.string
+    Json.Decode.at [ "target", "innerText" ] Json.Decode.string
 
 
 htmlPatternRef : Model -> Context -> Ast.Pattern -> Html Msg

@@ -113,9 +113,10 @@ expressionActions model ctx expr =
                         | value =
                             Ast.IfValue
                                 { cond = Just { defaultExpr | ref = model.file.nextRef }
-                                , true = Just
+                                , true =
+                                    Just
                                         { defaultExpr
-                                            | ref = model.file.nextRef + 1 
+                                            | ref = model.file.nextRef + 1
                                             , value = expr.value
                                         }
                                 , false = Just { defaultExpr | ref = model.file.nextRef + 2 }
@@ -131,7 +132,8 @@ expressionActions model ctx expr =
                             Ast.IfValue
                                 { cond = Just { defaultExpr | ref = model.file.nextRef }
                                 , true = Just { defaultExpr | ref = model.file.nextRef + 1 }
-                                , false = Just
+                                , false =
+                                    Just
                                         { defaultExpr
                                             | ref = model.file.nextRef + 2
                                             , value = expr.value
@@ -167,23 +169,27 @@ expressionActions model ctx expr =
       , msg =
             SetNode 2 <|
                 Expr
-                  { ref = model.file.nextRef
-                  , value = Ast.ApplicationValue
-                    { left = Just expr
-                    , right = Just { defaultExpr | ref = model.file.nextRef + 1 }
+                    { ref = model.file.nextRef
+                    , value =
+                        Ast.ApplicationValue
+                            { left = Just expr
+                            , right = Just { defaultExpr | ref = model.file.nextRef + 1 }
+                            }
                     }
-                  }
       }
-    , { label = "◆ ◇" -- TODO
+    , { label =
+            "◆ ◇"
+            -- TODO
       , msg =
             SetNode 2 <|
                 Expr
-                  { ref = model.file.nextRef
-                  , value = Ast.ApplicationValue
-                    { left = Just { defaultExpr | ref = model.file.nextRef + 1 }
-                    , right = Just expr
+                    { ref = model.file.nextRef
+                    , value =
+                        Ast.ApplicationValue
+                            { left = Just { defaultExpr | ref = model.file.nextRef + 1 }
+                            , right = Just expr
+                            }
                     }
-                  }
       }
     , { label = "◆"
       , msg = SetNode 0 <| Expr defaultExpr
