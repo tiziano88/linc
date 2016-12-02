@@ -1,15 +1,11 @@
 module Main exposing (..)
 
-import Array
-import Html exposing (..)
+import Html exposing (Html)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
 import Json.Decode
 import Json.Encode
-import String
-import Task
-import Time
 import Proto.Ast as Ast
 import Proto.Server as Server
 import Actions exposing (..)
@@ -311,8 +307,14 @@ view model =
 
 actionToButton : Action -> Html Msg
 actionToButton action =
-    Html.button
-        [ onClick <| action.msg ]
+    Html.div
+        [ onClick action.msg
+        , style <|
+            nodeStyle
+                ++ [ "width" => "10em"
+                   , "text-align" => "center"
+                   ]
+        ]
         [ Html.text action.label ]
 
 
@@ -464,6 +466,8 @@ nodeStyle =
     , "margin" => "2px"
     , "padding" => "2px"
     , "display" => "inline-block"
+    , "font-family" => "monospace"
+    , "cursor" => "default"
     ]
 
 
