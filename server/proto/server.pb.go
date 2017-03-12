@@ -22,6 +22,13 @@ func (m *GetFileRequest) String() string            { return proto.CompactTextSt
 func (*GetFileRequest) ProtoMessage()               {}
 func (*GetFileRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
 
+func (m *GetFileRequest) GetPath() string {
+	if m != nil {
+		return m.Path
+	}
+	return ""
+}
+
 type GetFileResponse struct {
 	JsonContent string `protobuf:"bytes,1,opt,name=json_content,json=jsonContent" json:"json_content,omitempty"`
 }
@@ -30,6 +37,13 @@ func (m *GetFileResponse) Reset()                    { *m = GetFileResponse{} }
 func (m *GetFileResponse) String() string            { return proto.CompactTextString(m) }
 func (*GetFileResponse) ProtoMessage()               {}
 func (*GetFileResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{1} }
+
+func (m *GetFileResponse) GetJsonContent() string {
+	if m != nil {
+		return m.JsonContent
+	}
+	return ""
+}
 
 type UpdateFileRequest struct {
 	Path        string `protobuf:"bytes,1,opt,name=path" json:"path,omitempty"`
@@ -41,6 +55,27 @@ func (m *UpdateFileRequest) Reset()                    { *m = UpdateFileRequest{
 func (m *UpdateFileRequest) String() string            { return proto.CompactTextString(m) }
 func (*UpdateFileRequest) ProtoMessage()               {}
 func (*UpdateFileRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
+
+func (m *UpdateFileRequest) GetPath() string {
+	if m != nil {
+		return m.Path
+	}
+	return ""
+}
+
+func (m *UpdateFileRequest) GetJsonContent() string {
+	if m != nil {
+		return m.JsonContent
+	}
+	return ""
+}
+
+func (m *UpdateFileRequest) GetElmContent() string {
+	if m != nil {
+		return m.ElmContent
+	}
+	return ""
+}
 
 func init() {
 	proto.RegisterType((*GetFileRequest)(nil), "ast.GetFileRequest")

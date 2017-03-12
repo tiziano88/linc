@@ -75,6 +75,20 @@ func (m *File) String() string            { return proto.CompactTextString(m) }
 func (*File) ProtoMessage()               {}
 func (*File) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
+func (m *File) GetNextRef() int64 {
+	if m != nil {
+		return m.NextRef
+	}
+	return 0
+}
+
+func (m *File) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
 func (m *File) GetTypeAliases() []*TypeAlias {
 	if m != nil {
 		return m.TypeAliases
@@ -166,6 +180,13 @@ func (m *Expression) GetValue() isExpression_Value {
 		return m.Value
 	}
 	return nil
+}
+
+func (m *Expression) GetRef() int64 {
+	if m != nil {
+		return m.Ref
+	}
+	return 0
 }
 
 func (m *Expression) GetEmptyValue() int32 {
@@ -494,6 +515,13 @@ func (m *Expression_Bool) String() string            { return proto.CompactTextS
 func (*Expression_Bool) ProtoMessage()               {}
 func (*Expression_Bool) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1, 0} }
 
+func (m *Expression_Bool) GetValue() bool {
+	if m != nil {
+		return m.Value
+	}
+	return false
+}
+
 type Expression_Int struct {
 	Value int64 `protobuf:"varint,1,opt,name=value" json:"value,omitempty"`
 }
@@ -502,6 +530,13 @@ func (m *Expression_Int) Reset()                    { *m = Expression_Int{} }
 func (m *Expression_Int) String() string            { return proto.CompactTextString(m) }
 func (*Expression_Int) ProtoMessage()               {}
 func (*Expression_Int) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1, 1} }
+
+func (m *Expression_Int) GetValue() int64 {
+	if m != nil {
+		return m.Value
+	}
+	return 0
+}
 
 type Expression_Float struct {
 	Value float32 `protobuf:"fixed32,1,opt,name=value" json:"value,omitempty"`
@@ -512,6 +547,13 @@ func (m *Expression_Float) String() string            { return proto.CompactText
 func (*Expression_Float) ProtoMessage()               {}
 func (*Expression_Float) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1, 2} }
 
+func (m *Expression_Float) GetValue() float32 {
+	if m != nil {
+		return m.Value
+	}
+	return 0
+}
+
 type Expression_String struct {
 	Value string `protobuf:"bytes,1,opt,name=value" json:"value,omitempty"`
 }
@@ -520,6 +562,13 @@ func (m *Expression_String) Reset()                    { *m = Expression_String{
 func (m *Expression_String) String() string            { return proto.CompactTextString(m) }
 func (*Expression_String) ProtoMessage()               {}
 func (*Expression_String) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1, 3} }
+
+func (m *Expression_String) GetValue() string {
+	if m != nil {
+		return m.Value
+	}
+	return ""
+}
 
 type Expression_List struct {
 	Values []*Expression `protobuf:"bytes,1,rep,name=values" json:"values,omitempty"`
@@ -626,6 +675,13 @@ func (m *Expression_Ref) String() string            { return proto.CompactTextSt
 func (*Expression_Ref) ProtoMessage()               {}
 func (*Expression_Ref) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1, 8} }
 
+func (m *Expression_Ref) GetRef() int64 {
+	if m != nil {
+		return m.Ref
+	}
+	return 0
+}
+
 type Expression_ExternalRef struct {
 	Path string `protobuf:"bytes,1,opt,name=path" json:"path,omitempty"`
 	Name string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
@@ -635,6 +691,20 @@ func (m *Expression_ExternalRef) Reset()                    { *m = Expression_Ex
 func (m *Expression_ExternalRef) String() string            { return proto.CompactTextString(m) }
 func (*Expression_ExternalRef) ProtoMessage()               {}
 func (*Expression_ExternalRef) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1, 9} }
+
+func (m *Expression_ExternalRef) GetPath() string {
+	if m != nil {
+		return m.Path
+	}
+	return ""
+}
+
+func (m *Expression_ExternalRef) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
 
 type VariableDefinition struct {
 	Ref       int64       `protobuf:"varint,1,opt,name=ref" json:"ref,omitempty"`
@@ -647,6 +717,13 @@ func (m *VariableDefinition) Reset()                    { *m = VariableDefinitio
 func (m *VariableDefinition) String() string            { return proto.CompactTextString(m) }
 func (*VariableDefinition) ProtoMessage()               {}
 func (*VariableDefinition) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *VariableDefinition) GetRef() int64 {
+	if m != nil {
+		return m.Ref
+	}
+	return 0
+}
 
 func (m *VariableDefinition) GetLabel() *Label {
 	if m != nil {
@@ -679,6 +756,13 @@ func (m *TypeAlias) Reset()                    { *m = TypeAlias{} }
 func (m *TypeAlias) String() string            { return proto.CompactTextString(m) }
 func (*TypeAlias) ProtoMessage()               {}
 func (*TypeAlias) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *TypeAlias) GetRef() int64 {
+	if m != nil {
+		return m.Ref
+	}
+	return 0
+}
 
 func (m *TypeAlias) GetLabel() *Label {
 	if m != nil {
@@ -731,6 +815,13 @@ func (m *Type) GetTvalue() isType_Tvalue {
 		return m.Tvalue
 	}
 	return nil
+}
+
+func (m *Type) GetRef() int64 {
+	if m != nil {
+		return m.Ref
+	}
+	return 0
 }
 
 func (m *Type) GetPrimitive() Type_PrimitiveType {
@@ -851,6 +942,13 @@ func (m *Type_RefType) String() string            { return proto.CompactTextStri
 func (*Type_RefType) ProtoMessage()               {}
 func (*Type_RefType) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4, 0} }
 
+func (m *Type_RefType) GetRef() int64 {
+	if m != nil {
+		return m.Ref
+	}
+	return 0
+}
+
 type Type_OpaqueType struct {
 	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 }
@@ -859,6 +957,13 @@ func (m *Type_OpaqueType) Reset()                    { *m = Type_OpaqueType{} }
 func (m *Type_OpaqueType) String() string            { return proto.CompactTextString(m) }
 func (*Type_OpaqueType) ProtoMessage()               {}
 func (*Type_OpaqueType) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4, 1} }
+
+func (m *Type_OpaqueType) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
 
 type Type_CompoundType struct {
 	X *Type `protobuf:"bytes,1,opt,name=x" json:"x,omitempty"`
@@ -893,6 +998,13 @@ func (m *TypeConstructor) Reset()                    { *m = TypeConstructor{} }
 func (m *TypeConstructor) String() string            { return proto.CompactTextString(m) }
 func (*TypeConstructor) ProtoMessage()               {}
 func (*TypeConstructor) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+func (m *TypeConstructor) GetRef() int64 {
+	if m != nil {
+		return m.Ref
+	}
+	return 0
+}
 
 func (m *TypeConstructor) GetLabel() *Label {
 	if m != nil {
@@ -938,6 +1050,13 @@ func (m *Pattern) GetPvalue() isPattern_Pvalue {
 		return m.Pvalue
 	}
 	return nil
+}
+
+func (m *Pattern) GetRef() int64 {
+	if m != nil {
+		return m.Ref
+	}
+	return 0
 }
 
 func (m *Pattern) GetTypeConstructorValue() *TypeConstructor {
@@ -1062,6 +1181,13 @@ func (m *Label) Reset()                    { *m = Label{} }
 func (m *Label) String() string            { return proto.CompactTextString(m) }
 func (*Label) ProtoMessage()               {}
 func (*Label) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+
+func (m *Label) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
 
 func init() {
 	proto.RegisterType((*File)(nil), "File")
