@@ -19,7 +19,7 @@ func main() {
 	r.HandleFunc("/", RootHandler)
 	r.HandleFunc("/LoadFile", GetFile)
 	r.HandleFunc("/SaveFile", UpdateFile)
-	http.ListenAndServe(":8080", r)
+	panic(http.ListenAndServe(":8080", r))
 }
 
 func RootHandler(w http.ResponseWriter, r *http.Request) {
