@@ -1,7 +1,9 @@
 module Actions exposing (..)
 
+import GetNode exposing (..)
 import Html exposing (..)
 import Html.Events exposing (..)
+import List.Extra
 import String
 import Proto.Ast as Ast
 import Defaults exposing (..)
@@ -22,18 +24,81 @@ nodeActions model node ctx =
                 Pat pat ->
                     patternActions model pat
 
+        parent =
+            Debug.log "parent" <|
+                case List.head <| List.drop 1 <| model.refPath of
+                    Just p ->
+                        case getNode model p of
+                            Just p ->
+                                Just p
+
+                            Nothing ->
+                                Nothing
+
+                    Nothing ->
+                        Nothing
+
+        children =
+            Debug.log "children" <| nodeChildren node
+
+        siblings =
+            Debug.log "siblings" <|
+                case parent of
+                    Just p ->
+                        nodeChildren p
+
+                    Nothing ->
+                        []
+
+        nodeIndex =
+            Debug.log "index"
+                (siblings
+                    |> List.Extra.findIndex (\n -> (getNodeRef n) == (getNodeRef node))
+                )
+
         b =
             [ { label = "↑"
-              , msg = SetRefPath <| List.drop 1 model.refPath
+              , msg =
+                    -- Remove the head of the refPath, which is the current node.
+                    SetRefPath <| List.drop 1 model.refPath
               }
             , { label = "↓"
-              , msg = Nop
+              , msg =
+                    -- Move the first child, if any.
+                    case List.head children of
+                        Just c ->
+                            SetRefPath <| (getNodeRef c) :: model.refPath
+
+                        Nothing ->
+                            Nop
               }
             , { label = "←"
-              , msg = Nop
+              , msg =
+                    case nodeIndex of
+                        Just i ->
+                            case (List.Extra.getAt (i - 1) siblings) of
+                                Just c ->
+                                    SetRefPath <| (getNodeRef c) :: (List.drop 1 model.refPath)
+
+                                Nothing ->
+                                    Nop
+
+                        Nothing ->
+                            Nop
               }
             , { label = "→"
-              , msg = Nop
+              , msg =
+                    case nodeIndex of
+                        Just i ->
+                            case (List.Extra.getAt (i + 1) siblings) of
+                                Just c ->
+                                    SetRefPath <| (getNodeRef c) :: (List.drop 1 model.refPath)
+
+                                Nothing ->
+                                    Nop
+
+                        Nothing ->
+                            Nop
               }
             , { label = "Create function"
               , msg = CreateFunction

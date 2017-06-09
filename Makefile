@@ -13,7 +13,7 @@ all: $(INDEX) $(SERVER)
 client: $(INDEX)
 
 $(INDEX): $(CLIENT_DIR)/*
-	elm make $(CLIENT_DIR)/main.elm --output $(INDEX)
+	elm make $(CLIENT_DIR)/main.elm --debug --output $(INDEX)
 
 server: $(SERVER)
 

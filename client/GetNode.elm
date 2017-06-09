@@ -58,6 +58,19 @@ getNodeName node =
                     ""
 
 
+getNodeRef : Node -> ExprRef
+getNodeRef node =
+    case node of
+        Expr expr ->
+            expr.ref
+
+        VarDef varDef ->
+            varDef.ref
+
+        Pat pat ->
+            pat.ref
+
+
 getNodeVariableDefinition : ExprRef -> Ast.VariableDefinition -> Maybe Node
 getNodeVariableDefinition ref def =
     if def.ref == ref then
@@ -105,6 +118,35 @@ getNodePattern ref pat =
         Just (Pat pat)
     else
         Nothing
+
+
+nodeChildren : Node -> List Node
+nodeChildren node =
+    case node of
+        Expr expr ->
+            case expr.value of
+                Ast.ListValue v ->
+                    List.map Expr v.values
+
+                Ast.IfValue v ->
+                    List.map Expr <|
+                        List.filterMap identity
+                            [ v.cond, v.true, v.false ]
+
+                Ast.LambdaValue v ->
+                    List.filterMap identity
+                        [ Maybe.map Pat v.argument, Maybe.map Expr v.body ]
+
+                Ast.ApplicationValue v ->
+                    List.map Expr <|
+                        List.filterMap identity
+                            [ v.left, v.right ]
+
+                _ ->
+                    []
+
+        _ ->
+            []
 
 
 

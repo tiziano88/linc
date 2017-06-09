@@ -365,7 +365,7 @@ htmlExpr model node ctx ancestors expr =
 
                 Ast.ListValue ls ->
                     [ Html.text "[" ]
-                        ++ (List.map (htmlExpr model node newCtx ancestors) ls.values |> List.intersperse (Html.text ","))
+                        ++ (List.map (htmlExpr model node newCtx newAncestors) ls.values |> List.intersperse (Html.text ","))
                         ++ [ Html.text "]" ]
 
                 Ast.IfValue v ->
