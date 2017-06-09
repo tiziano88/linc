@@ -285,24 +285,40 @@ view model =
                 Just n ->
                     nodeActions model n context
     in
-        Html.div [] <|
-            [ Html.input
-                [ onInput Input
-                , value model.input
+        -- Container.
+        Html.div
+            [ style
+                [ "display" => "flex"
                 ]
-                []
             ]
-                ++ (List.map actionToButton actions)
-                ++ [ Html.div [] [ Html.text <| toString model ]
-                   , Html.button
-                        [ onClick LoadFile ]
-                        [ Html.text "Load" ]
-                   , Html.button
-                        [ onClick SaveFile ]
-                        [ Html.text "Save" ]
-                   , Html.pre [] [ (htmlFile model node model.file) ]
-                   , Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
-                   ]
+            [ -- Toolbar
+              Html.div [] <|
+                [ Html.input
+                    [ onInput Input
+                    , value model.input
+                    ]
+                    []
+                , Html.button
+                    [ onClick LoadFile ]
+                    [ Html.text "Load" ]
+                , Html.button
+                    [ onClick SaveFile ]
+                    [ Html.text "Save" ]
+                , Html.div
+                    [ style
+                        [ "display" => "flex"
+                        , "flex-flow" => "column nowrap"
+                        ]
+                    ]
+                    (List.map actionToButton actions)
+                ]
+            , -- Main content.
+              Html.pre []
+                [ (htmlFile model node model.file)
+                  -- JSON render.
+                , Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
+                ]
+            ]
 
 
 actionToButton : Action -> Html Msg
@@ -311,7 +327,7 @@ actionToButton action =
         [ onClick action.msg
         , style <|
             nodeStyle
-                ++ [ "width" => "10em"
+                ++ [ "width" => "12em"
                    , "text-align" => "center"
                    ]
         ]
@@ -462,7 +478,7 @@ isRefTarget node ref =
 
 
 nodeStyle =
-    [ "border" => "solid"
+    [ "border" => "solid 1px"
     , "margin" => "2px"
     , "padding" => "2px"
     , "display" => "inline-block"

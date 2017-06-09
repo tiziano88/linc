@@ -262,10 +262,30 @@ expressionActions model ctx expr =
     , { label = "⌧"
       , msg = DeleteNode
       }
-    , { label = "\"" ++ model.input ++ "\" (String) "
+    , { label = "\"" ++ model.input ++ "\" (String)"
       , msg = SetNode 0 <| Expr { expr | value = Ast.StringValue { value = model.input } }
       }
     ]
+        ++ (case String.toInt model.input of
+                Ok v ->
+                    [ { label = (toString v) ++ " (Int)"
+                      , msg = SetNode 0 <| Expr { expr | value = Ast.IntValue { value = v } }
+                      }
+                    ]
+
+                Err _ ->
+                    []
+           )
+        ++ (case String.toFloat model.input of
+                Ok v ->
+                    [ { label = (toString v) ++ " (Float)"
+                      , msg = SetNode 0 <| Expr { expr | value = Ast.FloatValue { value = v } }
+                      }
+                    ]
+
+                Err _ ->
+                    []
+           )
         ++ (case expr.value of
                 Ast.IntValue v ->
                     [ { label = "-1"
