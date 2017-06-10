@@ -28,8 +28,8 @@ main =
         , update = update
         , subscriptions =
             always <|
-                Keyboard.downs
-                    (\k ->
+                Keyboard.downs <|
+                    \k ->
                         case Debug.log "k" k of
                             37 ->
                                 MoveLeft
@@ -45,7 +45,6 @@ main =
 
                             _ ->
                                 Nop
-                    )
         }
 
 
@@ -142,36 +141,16 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     let
         currentNode =
-            Debug.log "previous node" <| getCurrentNode model
+            getCurrentNode model
 
         parentNode =
-            case List.head <| List.drop 1 <| model.refPath of
-                Just p ->
-                    case getNode model p of
-                        Just p ->
-                            Just p
-
-                        Nothing ->
-                            Nothing
-
-                Nothing ->
-                    Nothing
+            Maybe.andThen (getNode model) <| List.head <| List.drop 1 <| model.refPath
 
         childNodes =
-            case currentNode of
-                Just n ->
-                    nodeChildren n
-
-                Nothing ->
-                    []
+            Maybe.withDefault [] <| Maybe.map nodeChildren currentNode
 
         siblingNodes =
-            case parentNode of
-                Just n ->
-                    nodeChildren n
-
-                Nothing ->
-                    []
+            Maybe.withDefault [] <| Maybe.map nodeChildren parentNode
 
         nodeIndex =
             case currentNode of
@@ -183,9 +162,9 @@ update action model =
                     Nothing
 
         currentContext =
-            Debug.log "previous context" <| getCurrentContext model
+            getCurrentContext model
     in
-        case Debug.log "action" action of
+        case action of
             Nop ->
                 noEffects model
 
