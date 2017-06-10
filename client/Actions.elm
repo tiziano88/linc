@@ -13,46 +13,7 @@ import Types exposing (..)
 nodeActions : Model -> Node -> Context -> List Action
 nodeActions model node ctx =
     let
-        a =
-            case node of
-                Expr expr ->
-                    expressionActions model ctx expr
-
-                VarDef vdef ->
-                    variableDefinitionActions model vdef
-
-                Pat pat ->
-                    patternActions model pat
-
-        parent =
-            case List.head <| List.drop 1 <| model.refPath of
-                Just p ->
-                    case getNode model p of
-                        Just p ->
-                            Just p
-
-                        Nothing ->
-                            Nothing
-
-                Nothing ->
-                    Nothing
-
-        children =
-            nodeChildren node
-
-        siblings =
-            case parent of
-                Just p ->
-                    nodeChildren p
-
-                Nothing ->
-                    []
-
-        nodeIndex =
-            siblings
-                |> List.Extra.findIndex (\n -> (getNodeRef n) == (getNodeRef node))
-
-        movement =
+        movementActions =
             [ { label = "↑"
               , msg = MoveOut
               }
@@ -69,8 +30,19 @@ nodeActions model node ctx =
               , msg = CreateFunction
               }
             ]
+
+        nodeActions =
+            case node of
+                Expr expr ->
+                    expressionActions model ctx expr
+
+                VarDef vdef ->
+                    variableDefinitionActions model vdef
+
+                Pat pat ->
+                    patternActions model pat
     in
-        movement ++ a
+        movementActions ++ nodeActions
 
 
 expressionActions : Model -> Context -> Ast.Expression -> List Action
