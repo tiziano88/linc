@@ -402,11 +402,13 @@ view model =
                     (List.map actionToButton actions)
                 ]
             , -- Main content.
-              Html.pre []
-                [ (htmlFile model node model.file)
-                  -- JSON render.
-                , Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
+              Html.pre
+                [ style globalStyle
                 ]
+                [ (htmlFile model node model.file)
+                ]
+            , -- JSON render.
+              Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
             ]
 
 
@@ -566,12 +568,16 @@ isRefTarget node ref =
             False
 
 
+globalStyle =
+    [ "font-family" => "Iosevka Term Slab, monospace"
+    ]
+
+
 nodeStyle =
     [ "border" => "solid 1px"
     , "margin" => "2px"
     , "padding" => "2px"
     , "display" => "inline-block"
-    , "font-family" => "monospace"
     , "cursor" => "default"
     ]
 

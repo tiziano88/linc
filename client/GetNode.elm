@@ -145,7 +145,11 @@ nodeChildren node =
                 _ ->
                     []
 
-        _ ->
+        VarDef varDef ->
+            (List.map Pat varDef.arguments)
+                ++ (Maybe.withDefault [] <| Maybe.map (List.singleton << Expr) varDef.value)
+
+        Pat pat ->
             []
 
 
