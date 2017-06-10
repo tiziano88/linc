@@ -6,12 +6,7 @@ import Types exposing (..)
 
 getCurrentNode : Model -> Maybe Node
 getCurrentNode model =
-    case model.refPath of
-        [] ->
-            Nothing
-
-        ref :: _ ->
-            getNode model ref
+    Maybe.andThen (getNode model) <| List.head model.refPath
 
 
 getNode : Model -> ExprRef -> Maybe Node
@@ -42,12 +37,7 @@ getNodeName node =
                     ""
 
         VarDef varDef ->
-            case varDef.label of
-                Just l ->
-                    l.name
-
-                Nothing ->
-                    ""
+            Maybe.withDefault "" <| Maybe.map (.name) varDef.label
 
         Pat pat ->
             case pat.pvalue of
