@@ -6,6 +6,8 @@ import Html.Events exposing (..)
 import Http
 import Json.Decode
 import Json.Encode
+import Keyboard
+import List.Extra
 import Proto.Ast as Ast
 import Proto.Server as Server
 import Actions exposing (..)
@@ -24,7 +26,26 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions =
+            always <|
+                Keyboard.downs
+                    (\k ->
+                        case Debug.log "k" k of
+                            37 ->
+                                MoveLeft
+
+                            38 ->
+                                MoveOut
+
+                            39 ->
+                                MoveRight
+
+                            40 ->
+                                MoveIn
+
+                            _ ->
+                                Nop
+                    )
         }
 
 
@@ -122,6 +143,44 @@ update action model =
     let
         currentNode =
             Debug.log "previous node" <| getCurrentNode model
+
+        parentNode =
+            case List.head <| List.drop 1 <| model.refPath of
+                Just p ->
+                    case getNode model p of
+                        Just p ->
+                            Just p
+
+                        Nothing ->
+                            Nothing
+
+                Nothing ->
+                    Nothing
+
+        childNodes =
+            case currentNode of
+                Just n ->
+                    nodeChildren n
+
+                Nothing ->
+                    []
+
+        siblingNodes =
+            case parentNode of
+                Just n ->
+                    nodeChildren n
+
+                Nothing ->
+                    []
+
+        nodeIndex =
+            case currentNode of
+                Just n ->
+                    siblingNodes
+                        |> List.Extra.findIndex (\i -> (getNodeRef i) == (getNodeRef n))
+
+                Nothing ->
+                    Nothing
 
         currentContext =
             Debug.log "previous context" <| getCurrentContext model
@@ -264,6 +323,57 @@ update action model =
                             (Json.Decode.string)
                         )
                     )
+
+            MoveIn ->
+                let
+                    refPath =
+                        -- Move the first child, if any.
+                        case List.head childNodes of
+                            Just c ->
+                                (getNodeRef c) :: model.refPath
+
+                            Nothing ->
+                                model.refPath
+                in
+                    noEffects { model | refPath = refPath }
+
+            MoveOut ->
+                -- Remove the head of the refPath, which is the current node.
+                noEffects { model | refPath = List.drop 1 model.refPath }
+
+            MoveLeft ->
+                let
+                    refPath =
+                        case nodeIndex of
+                            Just i ->
+                                case (List.Extra.getAt (i - 1) siblingNodes) of
+                                    Just c ->
+                                        (getNodeRef c) :: (List.drop 1 model.refPath)
+
+                                    Nothing ->
+                                        model.refPath
+
+                            Nothing ->
+                                model.refPath
+                in
+                    noEffects { model | refPath = refPath }
+
+            MoveRight ->
+                let
+                    refPath =
+                        case nodeIndex of
+                            Just i ->
+                                case (List.Extra.getAt (i + 1) siblingNodes) of
+                                    Just c ->
+                                        (getNodeRef c) :: (List.drop 1 model.refPath)
+
+                                    Nothing ->
+                                        model.refPath
+
+                            Nothing ->
+                                model.refPath
+                in
+                    noEffects { model | refPath = refPath }
 
 
 view model =

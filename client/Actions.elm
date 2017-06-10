@@ -25,87 +25,52 @@ nodeActions model node ctx =
                     patternActions model pat
 
         parent =
-            Debug.log "parent" <|
-                case List.head <| List.drop 1 <| model.refPath of
-                    Just p ->
-                        case getNode model p of
-                            Just p ->
-                                Just p
+            case List.head <| List.drop 1 <| model.refPath of
+                Just p ->
+                    case getNode model p of
+                        Just p ->
+                            Just p
 
-                            Nothing ->
-                                Nothing
+                        Nothing ->
+                            Nothing
 
-                    Nothing ->
-                        Nothing
+                Nothing ->
+                    Nothing
 
         children =
-            Debug.log "children" <| nodeChildren node
+            nodeChildren node
 
         siblings =
-            Debug.log "siblings" <|
-                case parent of
-                    Just p ->
-                        nodeChildren p
+            case parent of
+                Just p ->
+                    nodeChildren p
 
-                    Nothing ->
-                        []
+                Nothing ->
+                    []
 
         nodeIndex =
-            Debug.log "index"
-                (siblings
-                    |> List.Extra.findIndex (\n -> (getNodeRef n) == (getNodeRef node))
-                )
+            siblings
+                |> List.Extra.findIndex (\n -> (getNodeRef n) == (getNodeRef node))
 
-        b =
+        movement =
             [ { label = "↑"
-              , msg =
-                    -- Remove the head of the refPath, which is the current node.
-                    SetRefPath <| List.drop 1 model.refPath
+              , msg = MoveOut
               }
             , { label = "↓"
-              , msg =
-                    -- Move the first child, if any.
-                    case List.head children of
-                        Just c ->
-                            SetRefPath <| (getNodeRef c) :: model.refPath
-
-                        Nothing ->
-                            Nop
+              , msg = MoveIn
               }
             , { label = "←"
-              , msg =
-                    case nodeIndex of
-                        Just i ->
-                            case (List.Extra.getAt (i - 1) siblings) of
-                                Just c ->
-                                    SetRefPath <| (getNodeRef c) :: (List.drop 1 model.refPath)
-
-                                Nothing ->
-                                    Nop
-
-                        Nothing ->
-                            Nop
+              , msg = MoveLeft
               }
             , { label = "→"
-              , msg =
-                    case nodeIndex of
-                        Just i ->
-                            case (List.Extra.getAt (i + 1) siblings) of
-                                Just c ->
-                                    SetRefPath <| (getNodeRef c) :: (List.drop 1 model.refPath)
-
-                                Nothing ->
-                                    Nop
-
-                        Nothing ->
-                            Nop
+              , msg = MoveRight
               }
             , { label = "Create function"
               , msg = CreateFunction
               }
             ]
     in
-        a ++ b
+        movement ++ a
 
 
 expressionActions : Model -> Context -> Ast.Expression -> List Action

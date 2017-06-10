@@ -16,6 +16,10 @@ type Msg
     | LoadFile
     | LoadFileSuccess Server.GetFileResponse
     | SaveFile
+    | MoveIn
+    | MoveOut
+    | MoveLeft
+    | MoveRight
 
 
 type alias ExprRef =
