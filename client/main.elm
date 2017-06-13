@@ -73,6 +73,7 @@ testModel =
               , label =
                     Just
                         { name = "fib"
+                        , colour = "black"
                         }
               , value =
                     Just
@@ -97,7 +98,11 @@ testModel =
                         }
               , arguments =
                     [ { ref = 123
-                      , pvalue = Ast.LabelValue { name = "n" }
+                      , pvalue =
+                            Ast.LabelValue
+                                { name = "n"
+                                , colour = "black"
+                                }
                       }
                     ]
               }
@@ -105,6 +110,7 @@ testModel =
               , label =
                     Just
                         { name = "foo"
+                        , colour = "black"
                         }
               , value =
                     Just
@@ -114,7 +120,11 @@ testModel =
                                 { argument =
                                     Just
                                         { ref = 24
-                                        , pvalue = Ast.LabelValue { name = "iii" }
+                                        , pvalue =
+                                            Ast.LabelValue
+                                                { name = "iii"
+                                                , colour = "black"
+                                                }
                                         }
                                 , body =
                                     Just
@@ -220,7 +230,7 @@ update action model =
                         noEffects model
 
                     Just ref ->
-                        case Debug.log "current node" (getCurrentNode model) of
+                        case getCurrentNode model of
                             Nothing ->
                                 noEffects model
 
@@ -354,6 +364,61 @@ update action model =
                 in
                     noEffects { model | refPath = refPath }
 
+            SetColour c ->
+                case List.head model.refPath of
+                    Nothing ->
+                        noEffects model
+
+                    Just ref ->
+                        case getCurrentNode model of
+                            Nothing ->
+                                noEffects model
+
+                            Just node ->
+                                noEffects <|
+                                    let
+                                        fi =
+                                            model.file
+
+                                        newNode =
+                                            case node of
+                                                Expr expr ->
+                                                    let
+                                                        v =
+                                                            case expr.value of
+                                                                Ast.RefValue v ->
+                                                                    Ast.RefValue v
+
+                                                                _ ->
+                                                                    expr.value
+                                                    in
+                                                        Expr { expr | value = v }
+
+                                                VarDef v ->
+                                                    let
+                                                        l =
+                                                            case v.label of
+                                                                Just l ->
+                                                                    Just { l | colour = c }
+
+                                                                Nothing ->
+                                                                    Nothing
+                                                    in
+                                                        VarDef { v | label = l }
+
+                                                _ ->
+                                                    node
+                                    in
+                                        { model
+                                            | file =
+                                                { fi
+                                                    | variableDefinitions =
+                                                        List.map
+                                                            (setNodeVariableDefinition ref newNode)
+                                                            fi.variableDefinitions
+                                                }
+                                        }
+
 
 view model =
     let
@@ -400,6 +465,18 @@ view model =
                         ]
                     ]
                     (List.map actionToButton actions)
+                , Html.div
+                    [ style
+                        [ "display" => "flex"
+                        , "flex-flow" => "column nowrap"
+                        ]
+                    ]
+                    [ Html.input
+                        [ type_ "color"
+                        , onInput SetColour
+                        ]
+                        []
+                    ]
                 ]
             , -- Main content.
               Html.pre
@@ -763,6 +840,7 @@ htmlVariableDefinition model node ctx ancestors def =
             [ style <|
                 [ "border" => "solid"
                 , "margin" => "5px"
+                , "color" => (Maybe.withDefault "" <| Maybe.map (.colour) def.label)
                 ]
                     ++ (if Just def.ref == List.head model.refPath then
                             selectedStyle

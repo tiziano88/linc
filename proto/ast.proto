@@ -132,5 +132,7 @@ message Pattern {
 message Label {
   string name = 1;
 
+  string colour = 2;
+
   // TODO: Add styles etc.
 }

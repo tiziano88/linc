@@ -13,7 +13,7 @@ defaultExpr =
 defaultVariableDefinition : Ast.VariableDefinition
 defaultVariableDefinition =
     { ref = -1
-    , label = Just { name = "◆" }
+    , label = Just { name = "◆", colour = "white" }
     , value = Nothing
     , arguments = []
     }
@@ -22,5 +22,5 @@ defaultVariableDefinition =
 defaultPattern : Ast.Pattern
 defaultPattern =
     { ref = -1
-    , pvalue = Ast.LabelValue { name = "◆" }
+    , pvalue = Ast.LabelValue { name = "◆", colour = "white" }
     }

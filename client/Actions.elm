@@ -288,7 +288,7 @@ refActions expr node =
 variableDefinitionActions : Model -> Ast.VariableDefinition -> List Action
 variableDefinitionActions model def =
     [ { label = "set name"
-      , msg = SetNode 0 <| VarDef { def | label = Just { name = model.input } }
+      , msg = SetNode 0 <| VarDef { def | label = Just { name = model.input, colour = "black" } }
       }
     , { label = "arg"
       , msg =
@@ -298,7 +298,7 @@ variableDefinitionActions model def =
                         | arguments =
                             def.arguments
                                 ++ [ { ref = model.file.nextRef
-                                     , pvalue = Ast.LabelValue { name = "xyz" }
+                                     , pvalue = Ast.LabelValue { name = "xyz", colour = "black" }
                                      }
                                    ]
                     }

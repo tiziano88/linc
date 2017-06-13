@@ -20,6 +20,7 @@ type Msg
     | MoveOut
     | MoveLeft
     | MoveRight
+    | SetColour String
 
 
 type alias ExprRef =
