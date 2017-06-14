@@ -8,6 +8,29 @@ import Proto.Ast as Ast
 import Types exposing (..)
 
 
+firstWhere : (a -> Bool) -> Optional (List a) a
+firstWhere f =
+    Optional (firstWhere_ f) (\v l -> modifyFirstWhere f (always v) l)
+
+
+firstWhere_ : (a -> Bool) -> List a -> Maybe a
+firstWhere_ f =
+    List.filter f >> List.head
+
+
+modifyFirstWhere : (a -> Bool) -> (a -> a) -> List a -> List a
+modifyFirstWhere f m l =
+    case l of
+        [] ->
+            []
+
+        x :: xs ->
+            if f x then
+                (m x) :: xs
+            else
+                x :: (modifyFirstWhere f m xs)
+
+
 fileOfModel : Lens Model Ast.File
 fileOfModel =
     Lens .file (\f m -> { m | file = f })
