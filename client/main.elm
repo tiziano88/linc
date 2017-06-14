@@ -7,6 +7,7 @@ import Http
 import Json.Decode
 import Json.Encode
 import Keyboard
+import Lens exposing (..)
 import List.Extra
 import Proto.Ast as Ast
 import Proto.Server as Server

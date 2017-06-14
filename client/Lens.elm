@@ -1,0 +1,36 @@
+module Lens exposing (..)
+
+import Monocle.Lens exposing (..)
+import Monocle.Optional exposing (..)
+import Monocle.Prism exposing (..)
+import Proto.Ast as Ast
+import Types exposing (..)
+
+
+colourOfLabel : Lens Ast.Label String
+colourOfLabel =
+    Lens (.colour) (\c l -> { l | colour = c })
+
+
+nameOfLabel : Lens Ast.Label String
+nameOfLabel =
+    Lens (.name) (\c l -> { l | name = c })
+
+
+labelOfVariableDefinition : Optional Ast.VariableDefinition Ast.Label
+labelOfVariableDefinition =
+    Optional (.label) (\l v -> { v | label = Just l })
+
+
+variableDefinitionOfNode : Prism Node Ast.VariableDefinition
+variableDefinitionOfNode =
+    Prism
+        (\n ->
+            case n of
+                VarDef v ->
+                    Just v
+
+                _ ->
+                    Nothing
+        )
+        VarDef
