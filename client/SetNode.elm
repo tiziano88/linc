@@ -34,14 +34,16 @@ setNodeExpression ref node expr =
                 case expr.value of
                     Ast.IfValue v1 ->
                         Ast.IfValue
-                            { cond = Maybe.map (setNodeExpression ref node) v1.cond
-                            , true = Maybe.map (setNodeExpression ref node) v1.true
-                            , false = Maybe.map (setNodeExpression ref node) v1.false
+                            { v1
+                                | cond = Maybe.map (setNodeExpression ref node) v1.cond
+                                , true = Maybe.map (setNodeExpression ref node) v1.true
+                                , false = Maybe.map (setNodeExpression ref node) v1.false
                             }
 
                     Ast.ListValue v1 ->
                         Ast.ListValue
-                            { values = (List.map (setNodeExpression ref node) v1.values)
+                            { v1
+                                | values = List.map (setNodeExpression ref node) v1.values
                             }
 
                     Ast.LambdaValue v1 ->

@@ -36,6 +36,25 @@ fileOfModel =
     Lens .file (\f m -> { m | file = f })
 
 
+expressionOfNode : Prism Node Ast.Expression
+expressionOfNode =
+    Prism
+        (\n ->
+            case n of
+                Expr v ->
+                    Just v
+
+                _ ->
+                    Nothing
+        )
+        Expr
+
+
+valueOfExpression : Lens Ast.Expression Ast.Value
+valueOfExpression =
+    Lens .value (\v e -> { e | value = v })
+
+
 variableDefinitionsOfFile : Lens Ast.File (List Ast.VariableDefinition)
 variableDefinitionsOfFile =
     Lens .variableDefinitions (\v f -> { f | variableDefinitions = v })
