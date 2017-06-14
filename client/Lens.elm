@@ -1,5 +1,6 @@
 module Lens exposing (..)
 
+import Monocle.Common exposing ((=>))
 import Monocle.Lens exposing (..)
 import Monocle.Optional exposing (..)
 import Monocle.Prism exposing (..)
@@ -34,3 +35,8 @@ variableDefinitionOfNode =
                     Nothing
         )
         VarDef
+
+
+colourOfNode : Optional Node String
+colourOfNode =
+    (fromPrism variableDefinitionOfNode) => labelOfVariableDefinition => (fromLens colourOfLabel)
