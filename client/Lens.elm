@@ -8,19 +8,34 @@ import Proto.Ast as Ast
 import Types exposing (..)
 
 
+fileOfModel : Lens Model Ast.File
+fileOfModel =
+    Lens .file (\f m -> { m | file = f })
+
+
+variableDefinitionsOfFile : Lens Ast.File (List Ast.VariableDefinition)
+variableDefinitionsOfFile =
+    Lens .variableDefinitions (\v f -> { f | variableDefinitions = v })
+
+
+variableDefinitionsOfModel : Lens Model (List Ast.VariableDefinition)
+variableDefinitionsOfModel =
+    Monocle.Lens.compose fileOfModel variableDefinitionsOfFile
+
+
 colourOfLabel : Lens Ast.Label String
 colourOfLabel =
-    Lens (.colour) (\c l -> { l | colour = c })
+    Lens .colour (\c l -> { l | colour = c })
 
 
 nameOfLabel : Lens Ast.Label String
 nameOfLabel =
-    Lens (.name) (\c l -> { l | name = c })
+    Lens .name (\c l -> { l | name = c })
 
 
 labelOfVariableDefinition : Optional Ast.VariableDefinition Ast.Label
 labelOfVariableDefinition =
-    Optional (.label) (\l v -> { v | label = Just l })
+    Optional .label (\l v -> { v | label = Just l })
 
 
 variableDefinitionOfNode : Prism Node Ast.VariableDefinition

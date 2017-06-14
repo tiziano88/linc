@@ -9,6 +9,7 @@ import Json.Encode
 import Keyboard
 import Lens exposing (..)
 import List.Extra
+import Monocle.Lens
 import Proto.Ast as Ast
 import Proto.Server as Server
 import Actions exposing (..)
@@ -378,47 +379,11 @@ update action model =
                             Just node ->
                                 noEffects <|
                                     let
-                                        fi =
-                                            model.file
-
                                         newNode =
-                                            case node of
-                                                Expr expr ->
-                                                    let
-                                                        v =
-                                                            case expr.value of
-                                                                Ast.RefValue v ->
-                                                                    Ast.RefValue v
-
-                                                                _ ->
-                                                                    expr.value
-                                                    in
-                                                        Expr { expr | value = v }
-
-                                                VarDef v ->
-                                                    let
-                                                        l =
-                                                            case v.label of
-                                                                Just l ->
-                                                                    Just { l | colour = c }
-
-                                                                Nothing ->
-                                                                    Nothing
-                                                    in
-                                                        VarDef { v | label = l }
-
-                                                _ ->
-                                                    node
+                                            node |> colourOfNode.set c
                                     in
-                                        { model
-                                            | file =
-                                                { fi
-                                                    | variableDefinitions =
-                                                        List.map
-                                                            (setNodeVariableDefinition ref newNode)
-                                                            fi.variableDefinitions
-                                                }
-                                        }
+                                        model
+                                            |> Monocle.Lens.modify Lens.variableDefinitionsOfModel (List.map (setNodeVariableDefinition ref newNode))
 
 
 view model =
