@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/gorilla/mux"
-	p "github.com/tiziano88/linc/server/proto"
+	p "./proto"
 )
 
 var (

@@ -1,9 +1,9 @@
-module Print exposing (..)
+module Print exposing (printArg, printExpr, printFile, printFunction, printFunctionBody, printFunctionSignature, printLabel, printType)
 
 import Array
 import Dict
-import String
 import Proto.Ast as Ast
+import String
 import Types exposing (..)
 
 

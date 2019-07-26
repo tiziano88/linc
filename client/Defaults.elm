@@ -1,4 +1,4 @@
-module Defaults exposing (..)
+module Defaults exposing (defaultExpr, defaultPattern, defaultVariableDefinition)
 
 import Proto.Ast as Ast
 

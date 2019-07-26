@@ -1,4 +1,4 @@
-module SetNode exposing (..)
+module SetNode exposing (deleteNodeExpression, deleteNodeVariableDefinition, setNodeExpression, setNodePattern, setNodeVariableDefinition)
 
 import Proto.Ast as Ast
 import Types exposing (..)
@@ -13,6 +13,7 @@ setNodeVariableDefinition ref node def =
 
             _ ->
                 def
+
     else
         { def
             | value = Maybe.map (setNodeExpression ref node) def.value
@@ -28,6 +29,7 @@ setNodeExpression ref node expr =
 
             _ ->
                 expr
+
     else
         let
             newValue =
@@ -63,9 +65,9 @@ setNodeExpression ref node expr =
                     _ ->
                         expr.value
         in
-            { expr
-                | value = newValue
-            }
+        { expr
+            | value = newValue
+        }
 
 
 setNodePattern : ExprRef -> Node -> Ast.Pattern -> Ast.Pattern
@@ -77,6 +79,7 @@ setNodePattern ref node pat =
 
             _ ->
                 pat
+
     else
         pat
 
@@ -125,6 +128,6 @@ deleteNodeExpression ref expr =
                 _ ->
                     expr.value
     in
-        { expr
-            | value = newValue
-        }
+    { expr
+        | value = newValue
+    }

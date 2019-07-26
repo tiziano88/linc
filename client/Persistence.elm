@@ -1,4 +1,4 @@
-module Persistence exposing (..)
+module Persistence exposing (save)
 
 import Proto.Server as Server
 

@@ -1,6 +1,7 @@
-module Lens exposing (..)
+module Lens exposing (colourOfLabel, colourOfNode, expressionOfNode, fileOfModel, firstWhere, firstWhere_, labelOfVariableDefinition, modifyFirstWhere, nameOfLabel, valueOfExpression, variableDefinitionOfNode, variableDefinitionsOfFile, variableDefinitionsOfModel)
 
-import Monocle.Common exposing ((=>))
+import Monocle.Common exposing (..)
+import Monocle.Compose exposing (..)
 import Monocle.Lens exposing (..)
 import Monocle.Optional exposing (..)
 import Monocle.Prism exposing (..)
@@ -26,9 +27,10 @@ modifyFirstWhere f m l =
 
         x :: xs ->
             if f x then
-                (m x) :: xs
+                m x :: xs
+
             else
-                x :: (modifyFirstWhere f m xs)
+                x :: modifyFirstWhere f m xs
 
 
 fileOfModel : Lens Model Ast.File
@@ -96,4 +98,6 @@ variableDefinitionOfNode =
 
 colourOfNode : Optional Node String
 colourOfNode =
-    (fromPrism variableDefinitionOfNode) => labelOfVariableDefinition => (fromLens colourOfLabel)
+    fromPrism variableDefinitionOfNode
+        |> optionalWithOptional labelOfVariableDefinition
+        |> optionalWithOptional (fromLens colourOfLabel)

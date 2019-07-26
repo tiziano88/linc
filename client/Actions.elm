@@ -1,12 +1,12 @@
-module Actions exposing (..)
+module Actions exposing (contextActions, expressionActions, floatActions, intActions, nodeActions, patternActions, refActions, variableDefinitionActions)
 
+import Defaults exposing (..)
 import GetNode exposing (..)
 import Html exposing (..)
 import Html.Events exposing (..)
 import List.Extra
-import String
 import Proto.Ast as Ast
-import Defaults exposing (..)
+import String
 import Types exposing (..)
 
 
@@ -31,7 +31,7 @@ nodeActions model node ctx =
               }
             ]
 
-        nodeActions =
+        actions =
             case node of
                 Expr expr ->
                     expressionActions model ctx expr
@@ -42,7 +42,7 @@ nodeActions model node ctx =
                 Pat pat ->
                     patternActions model pat
     in
-        movementActions ++ nodeActions
+    movementActions ++ actions
 
 
 expressionActions : Model -> Context -> Ast.Expression -> List Action
@@ -181,7 +181,8 @@ expressionActions model ctx expr =
       }
     , { label =
             "◆ ◇"
-            -- TODO
+
+      -- TODO
       , msg =
             SetNode 2 <|
                 Expr
@@ -204,23 +205,23 @@ expressionActions model ctx expr =
       }
     ]
         ++ (case String.toInt model.input of
-                Ok v ->
-                    [ { label = (toString v) ++ " (Int)"
+                Just v ->
+                    [ { label = String.fromInt v ++ " (Int)"
                       , msg = SetNode 0 <| Expr { expr | value = Ast.IntValue { value = v } }
                       }
                     ]
 
-                Err _ ->
+                Nothing ->
                     []
            )
         ++ (case String.toFloat model.input of
-                Ok v ->
-                    [ { label = (toString v) ++ " (Float)"
+                Just v ->
+                    [ { label = String.fromFloat v ++ " (Float)"
                       , msg = SetNode 0 <| Expr { expr | value = Ast.FloatValue { value = v } }
                       }
                     ]
 
-                Err _ ->
+                Nothing ->
                     []
            )
         ++ (case expr.value of
@@ -248,7 +249,7 @@ expressionActions model ctx expr =
                 _ ->
                     []
            )
-        ++ (contextActions ctx expr)
+        ++ contextActions ctx expr
 
 
 contextActions : Context -> Ast.Expression -> List Action
@@ -278,7 +279,7 @@ refActions expr node =
                       }
                     ]
 
-                _ ->
+                Nothing ->
                     []
 
         _ ->
@@ -321,25 +322,25 @@ patternActions model pat =
 
 intActions : Model -> Ast.Expression -> List Action
 intActions model expr =
-    case String.toInt (model.input) of
-        Ok n ->
-            [ { label = (toString n) ++ " (Int)"
+    case String.toInt model.input of
+        Just n ->
+            [ { label = String.fromInt n ++ " (Int)"
               , msg = SetNode 0 <| Expr { expr | value = Ast.IntValue { value = n } }
               }
             ]
 
-        _ ->
+        Nothing ->
             []
 
 
 floatActions : Model -> Ast.Expression -> List Action
 floatActions model expr =
-    case String.toFloat (model.input) of
-        Ok n ->
-            [ { label = (toString n) ++ " (Float)"
+    case String.toFloat model.input of
+        Just n ->
+            [ { label = String.fromFloat n ++ " (Float)"
               , msg = SetNode 0 <| Expr { expr | value = Ast.FloatValue { value = n } }
               }
             ]
 
-        _ ->
+        Nothing ->
             []

@@ -1,4 +1,4 @@
-module GetNode exposing (..)
+module GetNode exposing (getCurrentNode, getNode, getNodeExpression, getNodeName, getNodePattern, getNodeRef, getNodeVariableDefinition, nodeChildren, oneOf)
 
 import Proto.Ast as Ast
 import Types exposing (..)
@@ -22,10 +22,10 @@ getNodeName node =
         Expr expr ->
             case expr.value of
                 Ast.IntValue v ->
-                    toString v.value
+                    String.fromInt v.value
 
                 Ast.FloatValue v ->
-                    toString v.value
+                    String.fromFloat v.value
 
                 Ast.StringValue v ->
                     v.value
@@ -37,7 +37,7 @@ getNodeName node =
                     ""
 
         VarDef varDef ->
-            Maybe.withDefault "" <| Maybe.map (.name) varDef.label
+            Maybe.withDefault "" <| Maybe.map .name varDef.label
 
         Pat pat ->
             case pat.pvalue of
@@ -65,6 +65,7 @@ getNodeVariableDefinition : ExprRef -> Ast.VariableDefinition -> Maybe Node
 getNodeVariableDefinition ref def =
     if def.ref == ref then
         Just (VarDef def)
+
     else
         -- TODO: Find more elegant way.
         oneOf <|
@@ -76,6 +77,7 @@ getNodeExpression : ExprRef -> Ast.Expression -> Maybe Node
 getNodeExpression ref expr =
     if expr.ref == ref then
         Just (Expr expr)
+
     else
         let
             vNode =
@@ -89,23 +91,24 @@ getNodeExpression ref expr =
 
                     Ast.LambdaValue v ->
                         oneOf <|
-                            (List.filterMap (Maybe.map <| getNodeExpression ref) [ v.body ])
-                                ++ (List.filterMap (Maybe.map <| getNodePattern ref) [ v.argument ])
+                            List.filterMap (Maybe.map <| getNodeExpression ref) [ v.body ]
+                                ++ List.filterMap (Maybe.map <| getNodePattern ref) [ v.argument ]
 
                     Ast.ApplicationValue v ->
                         oneOf <|
-                            (List.filterMap (Maybe.map <| getNodeExpression ref) [ v.left, v.right ])
+                            List.filterMap (Maybe.map <| getNodeExpression ref) [ v.left, v.right ]
 
                     _ ->
                         Nothing
         in
-            oneOf <| [ vNode ]
+        oneOf <| [ vNode ]
 
 
 getNodePattern : ExprRef -> Ast.Pattern -> Maybe Node
 getNodePattern ref pat =
     if pat.ref == ref then
         Just (Pat pat)
+
     else
         Nothing
 
@@ -136,7 +139,7 @@ nodeChildren node =
                     []
 
         VarDef varDef ->
-            (List.map Pat varDef.arguments)
+            List.map Pat varDef.arguments
                 ++ (Maybe.withDefault [] <| Maybe.map (List.singleton << Expr) varDef.value)
 
         Pat pat ->

@@ -1,57 +1,69 @@
-module Main exposing (..)
+module Main exposing (actionToButton, colorscheme, globalStyle, htmlExpr, htmlExternalRef, htmlFile, htmlFunctionBody, htmlFunctionSignature, htmlLabelRef, htmlPattern, htmlPatternContent, htmlPatternRef, htmlRef, htmlVariableDefinition, htmlVariableDefinitionRef, init, isRefSource, isRefTarget, main, noEffects, nodeStyle, onClick_, refSourceStyle, refStyle, refTargetStyle, rename, selectComponent, selectElement, selectedStyle, targetValue, testModel, update, view)
 
+import Actions exposing (..)
+import Browser
+import Browser.Events exposing (onKeyDown, onKeyPress)
+import Defaults exposing (..)
+import GetContext exposing (..)
+import GetNode exposing (..)
 import Html exposing (Html)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
 import Json.Decode
 import Json.Encode
-import Keyboard
 import Lens exposing (..)
 import List.Extra
 import Monocle.Lens
-import Proto.Ast as Ast
-import Proto.Server as Server
-import Actions exposing (..)
-import GetNode exposing (..)
-import GetContext exposing (..)
-import Defaults exposing (..)
 import Persistence exposing (..)
 import Print exposing (..)
+import Proto.Ast as Ast
+import Proto.Server as Server
 import SetNode exposing (..)
 import Types exposing (..)
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Html.program
+    Browser.document
         { init = init
         , view = view
         , update = update
-        , subscriptions =
-            always <|
-                Keyboard.downs <|
-                    \k ->
-                        case Debug.log "k" k of
-                            37 ->
-                                MoveLeft
-
-                            38 ->
-                                MoveOut
-
-                            39 ->
-                                MoveRight
-
-                            40 ->
-                                MoveIn
-
-                            _ ->
-                                Nop
+        , subscriptions = subscriptions
         }
 
 
-init : ( Model, Cmd Msg )
-init =
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    onKeyDown keyDecoder
+
+
+keyDecoder : Json.Decode.Decoder Msg
+keyDecoder =
+    Json.Decode.map toMove (Json.Decode.field "key" Json.Decode.string)
+
+
+toMove : String -> Msg
+toMove string =
+    case string of
+        "ArrowLeft" ->
+            MoveLeft
+
+        "ArrowRight" ->
+            MoveRight
+
+        "ArrowUp" ->
+            MoveOut
+
+        "ArrowDown" ->
+            MoveIn
+
+        _ ->
+            Nop
+
+
+init : () -> ( Model, Cmd Msg )
+init flags =
     noEffects testModel
 
 
@@ -168,7 +180,7 @@ update action model =
             case currentNode of
                 Just n ->
                     siblingNodes
-                        |> List.Extra.findIndex (\i -> (getNodeRef i) == (getNodeRef n))
+                        |> List.Extra.findIndex (\i -> getNodeRef i == getNodeRef n)
 
                 Nothing ->
                     Nothing
@@ -176,216 +188,217 @@ update action model =
         currentContext =
             getCurrentContext model
     in
-        case action of
-            Nop ->
-                noEffects model
+    case action of
+        Nop ->
+            noEffects model
 
-            SetRefPath refPath ->
-                let
-                    m1 =
-                        { model | refPath = refPath }
+        SetRefPath refPath ->
+            let
+                m1 =
+                    { model | refPath = refPath }
 
-                    newNode =
-                        getCurrentNode m1
-                in
-                    noEffects
-                        { m1
-                            | input = Maybe.withDefault "" <| Maybe.map getNodeName newNode
-                        }
+                newNode =
+                    getCurrentNode m1
+            in
+            noEffects
+                { m1
+                    | input = Maybe.withDefault "" <| Maybe.map getNodeName newNode
+                }
 
-            Input v ->
-                noEffects
-                    { model
-                        | input = v
-                    }
+        Input v ->
+            noEffects
+                { model
+                    | input = v
+                }
 
-            SetNode n node ->
-                case List.head model.refPath of
-                    Nothing ->
-                        noEffects model
+        SetNode n node ->
+            case List.head model.refPath of
+                Nothing ->
+                    noEffects model
 
-                    Just ref ->
-                        case Debug.log "current node" (getCurrentNode model) of
-                            Nothing ->
-                                noEffects model
+                Just ref ->
+                    case Debug.log "current node" (getCurrentNode model) of
+                        Nothing ->
+                            noEffects model
 
-                            Just v ->
-                                noEffects <|
-                                    let
-                                        fi =
-                                            model.file
-                                    in
-                                        { model
-                                            | file =
-                                                { fi
-                                                    | variableDefinitions =
-                                                        List.map
-                                                            (setNodeVariableDefinition ref node)
-                                                            fi.variableDefinitions
-                                                    , nextRef = fi.nextRef + n
-                                                }
+                        Just v ->
+                            noEffects <|
+                                let
+                                    fi =
+                                        model.file
+                                in
+                                { model
+                                    | file =
+                                        { fi
+                                            | variableDefinitions =
+                                                List.map
+                                                    (setNodeVariableDefinition ref node)
+                                                    fi.variableDefinitions
+                                            , nextRef = fi.nextRef + n
                                         }
-
-            DeleteNode ->
-                case List.head model.refPath of
-                    Nothing ->
-                        noEffects model
-
-                    Just ref ->
-                        case getCurrentNode model of
-                            Nothing ->
-                                noEffects model
-
-                            Just v ->
-                                noEffects <|
-                                    let
-                                        fi =
-                                            model.file
-                                    in
-                                        { model
-                                            | file =
-                                                { fi
-                                                    | variableDefinitions =
-                                                        List.map
-                                                            (deleteNodeVariableDefinition ref)
-                                                            fi.variableDefinitions
-                                                }
-                                        }
-
-            CreateFunction ->
-                noEffects <|
-                    let
-                        fi =
-                            model.file
-                    in
-                        { model
-                            | file =
-                                { fi
-                                    | variableDefinitions =
-                                        fi.variableDefinitions
-                                            ++ [ { defaultVariableDefinition
-                                                    | ref = fi.nextRef
-                                                    , value = Just { defaultExpr | ref = fi.nextRef + 1 }
-                                                 }
-                                               ]
-                                    , nextRef = fi.nextRef + 2
                                 }
+
+        DeleteNode ->
+            case List.head model.refPath of
+                Nothing ->
+                    noEffects model
+
+                Just ref ->
+                    case getCurrentNode model of
+                        Nothing ->
+                            noEffects model
+
+                        Just v ->
+                            noEffects <|
+                                let
+                                    fi =
+                                        model.file
+                                in
+                                { model
+                                    | file =
+                                        { fi
+                                            | variableDefinitions =
+                                                List.map
+                                                    (deleteNodeVariableDefinition ref)
+                                                    fi.variableDefinitions
+                                        }
+                                }
+
+        CreateFunction ->
+            noEffects <|
+                let
+                    fi =
+                        model.file
+                in
+                { model
+                    | file =
+                        { fi
+                            | variableDefinitions =
+                                fi.variableDefinitions
+                                    ++ [ { defaultVariableDefinition
+                                            | ref = fi.nextRef
+                                            , value = Just { defaultExpr | ref = fi.nextRef + 1 }
+                                         }
+                                       ]
+                            , nextRef = fi.nextRef + 2
                         }
+                }
 
-            LoadFile ->
-                ( model
-                , Http.send
-                    (\res ->
-                        case res of
-                            Ok r ->
-                                LoadFileSuccess r
+        LoadFile ->
+            ( model
+            , Http.send
+                (\res ->
+                    case res of
+                        Ok r ->
+                            LoadFileSuccess r
 
-                            Err _ ->
-                                Nop
-                    )
-                    (Http.get "/LoadFile" Server.getFileResponseDecoder)
-                )
-
-            LoadFileSuccess s ->
-                noEffects <|
-                    case Debug.log "c" (Json.Decode.decodeString Ast.fileDecoder (Debug.log "GetFileResponse" s).jsonContent) of
                         Err _ ->
-                            model
+                            Nop
+                )
+                (Http.get "/LoadFile" Server.getFileResponseDecoder)
+            )
 
-                        Ok v ->
-                            { model
-                                | file = v
-                            }
+        LoadFileSuccess s ->
+            noEffects <|
+                case Debug.log "c" (Json.Decode.decodeString Ast.fileDecoder (Debug.log "GetFileResponse" s).jsonContent) of
+                    Err _ ->
+                        model
 
-            SaveFile ->
-                let
-                    req =
-                        { path = "xx"
-                        , jsonContent = (Json.Encode.encode 2 <| Ast.fileEncoder model.file)
-                        , elmContent = "zz"
+                    Ok v ->
+                        { model
+                            | file = v
                         }
-                in
-                    ( model
-                    , Http.send
-                        (always Nop)
-                        (Http.post
-                            "/SaveFile"
-                            (Http.jsonBody <| Server.updateFileRequestEncoder req)
-                            (Json.Decode.string)
-                        )
-                    )
 
-            MoveIn ->
-                let
-                    refPath =
-                        -- Move the first child, if any.
-                        case List.head childNodes of
-                            Just c ->
-                                (getNodeRef c) :: model.refPath
+        SaveFile ->
+            let
+                req =
+                    { path = "xx"
+                    , jsonContent = Json.Encode.encode 2 <| Ast.fileEncoder model.file
+                    , elmContent = "zz"
+                    }
+            in
+            ( model
+            , Http.send
+                (always Nop)
+                (Http.post
+                    "/SaveFile"
+                    (Http.jsonBody <| Server.updateFileRequestEncoder req)
+                    Json.Decode.string
+                )
+            )
 
-                            Nothing ->
-                                model.refPath
-                in
-                    noEffects { model | refPath = refPath }
+        MoveIn ->
+            let
+                refPath =
+                    -- Move the first child, if any.
+                    case List.head childNodes of
+                        Just c ->
+                            getNodeRef c :: model.refPath
 
-            MoveOut ->
-                -- Remove the head of the refPath, which is the current node.
-                noEffects { model | refPath = List.drop 1 model.refPath }
+                        Nothing ->
+                            model.refPath
+            in
+            noEffects { model | refPath = refPath }
 
-            MoveLeft ->
-                let
-                    refPath =
-                        case nodeIndex of
-                            Just i ->
-                                case (List.Extra.getAt (i - 1) siblingNodes) of
-                                    Just c ->
-                                        (getNodeRef c) :: (List.drop 1 model.refPath)
+        MoveOut ->
+            -- Remove the head of the refPath, which is the current node.
+            noEffects { model | refPath = List.drop 1 model.refPath }
 
-                                    Nothing ->
-                                        model.refPath
+        MoveLeft ->
+            let
+                refPath =
+                    case nodeIndex of
+                        Just i ->
+                            case List.Extra.getAt (i - 1) siblingNodes of
+                                Just c ->
+                                    getNodeRef c :: List.drop 1 model.refPath
 
-                            Nothing ->
-                                model.refPath
-                in
-                    noEffects { model | refPath = refPath }
+                                Nothing ->
+                                    model.refPath
 
-            MoveRight ->
-                let
-                    refPath =
-                        case nodeIndex of
-                            Just i ->
-                                case (List.Extra.getAt (i + 1) siblingNodes) of
-                                    Just c ->
-                                        (getNodeRef c) :: (List.drop 1 model.refPath)
+                        Nothing ->
+                            model.refPath
+            in
+            noEffects { model | refPath = refPath }
 
-                                    Nothing ->
-                                        model.refPath
+        MoveRight ->
+            let
+                refPath =
+                    case nodeIndex of
+                        Just i ->
+                            case List.Extra.getAt (i + 1) siblingNodes of
+                                Just c ->
+                                    getNodeRef c :: List.drop 1 model.refPath
 
-                            Nothing ->
-                                model.refPath
-                in
-                    noEffects { model | refPath = refPath }
+                                Nothing ->
+                                    model.refPath
 
-            SetColour c ->
-                case List.head model.refPath of
-                    Nothing ->
-                        noEffects model
+                        Nothing ->
+                            model.refPath
+            in
+            noEffects { model | refPath = refPath }
 
-                    Just ref ->
-                        case getCurrentNode model of
-                            Nothing ->
-                                noEffects model
+        SetColour c ->
+            case List.head model.refPath of
+                Nothing ->
+                    noEffects model
 
-                            Just node ->
-                                noEffects <|
-                                    let
-                                        newNode =
-                                            node |> colourOfNode.set c
-                                    in
-                                        model
-                                            |> Monocle.Lens.modify Lens.variableDefinitionsOfModel (List.map (setNodeVariableDefinition ref newNode))
+                Just ref ->
+                    case getCurrentNode model of
+                        Nothing ->
+                            noEffects model
+
+                        Just node ->
+                            noEffects <|
+                                let
+                                    newNode =
+                                        node |> colourOfNode.set c
+                                in
+                                model
+                                    |> Monocle.Lens.modify Lens.variableDefinitionsOfModel (List.map (setNodeVariableDefinition ref newNode))
 
 
+view : Model -> Browser.Document Msg
 view model =
     let
         file =
@@ -404,67 +417,63 @@ view model =
 
                 Just n ->
                     nodeActions model n context
-    in
-        -- Container.
-        Html.div
-            [ style
-                [ "display" => "flex"
+
+        body =
+            Html.div
+                [ style "display" "flex"
                 ]
-            ]
-            [ -- Toolbar
-              Html.div [] <|
-                [ Html.input
-                    [ onInput Input
-                    , value model.input
-                    ]
-                    []
-                , Html.button
-                    [ onClick LoadFile ]
-                    [ Html.text "Load" ]
-                , Html.button
-                    [ onClick SaveFile ]
-                    [ Html.text "Save" ]
-                , Html.div
-                    [ style
-                        [ "display" => "flex"
-                        , "flex-flow" => "column nowrap"
-                        ]
-                    ]
-                    (List.map actionToButton actions)
-                , Html.div
-                    [ style
-                        [ "display" => "flex"
-                        , "flex-flow" => "column nowrap"
-                        ]
-                    ]
+                [ -- Toolbar
+                  Html.div [] <|
                     [ Html.input
-                        [ type_ "color"
-                        , onInput SetColour
+                        [ onInput Input
+                        , value model.input
                         ]
                         []
+                    , Html.button
+                        [ onClick LoadFile ]
+                        [ Html.text "Load" ]
+                    , Html.button
+                        [ onClick SaveFile ]
+                        [ Html.text "Save" ]
+                    , Html.div
+                        [ style "display" "flex"
+                        , style "flex-flow" "column nowrap"
+                        ]
+                        (List.map actionToButton actions)
+                    , Html.div
+                        [ style "display" "flex"
+                        , style "flex-flow" "column nowrap"
+                        ]
+                        [ Html.input
+                            [ type_ "color"
+                            , onInput SetColour
+                            ]
+                            []
+                        ]
                     ]
+                , -- Main content.
+                  Html.pre
+                    globalStyle
+                    [ htmlFile model node model.file
+                    ]
+                , -- JSON render.
+                  Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
                 ]
-            , -- Main content.
-              Html.pre
-                [ style globalStyle
-                ]
-                [ (htmlFile model node model.file)
-                ]
-            , -- JSON render.
-              Html.pre [] [ Html.text <| Json.Encode.encode 2 (Ast.fileEncoder model.file) ]
-            ]
+    in
+    { title = "LINC"
+    , body = [ body ]
+    }
 
 
 actionToButton : Action -> Html Msg
 actionToButton action =
     Html.div
-        [ onClick action.msg
-        , style <|
-            nodeStyle
-                ++ [ "width" => "12em"
-                   , "text-align" => "center"
-                   ]
-        ]
+        ([ onClick action.msg
+         , style "width" "12em"
+         , style "text-align" "center"
+         ]
+            ++ nodeStyle
+        )
         [ Html.text action.label ]
 
 
@@ -481,7 +490,7 @@ htmlFile model node file =
             file.variableDefinitions
                 |> List.map (htmlVariableDefinition model node newCtx newAncestors)
     in
-        Html.div [] xs
+    Html.div [] xs
 
 
 htmlExpr : Model -> Maybe Node -> Context -> List ExprRef -> Ast.Expression -> Html Msg
@@ -491,7 +500,7 @@ htmlExpr model node ctx ancestors expr =
             expr.ref :: ancestors
 
         newCtx =
-            (getContextExpression expr) ++ ctx
+            getContextExpression expr ++ ctx
 
         content =
             case expr.value of
@@ -502,13 +511,19 @@ htmlExpr model node ctx ancestors expr =
                     [ Html.text "◆" ]
 
                 Ast.IntValue v ->
-                    [ Html.text <| toString v.value ]
+                    [ Html.text <| String.fromInt v.value ]
 
                 Ast.FloatValue v ->
-                    [ Html.text <| toString v.value ]
+                    [ Html.text <| String.fromFloat v.value ]
 
                 Ast.BoolValue v ->
-                    [ Html.text <| toString v.value ]
+                    [ Html.text <|
+                        if v.value then
+                            "true"
+
+                        else
+                            "false"
+                    ]
 
                 Ast.StringValue v ->
                     [ Html.text <| "\"" ++ v.value ++ "\"" ]
@@ -568,22 +583,23 @@ htmlExpr model node ctx ancestors expr =
 
         -- TODO: Only if it is actually an operator.
     in
-        Html.span
-            [ style <|
-                nodeStyle
-                    ++ (if Just expr.ref == List.head model.refPath then
-                            selectedStyle
-                        else
-                            []
-                       )
-                    ++ (if isRefSource node expr.ref then
-                            refSourceStyle
-                        else
-                            []
-                       )
-            , onClick_ (SetRefPath newAncestors)
-            ]
-            content
+    Html.span
+        (nodeStyle
+            ++ (if Just expr.ref == List.head model.refPath then
+                    selectedStyle
+
+                else
+                    []
+               )
+            ++ (if isRefSource node expr.ref then
+                    refSourceStyle
+
+                else
+                    []
+               )
+            ++ [ onClick (SetRefPath newAncestors) ]
+        )
+        content
 
 
 isRefSource : Maybe Node -> ExprRef -> Bool
@@ -612,37 +628,36 @@ isRefTarget node ref =
 
 
 globalStyle =
-    [ "font-family" => "Iosevka Term Slab, monospace"
-    ]
+    [ style "font-family" "Iosevka Term Slab, monospace" ]
 
 
 nodeStyle =
-    [ "border" => "solid 1px"
-    , "margin" => "2px"
-    , "padding" => "2px"
-    , "display" => "inline-block"
-    , "cursor" => "default"
+    [ style "border" "solid 1px"
+    , style "margin" "2px"
+    , style "padding" "2px"
+    , style "display" "inline-block"
+    , style "cursor" "default"
     ]
 
 
 refStyle =
-    [ "border" => "dotted"
-    , "margin" => "2px"
-    , "padding" => "2px"
-    , "display" => "inline-block"
+    [ style "border" "dotted"
+    , style "margin" "2px"
+    , style "padding" "2px"
+    , style "display" "inline-block"
     ]
 
 
 selectedStyle =
-    [ "color" => "blue" ]
+    [ style "color" "blue" ]
 
 
 refSourceStyle =
-    [ "color" => "red" ]
+    [ style "color" "red" ]
 
 
 refTargetStyle =
-    [ "color" => "orange" ]
+    [ style "color" "orange" ]
 
 
 htmlRef : Model -> Maybe Node -> Context -> List ExprRef -> ExprRef -> Html Msg
@@ -651,20 +666,20 @@ htmlRef model node ctx ancestors ref =
         target =
             lookupContext ctx ref
     in
-        case target of
-            Just n ->
-                case n of
-                    Pat pat ->
-                        htmlPatternRef model ctx pat
+    case target of
+        Just n ->
+            case n of
+                Pat pat ->
+                    htmlPatternRef model ctx pat
 
-                    VarDef def ->
-                        htmlVariableDefinitionRef model ctx def
+                VarDef def ->
+                    htmlVariableDefinitionRef model ctx def
 
-                    _ ->
-                        Html.text "<<ERROR>>"
+                _ ->
+                    Html.text "<<ERROR>>"
 
-            _ ->
-                Html.text "<<ERROR>>"
+        _ ->
+            Html.text "<<ERROR>>"
 
 
 htmlExternalRef : Model -> Maybe Node -> Context -> List ExprRef -> Ast.Expression_ExternalRef -> Html Msg
@@ -672,17 +687,13 @@ htmlExternalRef model node ctx ancestors ref =
     Html.text (ref.path ++ "." ++ ref.name)
 
 
-(=>) : String -> String -> ( String, String )
-(=>) =
-    (,)
-
-
 htmlFunctionSignature : Model -> Context -> List ExprRef -> Ast.VariableDefinition -> Html Msg
 htmlFunctionSignature model ctx ancestors def =
     Html.div []
         [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label
         , Html.text " : "
-          --, Html.text <| (printType v.type_)
+
+        --, Html.text <| (printType v.type_)
         ]
 
 
@@ -693,19 +704,19 @@ htmlFunctionBody model node ctx ancestors def =
             def.ref :: ancestors
 
         newCtx =
-            (getContextVariableDefinition def) ++ ctx
+            getContextVariableDefinition def ++ ctx
     in
-        case def.value of
-            Nothing ->
-                Html.text "<<<ERROR>>>"
+    case def.value of
+        Nothing ->
+            Html.text "<<<ERROR>>>"
 
-            Just expr ->
-                Html.div [] <|
-                    [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label ]
-                        ++ (List.map (htmlPattern model node newCtx newAncestors) def.arguments)
-                        ++ [ Html.text "="
-                           , htmlExpr model node newCtx newAncestors expr
-                           ]
+        Just expr ->
+            Html.div [] <|
+                [ Html.text <| Maybe.withDefault "" <| Maybe.map printLabel def.label ]
+                    ++ List.map (htmlPattern model node newCtx newAncestors) def.arguments
+                    ++ [ Html.text "="
+                       , htmlExpr model node newCtx newAncestors expr
+                       ]
 
 
 htmlPatternContent : Model -> Context -> Ast.Pattern -> List (Html Msg)
@@ -730,24 +741,26 @@ htmlPattern model node ctx ancestors pat =
         content =
             htmlPatternContent model ctx pat
     in
-        Html.div
-            [ style <|
-                nodeStyle
-                    ++ (if Just pat.ref == List.head model.refPath then
-                            selectedStyle
-                        else
-                            []
-                       )
-                    ++ (if isRefTarget node pat.ref then
-                            refTargetStyle
-                        else
-                            []
-                       )
-            , onClick_ (SetRefPath (pat.ref :: ancestors))
-            , contenteditable True
-            , on "input" (Json.Decode.map (rename pat) targetValue)
-            ]
-            content
+    Html.div
+        (nodeStyle
+            ++ (if Just pat.ref == List.head model.refPath then
+                    selectedStyle
+
+                else
+                    []
+               )
+            ++ (if isRefTarget node pat.ref then
+                    refTargetStyle
+
+                else
+                    []
+               )
+            ++ [ onClick (SetRefPath (pat.ref :: ancestors))
+               , contenteditable True
+               , onInput (rename pat)
+               ]
+        )
+        content
 
 
 
@@ -782,7 +795,7 @@ htmlPatternRef model ctx pat =
 htmlLabelRef : Ast.Label -> Html Msg
 htmlLabelRef label =
     Html.div
-        [ style refStyle ]
+        refStyle
         [ Html.text label.name ]
 
 
@@ -802,22 +815,22 @@ htmlVariableDefinition model node ctx ancestors def =
         newCtx =
             (List.concat <| List.map getContextPattern def.arguments) ++ ctx
     in
-        Html.div
-            [ style <|
-                [ "border" => "solid"
-                , "margin" => "5px"
-                , "color" => (Maybe.withDefault "" <| Maybe.map (.colour) def.label)
-                ]
-                    ++ (if Just def.ref == List.head model.refPath then
-                            selectedStyle
-                        else
-                            []
-                       )
-            , onClick_ (SetRefPath (def.ref :: ancestors))
-            ]
-            [ htmlFunctionSignature model newCtx ancestors def
-            , htmlFunctionBody model node newCtx ancestors def
-            ]
+    Html.div
+        ([ onClick (SetRefPath (def.ref :: ancestors))
+         , style "border" "solid"
+         , style "margin" "5px"
+         , style "color" (Maybe.withDefault "" <| Maybe.map .colour def.label)
+         ]
+            ++ (if Just def.ref == List.head model.refPath then
+                    selectedStyle
+
+                else
+                    []
+               )
+        )
+        [ htmlFunctionSignature model newCtx ancestors def
+        , htmlFunctionBody model node newCtx ancestors def
+        ]
 
 
 
@@ -841,13 +854,11 @@ colorscheme =
 selectComponent : List String -> Html a
 selectComponent es =
     Html.div
-        [ style
-            [ "border-color" => colorscheme.foreground
-            , "border-style" => "solid"
-            , "width" => "10em"
-            , "max-height" => "10em"
-            , "overflow" => "auto"
-            ]
+        [ style "border-color" colorscheme.foreground
+        , style "border-style" "solid"
+        , style "width" "10em"
+        , style "max-height" "10em"
+        , style "overflow" "auto"
         ]
         [ selectElement "x"
         , selectElement "if"
@@ -859,18 +870,18 @@ selectComponent es =
 selectElement : String -> Html a
 selectElement e =
     Html.div
-        [ style
-            [ "background-color" => colorscheme.background
-            , "color" => colorscheme.foreground
-            , "padding" => "2px"
-            ]
+        [ style "background-color" colorscheme.background
+        , style "color" colorscheme.foreground
+        , style "padding" "2px"
         ]
         [ Html.text e
         ]
 
 
+
+-- TODO: StopPropagation
+
+
 onClick_ a =
-    onWithOptions
-        "click"
-        { defaultOptions | stopPropagation = True }
+    onClick
         (Json.Decode.succeed a)

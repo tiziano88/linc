@@ -1,4 +1,4 @@
-module Types exposing (..)
+module Types exposing (Action, Context, ExprRef, Model, Msg(..), Node(..))
 
 import Array
 import Dict
@@ -35,7 +35,8 @@ type alias Model =
     { file : Ast.File
     , refPath :
         List ExprRef
-        -- Head is the current ref.
+
+    -- Head is the current ref.
     , input : String
     }
 
