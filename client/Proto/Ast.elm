@@ -14,8 +14,7 @@ import Json.Encode as JE
 type alias File =
     { nextRef : Int -- 1
     , name : String -- 2
-    , typeAliases : List TypeAlias -- 4
-    , variableDefinitions : List VariableDefinition -- 5
+    , functionDefinitions : List FunctionDefinition -- 5
     }
 
 
@@ -24,8 +23,7 @@ fileDecoder =
     JD.lazy <| \_ -> decode File
         |> required "nextRef" intDecoder 0
         |> required "name" JD.string ""
-        |> repeated "typeAliases" typeAliasDecoder
-        |> repeated "variableDefinitions" variableDefinitionDecoder
+        |> repeated "functionDefinitions" functionDefinitionDecoder
 
 
 fileEncoder : File -> JE.Value
@@ -33,8 +31,7 @@ fileEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "nextRef" numericStringEncoder 0 v.nextRef)
         , (requiredFieldEncoder "name" JE.string "" v.name)
-        , (repeatedFieldEncoder "typeAliases" typeAliasEncoder v.typeAliases)
-        , (repeatedFieldEncoder "variableDefinitions" variableDefinitionEncoder v.variableDefinitions)
+        , (repeatedFieldEncoder "functionDefinitions" functionDefinitionEncoder v.functionDefinitions)
         ]
 
 
@@ -53,8 +50,7 @@ type Value
     | StringValue Expression_String
     | ListValue Expression_List
     | IfValue Expression_If
-    | LambdaValue Expression_Lambda
-    | ApplicationValue Expression_Application
+    | FunctionApplicationValue Expression_FunctionApplication
     | RefValue Expression_Ref
     | ExternalRefValue Expression_ExternalRef
 
@@ -69,8 +65,7 @@ valueDecoder =
         , JD.map StringValue (JD.field "stringValue" expression_StringDecoder)
         , JD.map ListValue (JD.field "listValue" expression_ListDecoder)
         , JD.map IfValue (JD.field "ifValue" expression_IfDecoder)
-        , JD.map LambdaValue (JD.field "lambdaValue" expression_LambdaDecoder)
-        , JD.map ApplicationValue (JD.field "applicationValue" expression_ApplicationDecoder)
+        , JD.map FunctionApplicationValue (JD.field "functionApplicationValue" expression_FunctionApplicationDecoder)
         , JD.map RefValue (JD.field "refValue" expression_RefDecoder)
         , JD.map ExternalRefValue (JD.field "externalRefValue" expression_ExternalRefDecoder)
         , JD.succeed ValueUnspecified
@@ -96,10 +91,8 @@ valueEncoder v =
             Just ( "listValue", expression_ListEncoder x )
         IfValue x ->
             Just ( "ifValue", expression_IfEncoder x )
-        LambdaValue x ->
-            Just ( "lambdaValue", expression_LambdaEncoder x )
-        ApplicationValue x ->
-            Just ( "applicationValue", expression_ApplicationEncoder x )
+        FunctionApplicationValue x ->
+            Just ( "functionApplicationValue", expression_FunctionApplicationEncoder x )
         RefValue x ->
             Just ( "refValue", expression_RefEncoder x )
         ExternalRefValue x ->
@@ -118,6 +111,23 @@ expressionEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "ref" numericStringEncoder 0 v.ref)
         , (valueEncoder v.value)
+        ]
+
+
+type alias Expression_Hole =
+    {
+    }
+
+
+expression_HoleDecoder : JD.Decoder Expression_Hole
+expression_HoleDecoder =
+    JD.lazy <| \_ -> decode Expression_Hole
+
+
+expression_HoleEncoder : Expression_Hole -> JE.Value
+expression_HoleEncoder v =
+    JE.object <| List.filterMap identity <|
+        [
         ]
 
 
@@ -235,45 +245,24 @@ expression_IfEncoder v =
         ]
 
 
-type alias Expression_Lambda =
-    { argument : Maybe Pattern -- 1
-    , body : Maybe Expression -- 2
+type alias Expression_FunctionApplication =
+    { function : Int -- 1
+    , arguments : List Expression -- 2
     }
 
 
-expression_LambdaDecoder : JD.Decoder Expression_Lambda
-expression_LambdaDecoder =
-    JD.lazy <| \_ -> decode Expression_Lambda
-        |> optional "argument" patternDecoder
-        |> optional "body" expressionDecoder
+expression_FunctionApplicationDecoder : JD.Decoder Expression_FunctionApplication
+expression_FunctionApplicationDecoder =
+    JD.lazy <| \_ -> decode Expression_FunctionApplication
+        |> required "function" intDecoder 0
+        |> repeated "arguments" expressionDecoder
 
 
-expression_LambdaEncoder : Expression_Lambda -> JE.Value
-expression_LambdaEncoder v =
+expression_FunctionApplicationEncoder : Expression_FunctionApplication -> JE.Value
+expression_FunctionApplicationEncoder v =
     JE.object <| List.filterMap identity <|
-        [ (optionalEncoder "argument" patternEncoder v.argument)
-        , (optionalEncoder "body" expressionEncoder v.body)
-        ]
-
-
-type alias Expression_Application =
-    { left : Maybe Expression -- 1
-    , right : Maybe Expression -- 2
-    }
-
-
-expression_ApplicationDecoder : JD.Decoder Expression_Application
-expression_ApplicationDecoder =
-    JD.lazy <| \_ -> decode Expression_Application
-        |> optional "left" expressionDecoder
-        |> optional "right" expressionDecoder
-
-
-expression_ApplicationEncoder : Expression_Application -> JE.Value
-expression_ApplicationEncoder v =
-    JE.object <| List.filterMap identity <|
-        [ (optionalEncoder "left" expressionEncoder v.left)
-        , (optionalEncoder "right" expressionEncoder v.right)
+        [ (requiredFieldEncoder "function" numericStringEncoder 0 v.function)
+        , (repeatedFieldEncoder "arguments" expressionEncoder v.arguments)
         ]
 
 
@@ -316,30 +305,33 @@ expression_ExternalRefEncoder v =
         ]
 
 
-type alias VariableDefinition =
+type alias FunctionDefinition =
     { ref : Int -- 1
     , label : Maybe Label -- 2
-    , value : Maybe Expression -- 3
-    , arguments : List Pattern -- 4
+    , arguments : List Argument -- 3
+    , returnType : Maybe Type -- 4
+    , body : Maybe Expression -- 5
     }
 
 
-variableDefinitionDecoder : JD.Decoder VariableDefinition
-variableDefinitionDecoder =
-    JD.lazy <| \_ -> decode VariableDefinition
+functionDefinitionDecoder : JD.Decoder FunctionDefinition
+functionDefinitionDecoder =
+    JD.lazy <| \_ -> decode FunctionDefinition
         |> required "ref" intDecoder 0
         |> optional "label" labelDecoder
-        |> optional "value" expressionDecoder
-        |> repeated "arguments" patternDecoder
+        |> repeated "arguments" argumentDecoder
+        |> optional "returnType" typeDecoder
+        |> optional "body" expressionDecoder
 
 
-variableDefinitionEncoder : VariableDefinition -> JE.Value
-variableDefinitionEncoder v =
+functionDefinitionEncoder : FunctionDefinition -> JE.Value
+functionDefinitionEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "ref" numericStringEncoder 0 v.ref)
         , (optionalEncoder "label" labelEncoder v.label)
-        , (optionalEncoder "value" expressionEncoder v.value)
-        , (repeatedFieldEncoder "arguments" patternEncoder v.arguments)
+        , (repeatedFieldEncoder "arguments" argumentEncoder v.arguments)
+        , (optionalEncoder "returnType" typeEncoder v.returnType)
+        , (optionalEncoder "body" expressionEncoder v.body)
         ]
 
 
@@ -592,6 +584,30 @@ patternEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "ref" numericStringEncoder 0 v.ref)
         , (pvalueEncoder v.pvalue)
+        ]
+
+
+type alias Argument =
+    { ref : Int -- 1
+    , label : Maybe Label -- 2
+    , type_ : Maybe Type -- 3
+    }
+
+
+argumentDecoder : JD.Decoder Argument
+argumentDecoder =
+    JD.lazy <| \_ -> decode Argument
+        |> required "ref" intDecoder 0
+        |> optional "label" labelDecoder
+        |> optional "type" typeDecoder
+
+
+argumentEncoder : Argument -> JE.Value
+argumentEncoder v =
+    JE.object <| List.filterMap identity <|
+        [ (requiredFieldEncoder "ref" numericStringEncoder 0 v.ref)
+        , (optionalEncoder "label" labelEncoder v.label)
+        , (optionalEncoder "type" typeEncoder v.type_)
         ]
 
 

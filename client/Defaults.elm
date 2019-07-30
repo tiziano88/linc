@@ -1,4 +1,4 @@
-module Defaults exposing (defaultExpr, defaultPattern, defaultVariableDefinition)
+module Defaults exposing (defaultExpr, defaultFunctionDefinition, defaultPattern)
 
 import Proto.Ast as Ast
 
@@ -10,12 +10,13 @@ defaultExpr =
     }
 
 
-defaultVariableDefinition : Ast.VariableDefinition
-defaultVariableDefinition =
+defaultFunctionDefinition : Ast.FunctionDefinition
+defaultFunctionDefinition =
     { ref = -1
     , label = Just { name = "◆", colour = "white" }
-    , value = Nothing
     , arguments = []
+    , returnType = Nothing
+    , body = Nothing
     }
 
 

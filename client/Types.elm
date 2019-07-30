@@ -43,8 +43,8 @@ type alias Model =
 
 type Node
     = Expr Ast.Expression
-    | VarDef Ast.VariableDefinition
-    | Pat Ast.Pattern
+    | FuncDef Ast.FunctionDefinition
+    | Arg Ast.Argument
 
 
 type alias Action =

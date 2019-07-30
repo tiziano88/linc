@@ -12,7 +12,7 @@ all: $(INDEX) $(SERVER)
 
 client: $(INDEX)
 
-$(INDEX): $(CLIENT_DIR)/*
+$(INDEX): $(wildcard $(CLIENT_DIR)/**/*.elm) proto
 	elm make $(CLIENT_DIR)/main.elm --debug --output $(INDEX)
 
 server: $(SERVER)

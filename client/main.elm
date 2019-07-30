@@ -672,7 +672,7 @@ htmlRef model node ctx ancestors ref =
                 Pat pat ->
                     htmlPatternRef model ctx pat
 
-                VarDef def ->
+                FuncDef def ->
                     htmlVariableDefinitionRef model ctx def
 
                 _ ->

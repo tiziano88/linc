@@ -1,4 +1,4 @@
-module Actions exposing (contextActions, expressionActions, floatActions, intActions, nodeActions, patternActions, refActions, variableDefinitionActions)
+module Actions exposing (argumentActions, contextActions, expressionActions, floatActions, functionDefinitionActions, intActions, nodeActions, refActions)
 
 import Defaults exposing (..)
 import GetNode exposing (..)
@@ -36,11 +36,11 @@ nodeActions model node ctx =
                 Expr expr ->
                     expressionActions model ctx expr
 
-                VarDef vdef ->
-                    variableDefinitionActions model vdef
+                FuncDef fdef ->
+                    functionDefinitionActions model fdef
 
-                Pat pat ->
-                    patternActions model pat
+                Arg arg ->
+                    argumentActions model arg
     in
     movementActions ++ actions
 
@@ -143,26 +143,17 @@ expressionActions model ctx expr =
                                 }
                     }
       }
-    , { label = "λ ◆ → ◆"
+    , { label = "fn"
       , msg =
             SetNode 2 <|
                 Expr
                     { expr
                         | value =
-                            Ast.LambdaValue
-                                { argument = Just { defaultPattern | ref = model.file.nextRef }
-                                , body = Just { defaultExpr | ref = model.file.nextRef + 1 }
-                                }
-                    }
-      }
-    , { label = "λ ◆ → ◇"
-      , msg =
-            SetNode 2 <|
-                Expr
-                    { expr
-                        | value =
-                            Ast.LambdaValue
-                                { argument = Just { defaultPattern | ref = model.file.nextRef }
+                            Ast.FunctionDefinition
+                                { ref = model.file.nextRef
+                                , label = Nothing
+                                , arguments = []
+                                , returnType = Nothing
                                 , body = Just { defaultExpr | ref = model.file.nextRef + 1, value = expr.value }
                                 }
                     }
@@ -173,9 +164,9 @@ expressionActions model ctx expr =
                 Expr
                     { ref = model.file.nextRef
                     , value =
-                        Ast.ApplicationValue
-                            { left = Just expr
-                            , right = Just { defaultExpr | ref = model.file.nextRef + 1 }
+                        Ast.FunctionApplicationValue
+                            { function = 1
+                            , arguments = []
                             }
                     }
       }
@@ -188,9 +179,9 @@ expressionActions model ctx expr =
                 Expr
                     { ref = model.file.nextRef
                     , value =
-                        Ast.ApplicationValue
-                            { left = Just { defaultExpr | ref = model.file.nextRef + 1 }
-                            , right = Just expr
+                        Ast.FunctionApplicationValue
+                            { function = 1
+                            , arguments = []
                             }
                     }
       }
@@ -260,18 +251,10 @@ contextActions ctx expr =
 refActions : Ast.Expression -> Node -> List Action
 refActions expr node =
     case node of
-        Pat pat ->
-            case pat.pvalue of
-                Ast.LabelValue l ->
-                    [ { label = l.name
-                      , msg = SetNode 1 <| Expr { expr | value = Ast.RefValue { ref = pat.ref } }
-                      }
-                    ]
+        Expr _ ->
+            []
 
-                _ ->
-                    []
-
-        VarDef def ->
+        FuncDef def ->
             case def.label of
                 Just l ->
                     [ { label = l.name
@@ -282,24 +265,38 @@ refActions expr node =
                 Nothing ->
                     []
 
-        _ ->
-            []
+        Arg arg ->
+            case arg.label of
+                Just l ->
+                    [ { label = l.name
+                      , msg = SetNode 1 <| Expr { expr | value = Ast.RefValue { ref = arg.ref } }
+                      }
+                    ]
+
+                Nothing ->
+                    []
 
 
-variableDefinitionActions : Model -> Ast.VariableDefinition -> List Action
-variableDefinitionActions model def =
+functionDefinitionActions : Model -> Ast.FunctionDefinition -> List Action
+functionDefinitionActions model def =
     [ { label = "set name"
-      , msg = SetNode 0 <| VarDef { def | label = Just { name = model.input, colour = "black" } }
+      , msg =
+            SetNode 0 <|
+                FuncDef
+                    { def
+                        | label = Just { name = model.input, colour = "black" }
+                    }
       }
     , { label = "arg"
       , msg =
             SetNode 1 <|
-                VarDef
+                FuncDef
                     { def
                         | arguments =
                             def.arguments
                                 ++ [ { ref = model.file.nextRef
-                                     , pvalue = Ast.LabelValue { name = "xyz", colour = "black" }
+                                     , label = Just { name = "xyz", colour = "black" }
+                                     , type_ = Nothing
                                      }
                                    ]
                     }
@@ -307,12 +304,12 @@ variableDefinitionActions model def =
     ]
 
 
-patternActions : Model -> Ast.Pattern -> List Action
-patternActions model pat =
-    case pat.pvalue of
+argumentActions : Model -> Ast.Argument -> List Action
+argumentActions model arg =
+    case arg.pvalue of
         Ast.LabelValue v ->
             [ { label = "set name"
-              , msg = SetNode 0 <| Pat { pat | pvalue = Ast.LabelValue { v | name = model.input } }
+              , msg = SetNode 0 <| Arg { arg | label = Ast.LabelValue { v | name = model.input } }
               }
             ]
 

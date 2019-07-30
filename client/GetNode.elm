@@ -1,4 +1,4 @@
-module GetNode exposing (getCurrentNode, getNode, getNodeExpression, getNodeName, getNodePattern, getNodeRef, getNodeVariableDefinition, nodeChildren, oneOf)
+module GetNode exposing (getCurrentNode, getNode, getNodeExpression, getNodeFunctionDefinition, getNodeName, getNodeRef, nodeChildren, oneOf)
 
 import Proto.Ast as Ast
 import Types exposing (..)
@@ -11,8 +11,8 @@ getCurrentNode model =
 
 getNode : Model -> ExprRef -> Maybe Node
 getNode model ref =
-    model.file.variableDefinitions
-        |> List.filterMap (getNodeVariableDefinition ref)
+    model.file.functionDefinitions
+        |> List.filterMap (getNodeFunctionDefinition ref)
         |> List.head
 
 
@@ -36,16 +36,11 @@ getNodeName node =
                 _ ->
                     ""
 
-        VarDef varDef ->
-            Maybe.withDefault "" <| Maybe.map .name varDef.label
+        FuncDef funcDef ->
+            Maybe.withDefault "" <| Maybe.map .name funcDef.label
 
-        Pat pat ->
-            case pat.pvalue of
-                Ast.LabelValue l ->
-                    l.name
-
-                _ ->
-                    ""
+        Arg arg ->
+            Maybe.withDefault "" <| Maybe.map .name arg.label
 
 
 getNodeRef : Node -> ExprRef
@@ -54,23 +49,26 @@ getNodeRef node =
         Expr expr ->
             expr.ref
 
-        VarDef varDef ->
-            varDef.ref
+        FuncDef funcDef ->
+            funcDef.ref
 
-        Pat pat ->
-            pat.ref
+        Arg arg ->
+            arg.ref
 
 
-getNodeVariableDefinition : ExprRef -> Ast.VariableDefinition -> Maybe Node
-getNodeVariableDefinition ref def =
+getNodeFunctionDefinition : ExprRef -> Ast.FunctionDefinition -> Maybe Node
+getNodeFunctionDefinition ref def =
     if def.ref == ref then
-        Just (VarDef def)
+        Just (FuncDef def)
 
     else
         -- TODO: Find more elegant way.
         oneOf <|
-            [ def.value |> Maybe.andThen (getNodeExpression ref) ]
-                ++ List.map (getNodePattern ref) def.arguments
+            [ def.body |> Maybe.andThen (getNodeExpression ref) ]
+
+
+
+--++ List.map (getNodePattern ref) def.arguments
 
 
 getNodeExpression : ExprRef -> Ast.Expression -> Maybe Node
@@ -89,28 +87,43 @@ getNodeExpression ref expr =
                         List.filterMap (Maybe.map <| getNodeExpression ref) [ v.cond, v.true, v.false ]
                             |> oneOf
 
-                    Ast.LambdaValue v ->
-                        oneOf <|
-                            List.filterMap (Maybe.map <| getNodeExpression ref) [ v.body ]
-                                ++ List.filterMap (Maybe.map <| getNodePattern ref) [ v.argument ]
+                    Ast.FunctionApplicationValue v ->
+                        List.filterMap (getNodeExpression ref) v.arguments |> List.head
 
-                    Ast.ApplicationValue v ->
-                        oneOf <|
-                            List.filterMap (Maybe.map <| getNodeExpression ref) [ v.left, v.right ]
+                    Ast.RefValue _ ->
+                        Nothing
 
-                    _ ->
+                    Ast.ExternalRefValue _ ->
+                        Nothing
+
+                    Ast.ValueUnspecified ->
+                        Nothing
+
+                    Ast.EmptyValue _ ->
+                        Nothing
+
+                    Ast.BoolValue _ ->
+                        Nothing
+
+                    Ast.IntValue _ ->
+                        Nothing
+
+                    Ast.FloatValue _ ->
+                        Nothing
+
+                    Ast.StringValue _ ->
                         Nothing
         in
         oneOf <| [ vNode ]
 
 
-getNodePattern : ExprRef -> Ast.Pattern -> Maybe Node
-getNodePattern ref pat =
-    if pat.ref == ref then
-        Just (Pat pat)
 
-    else
-        Nothing
+--getNodePattern : ExprRef -> Ast.Pattern -> Maybe Node
+--getNodePattern ref pat =
+--if pat.ref == ref then
+--Just (Pat pat)
+--else
+--Nothing
 
 
 nodeChildren : Node -> List Node
@@ -126,23 +139,38 @@ nodeChildren node =
                         List.filterMap identity
                             [ v.cond, v.true, v.false ]
 
-                Ast.LambdaValue v ->
-                    List.filterMap identity
-                        [ Maybe.map Pat v.argument, Maybe.map Expr v.body ]
+                Ast.FunctionApplicationValue v ->
+                    List.map Expr v.arguments
 
-                Ast.ApplicationValue v ->
-                    List.map Expr <|
-                        List.filterMap identity
-                            [ v.left, v.right ]
-
-                _ ->
+                Ast.RefValue _ ->
                     []
 
-        VarDef varDef ->
-            List.map Pat varDef.arguments
-                ++ (Maybe.withDefault [] <| Maybe.map (List.singleton << Expr) varDef.value)
+                Ast.ExternalRefValue _ ->
+                    []
 
-        Pat pat ->
+                Ast.EmptyValue _ ->
+                    []
+
+                Ast.BoolValue _ ->
+                    []
+
+                Ast.IntValue _ ->
+                    []
+
+                Ast.FloatValue _ ->
+                    []
+
+                Ast.StringValue _ ->
+                    []
+
+                Ast.ValueUnspecified ->
+                    []
+
+        FuncDef funcDef ->
+            List.map Arg funcDef.arguments
+                ++ (Maybe.withDefault [] <| Maybe.map (List.singleton << Expr) funcDef.body)
+
+        Arg arg ->
             []
 
 

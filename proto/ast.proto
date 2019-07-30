@@ -3,13 +3,14 @@ syntax = "proto3";
 message File {
   int64 next_ref = 1;
   string name = 2;
-  repeated TypeAlias type_aliases = 4;
-  repeated VariableDefinition variable_definitions = 5;
-  /*repeated TypeDefinition type_definitions = 5;*/
+  repeated FunctionDefinition function_definitions = 5;
 }
 
 message Expression {
   int64 ref = 1;
+
+  message Hole {
+  };
 
   message Bool {
     bool value = 1;
@@ -37,14 +38,9 @@ message Expression {
     Expression false = 3;
   }
 
-  message Lambda {
-    Pattern argument = 1;
-    Expression body = 2;
-  }
-
-  message Application {
-    Expression left = 1;
-    Expression right = 2;
+  message FunctionApplication {
+    int64 function = 1;
+    repeated Expression arguments = 2;
   }
 
   message Ref {
@@ -64,18 +60,20 @@ message Expression {
     String string_value = 5;
     List list_value = 6;
     If if_value = 7;
-    Lambda lambda_value = 10;
-    Application application_value = 11;
+    FunctionApplication function_application_value = 8;
     Ref ref_value = 12;
     ExternalRef external_ref_value = 13;
+    /*Hole hole_value = 14;*/
   }
 }
 
-message VariableDefinition {
+message FunctionDefinition {
   int64 ref = 1;
   Label label = 2;
-  Expression value = 3;
-  repeated Pattern arguments = 4;
+
+  repeated Argument arguments = 3;
+  Type return_type = 4;
+  Expression body = 5;
 }
 
 message TypeAlias {
@@ -127,6 +125,12 @@ message Pattern {
     Label label_value = 3;
     Pattern pattern_value = 4;
   }
+}
+
+message Argument {
+  int64 ref = 1;
+  Label label = 2;
+  Type type = 3;
 }
 
 message Label {

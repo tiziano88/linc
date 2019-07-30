@@ -1,4 +1,4 @@
-module Lens exposing (colourOfLabel, colourOfNode, expressionOfNode, fileOfModel, firstWhere, firstWhere_, labelOfVariableDefinition, modifyFirstWhere, nameOfLabel, valueOfExpression, variableDefinitionOfNode, variableDefinitionsOfFile, variableDefinitionsOfModel)
+module Lens exposing (colourOfLabel, colourOfNode, expressionOfNode, fileOfModel, firstWhere, firstWhere_, functionDefinitionOfNode, functionDefinitionsOfFile, functionDefinitionsOfModel, labelOfFunctionDefinition, modifyFirstWhere, nameOfLabel, valueOfExpression)
 
 import Monocle.Common exposing (..)
 import Monocle.Compose exposing (..)
@@ -57,14 +57,14 @@ valueOfExpression =
     Lens .value (\v e -> { e | value = v })
 
 
-variableDefinitionsOfFile : Lens Ast.File (List Ast.VariableDefinition)
-variableDefinitionsOfFile =
-    Lens .variableDefinitions (\v f -> { f | variableDefinitions = v })
+functionDefinitionsOfFile : Lens Ast.File (List Ast.FunctionDefinition)
+functionDefinitionsOfFile =
+    Lens .functionDefinitions (\v f -> { f | functionDefinitions = v })
 
 
-variableDefinitionsOfModel : Lens Model (List Ast.VariableDefinition)
-variableDefinitionsOfModel =
-    Monocle.Lens.compose fileOfModel variableDefinitionsOfFile
+functionDefinitionsOfModel : Lens Model (List Ast.FunctionDefinition)
+functionDefinitionsOfModel =
+    Monocle.Lens.compose fileOfModel functionDefinitionsOfFile
 
 
 colourOfLabel : Lens Ast.Label String
@@ -77,27 +77,27 @@ nameOfLabel =
     Lens .name (\c l -> { l | name = c })
 
 
-labelOfVariableDefinition : Optional Ast.VariableDefinition Ast.Label
-labelOfVariableDefinition =
+labelOfFunctionDefinition : Optional Ast.FunctionDefinition Ast.Label
+labelOfFunctionDefinition =
     Optional .label (\l v -> { v | label = Just l })
 
 
-variableDefinitionOfNode : Prism Node Ast.VariableDefinition
-variableDefinitionOfNode =
+functionDefinitionOfNode : Prism Node Ast.FunctionDefinition
+functionDefinitionOfNode =
     Prism
         (\n ->
             case n of
-                VarDef v ->
+                FuncDef v ->
                     Just v
 
                 _ ->
                     Nothing
         )
-        VarDef
+        FuncDef
 
 
 colourOfNode : Optional Node String
 colourOfNode =
-    fromPrism variableDefinitionOfNode
-        |> optionalWithOptional labelOfVariableDefinition
+    fromPrism functionDefinitionOfNode
+        |> optionalWithOptional labelOfFunctionDefinition
         |> optionalWithOptional (fromLens colourOfLabel)
