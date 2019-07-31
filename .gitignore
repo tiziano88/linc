@@ -7,3 +7,5 @@ elm.js
 
 /client/out
 /server/out
+
+target/

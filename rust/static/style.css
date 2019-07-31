@@ -1,0 +1,8 @@
+.node {
+  border: 1px solid;
+  padding: 5px;
+}
+
+.selected {
+  color: red;
+}
