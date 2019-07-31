@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use yew::{html, Component, ComponentLink, Html, Renderable, ShouldRender};
 
 type Ref = i32;
@@ -9,8 +10,10 @@ pub struct Model {
 
 pub enum Msg {
     Select(Ref),
+    Rename(Ref, String),
 }
 
+#[derive(Serialize, Deserialize)]
 struct File {
     bindings: Vec<Binding>,
 }
@@ -24,6 +27,7 @@ impl Lookup for File {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 struct Binding {
     reference: Ref,
     label: Label,
@@ -56,11 +60,13 @@ impl<'a> Node<'a> {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 struct Expression {
     reference: Ref,
     value: Value,
 }
 
+#[derive(Serialize, Deserialize)]
 enum Value {
     Hole,
 
@@ -121,36 +127,43 @@ impl Lookup for Expression {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 struct BlockValue {
     expressions: Vec<Expression>,
 }
 
+#[derive(Serialize, Deserialize)]
 struct ListValue {
     items: Vec<Expression>,
 }
 
+#[derive(Serialize, Deserialize)]
 struct IfValue {
     conditional: Box<Expression>,
     true_body: Box<Expression>,
     false_body: Box<Expression>,
 }
 
+#[derive(Serialize, Deserialize)]
 struct FunctionDefinitionValue {
     arguments: Vec<Pattern>,
     body: Box<Expression>,
 }
 
+#[derive(Serialize, Deserialize)]
 struct FunctionCallValue {
     function: Ref,
     arguments: Vec<Expression>,
 }
 
+#[derive(Serialize, Deserialize)]
 struct BinaryOperatorValue {
     operator: String,
     left: Box<Expression>,
     right: Box<Expression>,
 }
 
+#[derive(Serialize, Deserialize)]
 struct Pattern {
     reference: Ref,
     label: Label,
@@ -166,6 +179,7 @@ impl Lookup for Pattern {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 struct Label {
     name: String,
     colour: String,
@@ -258,6 +272,27 @@ impl Component for Model {
             Msg::Select(reference) => {
                 self.selected = Some(reference);
             }
+            Msg::Rename(reference, name) => {
+                if let Some(ref mut node) = self.file.lookup(reference) {
+                    match node {
+                        Node::Expression(_) => {}
+                        Node::Pattern(_) => {}
+                        Node::Binding(ref mut v) => {
+                            *v = &Binding {
+                                reference: 1111,
+                                label: Label {
+                                    name: "test".to_string(),
+                                    colour: "red".to_string(),
+                                },
+                                value: Expression {
+                                    reference: 123,
+                                    value: Value::Hole,
+                                },
+                            }
+                        }
+                    };
+                }
+            }
         };
         true
     }
@@ -277,11 +312,14 @@ impl Renderable<Model> for Model {
 
 impl Model {
     fn view_file(&self, file: &File) -> Html<Model> {
+        let serialized = serde_json::to_string_pretty(file).expect("could not serialize to JSON");
         html! {
             <div>
                 <div>{ "file" }</div>
                 <div>{ for file.bindings.iter().map(|v| self.view_binding(&v)) }</div>
-                </div>
+                <div>{ "JSON" }</div>
+                <pre>{ serialized }</pre>
+            </div>
         }
     }
 
@@ -304,7 +342,10 @@ impl Model {
         html! {
             <div class=class
                 onclick=|_| Msg::Select(reference) >
-                <span>{ self.view_label(&binding.label) }</span>
+                <span contenteditable=true
+                      oninput=|e| Msg::Rename(reference, e.value)>
+                  { self.view_label(&binding.label) }
+                </span>
                 <span>{ "=" }</span>
                 <span>{ self.view_expression(&binding.value) }</span>
                 </div>
@@ -369,9 +410,9 @@ impl Model {
             Value::FunctionDefinition(v) => {
                 html! {
                     <span>
-                      { "fn" }
-                      { "(" }{ for v.arguments.iter().map(|v| self.view_pattern(v)) }{ ")" }
-                      { self.view_expression(&v.body) }
+                    { "fn" }
+                    { "(" }{ for v.arguments.iter().map(|v| self.view_pattern(v)) }{ ")" }
+                    { self.view_expression(&v.body) }
                     </span>
                 }
             }
@@ -383,17 +424,17 @@ impl Model {
                     .unwrap_or("<UNKNOWN>".to_string());
                 html! {
                     <span>
-                      { function_name }
-                      { "(" }{ for v.arguments.iter().map(|v| self.view_expression(v)) }{ ")" }
+                    { function_name }
+                    { "(" }{ for v.arguments.iter().map(|v| self.view_expression(v)) }{ ")" }
                     </span>
                 }
             }
             Value::BinaryOperator(v) => {
                 html! {
                     <span>
-                      { self.view_expression(&v.left) }
-                      { &v.operator }
-                      { self.view_expression(&v.right) }
+                    { self.view_expression(&v.left) }
+                    { &v.operator }
+                    { self.view_expression(&v.right) }
                     </span>
                 }
             }
@@ -412,8 +453,8 @@ impl Model {
         }
         html! {
             <span class=class
-                  onclick=|_| Msg::Select(reference)>
-              { &pattern.label.name }
+                onclick=|_| Msg::Select(reference)>
+                { &pattern.label.name }
             </span>
         }
     }
