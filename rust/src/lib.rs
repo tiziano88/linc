@@ -8,6 +8,15 @@ pub struct Model {
     selected: Option<Ref>,
 }
 
+impl Model {
+    fn lookup(&self, reference: Ref) -> Option<&Node> {
+        self.file.lookup(reference)
+    }
+    fn lookup_mut(&mut self, reference: Ref) -> Option<&mut Node> {
+        self.file.lookup_mut(reference)
+    }
+}
+
 pub enum Msg {
     Select(Ref),
     Rename(Ref, String),
@@ -15,14 +24,22 @@ pub enum Msg {
 
 #[derive(Serialize, Deserialize)]
 struct File {
-    bindings: Vec<Node>,
+    bindings: Vec<Ref>,
+    nodes: Vec<Node>,
 }
 
 impl File {
     fn lookup(&self, reference: Ref) -> Option<&Node> {
-        self.bindings
+        self.nodes
             .iter()
-            .filter_map(|v| v.lookup(reference))
+            .filter(|v| v.reference == reference)
+            .next()
+    }
+
+    fn lookup_mut(&mut self, reference: Ref) -> Option<&mut Node> {
+        self.nodes
+            .iter_mut()
+            .filter(|v| v.reference == reference)
             .next()
     }
 }
@@ -32,6 +49,11 @@ struct Node {
     reference: Ref,
     value: Value,
 }
+
+const ERROR_NODE: Node = Node {
+    reference: 1111111111,
+    value: Value::Hole,
+};
 
 #[derive(Serialize, Deserialize)]
 enum Value {
@@ -55,48 +77,18 @@ enum Value {
 }
 
 impl Node {
-    fn lookup(&self, reference: Ref) -> Option<&Node> {
-        if reference == self.reference {
-            Some(self)
-        } else {
-            match self.value {
-                Value::Hole => None,
-                Value::Bool(_) => None,
-                Value::Int(_) => None,
-                Value::Float(_) => None,
-                Value::String(_) => None,
-                Value::Ref(_) => None,
-                Value::Binding(_) => None,
-                Value::Pattern(_) => None,
-                Value::Block(_) => None,
-                Value::List(_) => None,
-                Value::If(ref v) => v
-                    .conditional
-                    .lookup(reference)
-                    .or(v.true_body.lookup(reference))
-                    .or(v.false_body.lookup(reference)),
-                Value::FunctionDefinition(ref v) => v
-                    .arguments
-                    .iter()
-                    .filter_map(|v| v.lookup(reference))
-                    .next()
-                    .or(v.body.lookup(reference)),
-                Value::FunctionCall(ref v) => v
-                    .arguments
-                    .iter()
-                    .filter_map(|v| v.lookup(reference))
-                    .next(),
-                Value::BinaryOperator(ref v) => {
-                    v.left.lookup(reference).or(v.right.lookup(reference))
-                }
-            }
-        }
-    }
-
     fn label(&self) -> Option<&Label> {
         match &self.value {
             Value::Binding(ref v) => Some(&v.label),
+            Value::Pattern(ref v) => Some(&v.label),
             _ => None,
+        }
+    }
+    fn rename(&mut self, name: String) {
+        match &mut self.value {
+            Value::Binding(ref mut v) => v.label.name = name,
+            Value::Pattern(ref mut v) => v.label.name = name,
+            _ => {}
         }
     }
 }
@@ -104,7 +96,7 @@ impl Node {
 #[derive(Serialize, Deserialize)]
 struct BindingValue {
     label: Label,
-    value: Box<Node>,
+    value: Ref,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -114,38 +106,38 @@ struct PatternValue {
 
 #[derive(Serialize, Deserialize)]
 struct BlockValue {
-    expressions: Vec<Node>,
+    expressions: Vec<Ref>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct ListValue {
-    items: Vec<Node>,
+    items: Vec<Ref>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct IfValue {
-    conditional: Box<Node>,
-    true_body: Box<Node>,
-    false_body: Box<Node>,
+    conditional: Ref,
+    true_body: Ref,
+    false_body: Ref,
 }
 
 #[derive(Serialize, Deserialize)]
 struct FunctionDefinitionValue {
-    arguments: Vec<Node>,
-    body: Box<Node>,
+    arguments: Vec<Ref>,
+    body: Ref,
 }
 
 #[derive(Serialize, Deserialize)]
 struct FunctionCallValue {
     function: Ref,
-    arguments: Vec<Node>,
+    arguments: Vec<Ref>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct BinaryOperatorValue {
     operator: String,
-    left: Box<Node>,
-    right: Box<Node>,
+    left: Ref,
+    right: Ref,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -166,7 +158,7 @@ impl Component for Model {
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
         Model {
             file: File {
-                bindings: vec![
+                nodes: vec![
                     Node {
                         reference: 111,
                         value: Value::Binding(BindingValue {
@@ -174,17 +166,19 @@ impl Component for Model {
                                 name: "main".to_string(),
                                 colour: "red".to_string(),
                             },
-                            value: Box::new(Node {
-                                reference: 123,
-                                value: Value::FunctionDefinition(FunctionDefinitionValue {
-                                    arguments: vec![],
-                                    body: Box::new(Node {
-                                        reference: 124,
-                                        value: Value::Int(123),
-                                    }),
-                                }),
-                            }),
+                            value: 123,
                         }),
+                    },
+                    Node {
+                        reference: 123,
+                        value: Value::FunctionDefinition(FunctionDefinitionValue {
+                            arguments: vec![],
+                            body: 124,
+                        }),
+                    },
+                    Node {
+                        reference: 124,
+                        value: Value::Int(123),
                     },
                     Node {
                         reference: 12,
@@ -193,27 +187,62 @@ impl Component for Model {
                                 name: "factorial".to_string(),
                                 colour: "red".to_string(),
                             },
-                            value: Box::new(Node {
-                                reference: 1231312,
-                                value: Value::FunctionDefinition(FunctionDefinitionValue {
-                                    arguments: vec![Node {
-                                        reference: 222,
-                                        value: Value::Pattern(PatternValue {
-                                            label: Label {
-                                                name: "x".to_string(),
-                                                colour: "".to_string(),
-                                            },
-                                        }),
-                                    }],
-                                    body: Box::new(Node {
-                                        reference: 228,
-                                        value: Value::Hole,
-                                    }),
-                                }),
-                            }),
+                            value: 1231312,
                         }),
                     },
+                    Node {
+                        reference: 1231312,
+                        value: Value::FunctionDefinition(FunctionDefinitionValue {
+                            arguments: vec![222],
+                            body: 228,
+                        }),
+                    },
+                    Node {
+                        reference: 222,
+                        value: Value::Pattern(PatternValue {
+                            label: Label {
+                                name: "x".to_string(),
+                                colour: "".to_string(),
+                            },
+                        }),
+                    },
+                    Node {
+                        reference: 228,
+                        value: Value::BinaryOperator(BinaryOperatorValue {
+                            operator: "*".to_string(),
+                            left: 1231,
+                            right: 1232,
+                        }),
+                    },
+                    Node {
+                        reference: 1231,
+                        value: Value::Ref(222),
+                    },
+                    Node {
+                        reference: 1232,
+                        value: Value::FunctionCall(FunctionCallValue {
+                            function: 12,
+                            arguments: vec![229],
+                        }),
+                    },
+                    Node {
+                        reference: 229,
+                        value: Value::BinaryOperator(BinaryOperatorValue {
+                            operator: "-".to_string(),
+                            left: 230,
+                            right: 231,
+                        }),
+                    },
+                    Node {
+                        reference: 230,
+                        value: Value::Ref(222),
+                    },
+                    Node {
+                        reference: 231,
+                        value: Value::Int(1),
+                    },
                 ],
+                bindings: vec![111, 12],
             },
             selected: None,
         }
@@ -225,39 +254,9 @@ impl Component for Model {
                 self.selected = Some(reference);
             }
             Msg::Rename(reference, name) => {
-                /*
-                  for b in self.file.bindings.iter() {
-                  let mut n = Node::Binding(b);
-                  n.map(|n| match n {
-                  Node::Expression(v) => {}
-                  Node::Pattern(v) => {}
-                  Node::Binding(ref mut v) => {
-                  if v.reference == reference {
-                  v.label.name = name.clone();
-                  }
-                  }
-                  });
-                  }
-                  if let Some(ref mut node) = self.file.lookup(reference) {
-                  match node {
-                  Node::Expression(_) => {}
-                  Node::Pattern(_) => {}
-                  Node::Binding(ref mut v) => {
-                *v = &Binding {
-                reference: 1111,
-                label: Label {
-                name: "test".to_string(),
-                colour: "red".to_string(),
-                },
-                value: Expression {
-                reference: 123,
-                value: Value::Hole,
-                },
+                if let Some(node) = self.lookup_mut(reference) {
+                    node.rename(name);
                 }
-                }
-                };
-                }
-                */
             }
         };
         true
@@ -271,7 +270,7 @@ impl Renderable<Model> for Model {
                 <div>{ "LINC" }</div>
                 <div>{ format!("Selected: {:?}", self.selected) }</div>
                 <div>{ self.view_file(&self.file) }</div>
-            </div>
+                </div>
         }
     }
 }
@@ -282,20 +281,23 @@ impl Model {
         html! {
             <div>
                 <div>{ "file" }</div>
-                <div>{ for file.bindings.iter().map(|v| self.view_binding(&v)) }</div>
+                <div>{ for file.bindings.iter().map(|v| self.view_binding(*v)) }</div>
                 <div>{ "JSON" }</div>
                 <pre>{ serialized }</pre>
-            </div>
+                </div>
         }
     }
 
-    fn view_label(&self, label: &Label) -> Html<Model> {
+    fn view_label(&self, label: &Label, reference: Ref) -> Html<Model> {
         html! {
-            <span>{ &label.name }</span>
+            <input oninput=|e| Msg::Rename(reference, e.value)
+                type="text"
+                value=label.name/>
         }
     }
 
-    fn view_binding(&self, node: &Node) -> Html<Model> {
+    fn view_binding(&self, reference: Ref) -> Html<Model> {
+        let node = self.lookup(reference).unwrap_or(&ERROR_NODE);
         html! {
             <div>{ self.view_node(node) }</div>
         }
@@ -313,14 +315,13 @@ impl Model {
             class.push_str(" selected");
         }
         html! {
-            <span class=class
-                  onclick=|_| Msg::Select(reference)>
-                <span>{ self.view_value(&node.value) }</span>
-            </span>
+            <div class=class onclick=|_| Msg::Select(reference)>
+                <span>{ self.view_value(&node.value, reference) }</span>
+                </div>
         }
     }
 
-    fn view_value(&self, value: &Value) -> Html<Model> {
+    fn view_value(&self, value: &Value, reference: Ref) -> Html<Model> {
         match value {
             Value::Hole => {
                 html! { <span>{ "@" }</span> }
@@ -341,7 +342,7 @@ impl Model {
                 html! { <span>{ v }</span> }
             }
             Value::Ref(reference) => {
-                let node = self.file.lookup(*reference);
+                let node = self.lookup(*reference);
                 let text = node
                     .and_then(|n| n.label())
                     .map(|l| l.name.clone())
@@ -349,16 +350,37 @@ impl Model {
                 html! { <span>{ text }</span> }
             }
             Value::Binding(v) => {
-                html! {
-                    <span>
-                        { self.view_label(&v.label) }
-                        { "=" }
-                        { self.view_node(&v.value) }
-                    </span>
+                let label = self.view_label(&v.label, reference);
+                let value = self.lookup(v.value).unwrap_or(&ERROR_NODE);
+                if let Value::FunctionDefinition(ref fd) = value.value {
+                    let mut args = fd
+                        .arguments
+                        .iter()
+                        // TODO: We should not filter out invalid nodes.
+                        .filter_map(|r| self.lookup(*r))
+                        .map(|n| self.view_node(n));
+                    let body = self.lookup(fd.body).unwrap_or(&ERROR_NODE);
+                    html! {
+                        <span>
+                        { "fn" }{ label }
+                        { "(" }{ for args }{ ")" }
+                        { self.view_node(body) }
+                        </span>
+                    }
+                } else {
+                    html! {
+                        <span>
+                        { label }{ "=" }{ self.view_node(value) }
+                        </span>
+                    }
                 }
             }
-            Value::Pattern(_) => {
-                html! { <span>{ "xxx" }</span> }
+            Value::Pattern(v) => {
+                html! {
+                    <span>
+                    { self.view_label(&v.label, reference) }
+                    </span>
+                }
             }
             Value::Block(_) => {
                 html! { <span>{ "xxx" }</span> }
@@ -370,11 +392,18 @@ impl Model {
                 html! { <span>{ "xxx" }</span> }
             }
             Value::FunctionDefinition(v) => {
+                let mut args = v
+                    .arguments
+                    .iter()
+                    // TODO: We should not filter out invalid nodes.
+                    .filter_map(|r| self.lookup(*r))
+                    .map(|n| self.view_node(n));
+                let body = self.lookup(v.body).unwrap_or(&ERROR_NODE);
                 html! {
                     <span>
-                        { "fn" }
-                        { "(" }{ for v.arguments.iter().map(|v| self.view_node(v)) }{ ")" }
-                        { self.view_node(&v.body) }
+                    { "fn" }
+                    { "(" }{ for args }{ ")" }
+                    { self.view_node(body) }
                     </span>
                 }
             }
@@ -384,19 +413,27 @@ impl Model {
                     .and_then(|n| n.label())
                     .map(|l| l.name.clone())
                     .unwrap_or("<UNKNOWN>".to_string());
+                let mut args = v
+                    .arguments
+                    .iter()
+                    // TODO: We should not filter out invalid nodes.
+                    .filter_map(|r| self.lookup(*r))
+                    .map(|n| self.view_node(n));
                 html! {
                     <span>
-                        { function_name }
-                        { "(" }{ for v.arguments.iter().map(|v| self.view_node(v)) }{ ")" }
+                    { function_name }
+                    { "(" }{ for args }{ ")" }
                     </span>
                 }
             }
             Value::BinaryOperator(v) => {
+                let left = self.lookup(v.left).unwrap_or(&ERROR_NODE);
+                let right = self.lookup(v.right).unwrap_or(&ERROR_NODE);
                 html! {
                     <span>
-                        { self.view_node(&v.left) }
-                        { &v.operator }
-                        { self.view_node(&v.right) }
+                    { self.view_node(left) }
+                    { &v.operator }
+                    { self.view_node(right) }
                     </span>
                 }
             }
