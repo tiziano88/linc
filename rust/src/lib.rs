@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
+use yew::services::storage::{Area, StorageService};
 use yew::{html, Component, ComponentLink, Html, Renderable, ShouldRender};
 
 type Ref = i32;
 
 pub struct Model {
     file: File,
+    store: StorageService,
     selected: Option<Ref>,
 }
 
@@ -17,9 +19,12 @@ impl Model {
     }
 }
 
+#[derive(Clone)]
 pub enum Msg {
     Select(Ref),
     Rename(Ref, String),
+    Store,
+    Load,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -157,6 +162,7 @@ impl Component for Model {
 
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
         Model {
+            store: StorageService::new(Area::Local),
             file: File {
                 nodes: vec![
                     Node {
@@ -249,6 +255,7 @@ impl Component for Model {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        const KEY: &str = "linc_file";
         match msg {
             Msg::Select(reference) => {
                 self.selected = Some(reference);
@@ -256,6 +263,14 @@ impl Component for Model {
             Msg::Rename(reference, name) => {
                 if let Some(node) = self.lookup_mut(reference) {
                     node.rename(name);
+                }
+            }
+            Msg::Store => {
+                self.store.store(KEY, yew::format::Json(&self.file));
+            }
+            Msg::Load => {
+                if let yew::format::Json(Ok(file)) = self.store.restore(KEY) {
+                    self.file = file;
                 }
             }
         };
@@ -269,13 +284,47 @@ impl Renderable<Model> for Model {
             <div>
                 <div>{ "LINC" }</div>
                 <div>{ format!("Selected: {:?}", self.selected) }</div>
+                <div>{ self.view_actions() }</div>
                 <div>{ self.view_file(&self.file) }</div>
                 </div>
         }
     }
 }
 
+struct Action {
+    text: String,
+    msg: Msg,
+}
+
 impl Model {
+    fn view_actions(&self) -> Html<Model> {
+        let actions = vec![
+            Action {
+                text: "store".to_string(),
+                msg: Msg::Store,
+            },
+            Action {
+                text: "load".to_string(),
+                msg: Msg::Load,
+            },
+        ];
+        let mut actions = actions.iter().map(|a| self.view_action(a));
+        html! {
+            <div>
+            { for actions }
+            </div>
+        }
+    }
+
+    fn view_action(&self, action: &Action) -> Html<Model> {
+        let m = action.msg.clone();
+        html! {
+            <div class="action" onclick=|_| m.clone()>
+            { &action.text }
+            </div>
+        }
+    }
+
     fn view_file(&self, file: &File) -> Html<Model> {
         let serialized = serde_json::to_string_pretty(file).expect("could not serialize to JSON");
         html! {

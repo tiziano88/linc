@@ -7,3 +7,9 @@
 .selected {
   color: red;
 }
+
+.action {
+  border: 1px solid;
+  padding: 5px;
+  display: inline-block;
+}
