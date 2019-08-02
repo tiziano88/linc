@@ -106,6 +106,7 @@ impl Node {
         match &self.value {
             Value::Binding(ref v) => Some(&v.label),
             Value::Pattern(ref v) => Some(&v.label),
+            Value::FunctionDefinition(ref v) => Some(&v.label),
             _ => None,
         }
     }
@@ -113,6 +114,7 @@ impl Node {
         match &mut self.value {
             Value::Binding(ref mut v) => v.label.name = name,
             Value::Pattern(ref mut v) => v.label.name = name,
+            Value::FunctionDefinition(ref mut v) => v.label.name = name,
             _ => {}
         }
     }
@@ -308,10 +310,17 @@ impl Component for Model {
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
+        let selected_node = self
+            .selected
+            .and_then(|reference| self.lookup(reference))
+            .unwrap_or(&ERROR_NODE);
+        let serialized_node =
+            serde_json::to_string_pretty(selected_node).expect("could not serialize to JSON");
         html! {
             <div>
                 <div>{ "LINC" }</div>
                 <div>{ format!("Selected: {:?}", self.selected) }</div>
+                <pre>{ serialized_node }</pre>
                 <div>{ self.view_actions() }</div>
                 <div>{ self.view_file(&self.file) }</div>
             </div>
