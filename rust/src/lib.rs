@@ -23,14 +23,18 @@ impl Model {
 pub enum Msg {
     Select(Ref),
     Rename(Ref, String),
+
     Store,
     Load,
+
+    AddArgument,
 }
 
 #[derive(Serialize, Deserialize)]
 struct File {
     bindings: Vec<Ref>,
     nodes: Vec<Node>,
+    next_reference: Ref,
 }
 
 impl File {
@@ -46,6 +50,22 @@ impl File {
             .iter_mut()
             .filter(|v| v.reference == reference)
             .next()
+    }
+
+    fn add_node(&mut self, value: Value) -> Ref {
+        let reference = self.next_reference();
+        let node = Node {
+            reference: reference,
+            value: value,
+        };
+        self.nodes.push(node);
+        reference
+    }
+
+    fn next_reference(&mut self) -> Ref {
+        let reference = self.next_reference;
+        self.next_reference += 1;
+        reference
     }
 }
 
@@ -128,6 +148,7 @@ struct IfValue {
 
 #[derive(Serialize, Deserialize)]
 struct FunctionDefinitionValue {
+    label: Label,
     arguments: Vec<Ref>,
     body: Ref,
 }
@@ -164,22 +185,17 @@ impl Component for Model {
         Model {
             store: StorageService::new(Area::Local),
             file: File {
+                next_reference: 1000,
                 nodes: vec![
                     Node {
                         reference: 111,
-                        value: Value::Binding(BindingValue {
+                        value: Value::FunctionDefinition(FunctionDefinitionValue {
                             label: Label {
                                 name: "main".to_string(),
                                 colour: "red".to_string(),
                             },
-                            value: 123,
-                        }),
-                    },
-                    Node {
-                        reference: 123,
-                        value: Value::FunctionDefinition(FunctionDefinitionValue {
                             arguments: vec![],
-                            body: 124,
+                            body: 123,
                         }),
                     },
                     Node {
@@ -188,17 +204,11 @@ impl Component for Model {
                     },
                     Node {
                         reference: 12,
-                        value: Value::Binding(BindingValue {
+                        value: Value::FunctionDefinition(FunctionDefinitionValue {
                             label: Label {
                                 name: "factorial".to_string(),
                                 colour: "red".to_string(),
                             },
-                            value: 1231312,
-                        }),
-                    },
-                    Node {
-                        reference: 1231312,
-                        value: Value::FunctionDefinition(FunctionDefinitionValue {
                             arguments: vec![222],
                             body: 228,
                         }),
@@ -265,12 +275,30 @@ impl Component for Model {
                     node.rename(name);
                 }
             }
+
             Msg::Store => {
                 self.store.store(KEY, yew::format::Json(&self.file));
             }
             Msg::Load => {
                 if let yew::format::Json(Ok(file)) = self.store.restore(KEY) {
                     self.file = file;
+                }
+            }
+
+            Msg::AddArgument => {
+                let reference = self.file.add_node(Value::Pattern(PatternValue {
+                    label: Label {
+                        name: "xxx".to_string(),
+                        colour: "red".to_string(),
+                    },
+                }));
+                if let Some(node) = self
+                    .selected
+                    .and_then(|reference| self.lookup_mut(reference))
+                {
+                    if let Value::FunctionDefinition(ref mut v) = node.value {
+                        v.arguments.push(reference);
+                    }
                 }
             }
         };
@@ -286,7 +314,7 @@ impl Renderable<Model> for Model {
                 <div>{ format!("Selected: {:?}", self.selected) }</div>
                 <div>{ self.view_actions() }</div>
                 <div>{ self.view_file(&self.file) }</div>
-                </div>
+            </div>
         }
     }
 }
@@ -307,6 +335,10 @@ impl Model {
                 text: "load".to_string(),
                 msg: Msg::Load,
             },
+            Action {
+                text: "+arg".to_string(),
+                msg: Msg::AddArgument,
+            },
         ];
         let mut actions = actions.iter().map(|a| self.view_action(a));
         html! {
@@ -320,7 +352,7 @@ impl Model {
         let m = action.msg.clone();
         html! {
             <div class="action" onclick=|_| m.clone()>
-            { &action.text }
+                { &action.text }
             </div>
         }
     }
@@ -333,7 +365,7 @@ impl Model {
                 <div>{ for file.bindings.iter().map(|v| self.view_binding(*v)) }</div>
                 <div>{ "JSON" }</div>
                 <pre>{ serialized }</pre>
-                </div>
+            </div>
         }
     }
 
@@ -401,33 +433,16 @@ impl Model {
             Value::Binding(v) => {
                 let label = self.view_label(&v.label, reference);
                 let value = self.lookup(v.value).unwrap_or(&ERROR_NODE);
-                if let Value::FunctionDefinition(ref fd) = value.value {
-                    let mut args = fd
-                        .arguments
-                        .iter()
-                        // TODO: We should not filter out invalid nodes.
-                        .filter_map(|r| self.lookup(*r))
-                        .map(|n| self.view_node(n));
-                    let body = self.lookup(fd.body).unwrap_or(&ERROR_NODE);
-                    html! {
-                        <span>
-                        { "fn" }{ label }
-                        { "(" }{ for args }{ ")" }
-                        { self.view_node(body) }
-                        </span>
-                    }
-                } else {
-                    html! {
-                        <span>
-                        { label }{ "=" }{ self.view_node(value) }
-                        </span>
-                    }
+                html! {
+                    <span>
+                    { label }{ "=" }{ self.view_node(value) }
+                    </span>
                 }
             }
             Value::Pattern(v) => {
                 html! {
                     <span>
-                    { self.view_label(&v.label, reference) }
+                        { self.view_label(&v.label, reference) }
                     </span>
                 }
             }
@@ -441,6 +456,7 @@ impl Model {
                 html! { <span>{ "xxx" }</span> }
             }
             Value::FunctionDefinition(v) => {
+                let label = self.view_label(&v.label, reference);
                 let mut args = v
                     .arguments
                     .iter()
@@ -450,9 +466,9 @@ impl Model {
                 let body = self.lookup(v.body).unwrap_or(&ERROR_NODE);
                 html! {
                     <span>
-                    { "fn" }
-                    { "(" }{ for args }{ ")" }
-                    { self.view_node(body) }
+                        { "fn" }{ label }
+                        { "(" }{ for args }{ ")" }
+                        { self.view_node(body) }
                     </span>
                 }
             }
@@ -470,8 +486,8 @@ impl Model {
                     .map(|n| self.view_node(n));
                 html! {
                     <span>
-                    { function_name }
-                    { "(" }{ for args }{ ")" }
+                        { function_name }
+                        { "(" }{ for args }{ ")" }
                     </span>
                 }
             }
@@ -480,16 +496,12 @@ impl Model {
                 let right = self.lookup(v.right).unwrap_or(&ERROR_NODE);
                 html! {
                     <span>
-                    { self.view_node(left) }
-                    { &v.operator }
-                    { self.view_node(right) }
+                        { self.view_node(left) }
+                        { &v.operator }
+                        { self.view_node(right) }
                     </span>
                 }
             }
         }
-    }
-
-    fn node_by_reference(&self, reference: Ref) -> Option<Node> {
-        None
     }
 }
