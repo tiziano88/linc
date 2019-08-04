@@ -5,7 +5,6 @@ readonly TARGET_DIR=$PWD/../linc-gh-pages
 rm -rf $TARGET_DIR/*
 
 (
-  cd rust
   cargo web deploy --release --output=$TARGET_DIR
 )
 (
