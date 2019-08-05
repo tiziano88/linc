@@ -319,10 +319,15 @@ impl Renderable<Model> for Model {
         html! {
             <div>
                 <div>{ "LINC" }</div>
-                <div>{ format!("Selected: {:?}", self.selected) }</div>
-                <pre>{ serialized_node }</pre>
                 <div>{ self.view_actions() }</div>
-                <div>{ self.view_file(&self.file) }</div>
+                <div class="wrapper">
+                    <div class="column">{ self.view_file(&self.file) }</div>
+                    <div class="column">{ self.view_file_json(&self.file) }</div>
+                    <div class="column">
+                        { format!("Selected: {:?}", self.selected) }
+                        <pre class="column">{ serialized_node }</pre>
+                    </div>
+                </div>
             </div>
         }
     }
@@ -369,12 +374,14 @@ impl Model {
     fn view_file(&self, file: &File) -> Html<Model> {
         let serialized = serde_json::to_string_pretty(file).expect("could not serialize to JSON");
         html! {
-            <div>
-                <div>{ "file" }</div>
-                <div>{ for file.bindings.iter().map(|v| self.view_binding(*v)) }</div>
-                <div>{ "JSON" }</div>
-                <pre>{ serialized }</pre>
-            </div>
+            <div>{ for file.bindings.iter().map(|v| self.view_binding(*v)) }</div>
+        }
+    }
+
+    fn view_file_json(&self, file: &File) -> Html<Model> {
+        let serialized = serde_json::to_string_pretty(file).expect("could not serialize to JSON");
+        html! {
+            <pre>{ serialized }</pre>
         }
     }
 
