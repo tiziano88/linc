@@ -17,6 +17,10 @@ impl Model {
     fn lookup_mut(&mut self, reference: Ref) -> Option<&mut Node> {
         self.file.lookup_mut(reference)
     }
+
+    fn selected_node(&self) -> Option<&Node> {
+        self.selected.and_then(|reference| self.lookup(reference))
+    }
 }
 
 #[derive(Clone)]
@@ -28,6 +32,9 @@ pub enum Msg {
     Load,
 
     AddArgument,
+    NewFn,
+
+    SetValue(Value),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -80,8 +87,8 @@ const ERROR_NODE: Node = Node {
     value: Value::Hole,
 };
 
-#[derive(Serialize, Deserialize)]
-enum Value {
+#[derive(Serialize, Deserialize, Clone)]
+pub enum Value {
     Hole,
 
     Bool(bool),
@@ -120,61 +127,61 @@ impl Node {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct BindingValue {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct BindingValue {
     label: Label,
     value: Ref,
 }
 
-#[derive(Serialize, Deserialize)]
-struct PatternValue {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct PatternValue {
     label: Label,
 }
 
-#[derive(Serialize, Deserialize)]
-struct BlockValue {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct BlockValue {
     expressions: Vec<Ref>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct ListValue {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ListValue {
     items: Vec<Ref>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct IfValue {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct IfValue {
     conditional: Ref,
     true_body: Ref,
     false_body: Ref,
 }
 
-#[derive(Serialize, Deserialize)]
-struct FunctionDefinitionValue {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct FunctionDefinitionValue {
     label: Label,
     arguments: Vec<Ref>,
     body: Ref,
 }
 
-#[derive(Serialize, Deserialize)]
-struct FunctionCallValue {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct FunctionCallValue {
     function: Ref,
     arguments: Vec<Ref>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct BinaryOperatorValue {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct BinaryOperatorValue {
     operator: String,
     left: Ref,
     right: Ref,
 }
 
-#[derive(Serialize, Deserialize)]
-struct Pattern {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Pattern {
     label: Label,
 }
 
-#[derive(Serialize, Deserialize)]
-struct Label {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Label {
     name: String,
     colour: String,
 }
@@ -303,6 +310,21 @@ impl Component for Model {
                     }
                 }
             }
+            Msg::NewFn => {
+                let reference =
+                    self.file
+                        .add_node(Value::FunctionDefinition(FunctionDefinitionValue {
+                            label: Label {
+                                name: "xxx".to_string(),
+                                colour: "red".to_string(),
+                            },
+                            arguments: vec![],
+                            body: 11111,
+                        }));
+                self.file.bindings.push(reference);
+            }
+
+            Msg::SetValue(v) => {}
         };
         true
     }
@@ -321,14 +343,14 @@ impl Renderable<Model> for Model {
                 <div>{ "LINC" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="wrapper">
-                    <div class="column">{ self.view_file(&self.file) }</div>
-                    <div class="column">{ self.view_file_json(&self.file) }</div>
-                    <div class="column">
-                        { format!("Selected: {:?}", self.selected) }
-                        <pre class="column">{ serialized_node }</pre>
-                    </div>
+                <div class="column">{ self.view_file(&self.file) }</div>
+                <div class="column">{ self.view_file_json(&self.file) }</div>
+                <div class="column">
+                { format!("Selected: {:?}", self.selected) }
+            <pre class="column">{ serialized_node }</pre>
                 </div>
-            </div>
+                </div>
+                </div>
         }
     }
 }
@@ -353,6 +375,14 @@ impl Model {
                 text: "+arg".to_string(),
                 msg: Msg::AddArgument,
             },
+            Action {
+                text: "+fn".to_string(),
+                msg: Msg::NewFn,
+            },
+            Action {
+                text: "Int".to_string(),
+                msg: Msg::SetValue(Value::Int(0)),
+            },
         ];
         let mut actions = actions.iter().map(|a| self.view_action(a));
         html! {
@@ -366,7 +396,7 @@ impl Model {
         let m = action.msg.clone();
         html! {
             <div class="action" onclick=|_| m.clone()>
-                { &action.text }
+            { &action.text }
             </div>
         }
     }
@@ -406,13 +436,26 @@ impl Model {
             None => false,
             Some(selected_reference) => selected_reference == reference,
         };
+        let target = match self.selected_node() {
+            None => false,
+            Some(n) => {
+                if let Value::Ref(target_reference) = n.value {
+                    target_reference == reference
+                } else {
+                    false
+                }
+            }
+        };
         // TODO: Use Vec.
-        let mut class = "node".to_string();
+        let mut classes = vec!["node".to_string()];
         if selected {
-            class.push_str(" selected");
+            classes.push("selected".to_string());
+        }
+        if target {
+            classes.push("target".to_string());
         }
         html! {
-            <div class=class onclick=|_| Msg::Select(reference)>
+            <div class=classes.join(" ") onclick=|_| Msg::Select(reference)>
                 <span>{ self.view_value(&node.value, reference) }</span>
                 </div>
         }
@@ -458,7 +501,7 @@ impl Model {
             Value::Pattern(v) => {
                 html! {
                     <span>
-                        { self.view_label(&v.label, reference) }
+                    { self.view_label(&v.label, reference) }
                     </span>
                 }
             }
@@ -482,9 +525,9 @@ impl Model {
                 let body = self.lookup(v.body).unwrap_or(&ERROR_NODE);
                 html! {
                     <span>
-                        { "fn" }{ label }
-                        { "(" }{ for args }{ ")" }
-                        { self.view_node(body) }
+                    { "fn" }{ label }
+                    { "(" }{ for args }{ ")" }
+                    { self.view_node(body) }
                     </span>
                 }
             }
@@ -502,8 +545,8 @@ impl Model {
                     .map(|n| self.view_node(n));
                 html! {
                     <span>
-                        { function_name }
-                        { "(" }{ for args }{ ")" }
+                    { function_name }
+                    { "(" }{ for args }{ ")" }
                     </span>
                 }
             }
@@ -512,9 +555,9 @@ impl Model {
                 let right = self.lookup(v.right).unwrap_or(&ERROR_NODE);
                 html! {
                     <span>
-                        { self.view_node(left) }
-                        { &v.operator }
-                        { self.view_node(right) }
+                    { self.view_node(left) }
+                    { &v.operator }
+                    { self.view_node(right) }
                     </span>
                 }
             }

@@ -8,6 +8,10 @@
   color: red;
 }
 
+.target {
+  color: blue;
+}
+
 .action {
   border: 1px solid;
   padding: 5px;
