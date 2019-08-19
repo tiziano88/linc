@@ -391,6 +391,50 @@ impl Model {
                 msg: Msg::NewFn,
             },
             Action {
+                text: "{}".to_string(),
+                msg: Msg::SetValue(Value::Block(BlockValue {
+                    expressions: vec![],
+                })),
+            },
+            Action {
+                text: "{☆}".to_string(),
+                msg: Msg::SetValue(Value::Block(BlockValue {
+                    expressions: vec![],
+                })),
+            },
+            Action {
+                text: "[]".to_string(),
+                msg: Msg::SetValue(Value::List(ListValue { items: vec![] })),
+            },
+            Action {
+                text: "[☆]".to_string(),
+                msg: Msg::SetValue(Value::List(ListValue { items: vec![] })),
+            },
+            Action {
+                text: "If (◆) then ◆".to_string(),
+                msg: Msg::SetValue(Value::If(IfValue {
+                    conditional: -1,
+                    true_body: -1,
+                    false_body: -1,
+                })),
+            },
+            Action {
+                text: "If (☆) then ◆".to_string(),
+                msg: Msg::SetValue(Value::If(IfValue {
+                    conditional: -1,
+                    true_body: -1,
+                    false_body: -1,
+                })),
+            },
+            Action {
+                text: "If (◆) then ☆".to_string(),
+                msg: Msg::SetValue(Value::If(IfValue {
+                    conditional: -1,
+                    true_body: -1,
+                    false_body: -1,
+                })),
+            },
+            Action {
                 text: "Int".to_string(),
                 msg: Msg::SetValue(Value::Int(0)),
             },
@@ -468,7 +512,7 @@ impl Model {
         html! {
             <div class=classes.join(" ") onclick=|_| Msg::Select(reference)>
                 <span>{ self.view_value(&node.value, reference) }</span>
-                </div>
+            </div>
         }
     }
 
