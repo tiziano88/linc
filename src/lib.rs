@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 use serde::{Deserialize, Serialize};
 use yew::services::storage::{Area, StorageService};
 use yew::{html, Component, ComponentLink, Html, Renderable, ShouldRender};
@@ -8,6 +10,13 @@ pub struct Model {
     file: File,
     store: StorageService,
     selected: Option<Ref>,
+    cursor: Option<Cursor>,
+}
+
+#[derive(Debug)]
+pub struct Cursor {
+    node: Ref,
+    offset: usize,
 }
 
 impl Model {
@@ -270,6 +279,7 @@ impl Component for Model {
                 bindings: vec![111, 12],
             },
             selected: None,
+            cursor: None,
         }
     }
 
@@ -343,14 +353,15 @@ impl Renderable<Model> for Model {
                 <div>{ "LINC" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="wrapper">
-                <div class="column">{ self.view_file(&self.file) }</div>
-                <div class="column">{ self.view_file_json(&self.file) }</div>
-                <div class="column">
-                { format!("Selected: {:?}", self.selected) }
-            <pre class="column">{ serialized_node }</pre>
+                    <div class="column">{ self.view_file(&self.file) }</div>
+                    <div class="column">{ self.view_file_json(&self.file) }</div>
+                    <div class="column">
+                        <div>{ format!("Cursor: {:?}", self.cursor) }</div>
+                        <div>{ format!("Selected: {:?}", self.selected) }</div>
+                        <pre class="column">{ serialized_node }</pre>
+                    </div>
                 </div>
-                </div>
-                </div>
+            </div>
         }
     }
 }
