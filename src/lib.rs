@@ -5,7 +5,15 @@ use std::collections::VecDeque;
 use yew::services::storage::{Area, StorageService};
 use yew::{html, Component, ComponentLink, Html, Renderable, ShouldRender};
 
-type Ref = i32;
+type Ref = String;
+
+fn invalid_ref() -> Ref {
+    "".to_string()
+}
+
+fn new_ref() -> Ref {
+    uuid::Uuid::new_v4().to_hyphenated().to_string()
+}
 
 type Path = VecDeque<Ref>;
 
@@ -16,17 +24,16 @@ pub struct Model {
 }
 
 impl Model {
-    fn lookup(&self, reference: Ref) -> Option<&Node> {
+    fn lookup(&self, reference: &Ref) -> Option<&Node> {
         self.file.lookup(reference)
     }
-    fn lookup_mut(&mut self, reference: Ref) -> Option<&mut Node> {
+    fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
         self.file.lookup_mut(reference)
     }
-
     fn selected_node(&self) -> Option<&Node> {
         self.path
             .back()
-            .and_then(|reference| self.lookup(*reference))
+            .and_then(|reference| self.lookup(reference))
     }
 }
 
@@ -39,6 +46,8 @@ pub enum Msg {
     Load,
 
     AddArgument,
+    AddItem,
+    AddExpression,
     NewFn,
 
     SetValue(Value),
@@ -48,37 +57,30 @@ pub enum Msg {
 struct File {
     bindings: Vec<Ref>,
     nodes: Vec<Node>,
-    next_reference: Ref,
 }
 
 impl File {
-    fn lookup(&self, reference: Ref) -> Option<&Node> {
+    fn lookup(&self, reference: &Ref) -> Option<&Node> {
         self.nodes
             .iter()
-            .filter(|v| v.reference == reference)
+            .filter(|v| v.reference == *reference)
             .next()
     }
 
-    fn lookup_mut(&mut self, reference: Ref) -> Option<&mut Node> {
+    fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
         self.nodes
             .iter_mut()
-            .filter(|v| v.reference == reference)
+            .filter(|v| v.reference == *reference)
             .next()
     }
 
     fn add_node(&mut self, value: Value) -> Ref {
-        let reference = self.next_reference();
+        let reference = new_ref();
         let node = Node {
-            reference: reference,
+            reference: reference.clone(),
             value: value,
         };
         self.nodes.push(node);
-        reference
-    }
-
-    fn next_reference(&mut self) -> Ref {
-        let reference = self.next_reference;
-        self.next_reference += 1;
         reference
     }
 }
@@ -89,10 +91,12 @@ struct Node {
     value: Value,
 }
 
-const ERROR_NODE: Node = Node {
-    reference: 1111111111,
-    value: Value::Hole,
-};
+fn invalid_node() -> Node {
+    Node {
+        reference: "".to_string(),
+        value: Value::Hole,
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum Value {
@@ -124,6 +128,7 @@ impl Node {
             _ => None,
         }
     }
+
     fn rename(&mut self, name: String) {
         match &mut self.value {
             Value::Binding(ref mut v) => v.label.name = name,
@@ -131,6 +136,34 @@ impl Node {
             Value::FunctionDefinition(ref mut v) => v.label.name = name,
             _ => {}
         }
+    }
+
+    fn map_ref<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&Ref) -> Ref,
+    {
+        match &mut self.value {
+            Value::Block(ref mut v) => {
+                v.expressions = v.expressions.iter().map(f).collect();
+            }
+            Value::BinaryOperator(ref mut v) => {
+                v.left = f(&v.left);
+                v.right = f(&v.right);
+            }
+            Value::FunctionCall(ref mut v) => {
+                v.function = f(&v.function);
+                v.arguments = v.arguments.iter().map(f).collect();
+            }
+            Value::FunctionDefinition(ref mut v) => {
+                v.body = f(&v.body);
+                v.arguments = v.arguments.iter().map(f).collect();
+            }
+            _ => {}
+        }
+    }
+
+    fn to_json(&self) -> String {
+        serde_json::to_string_pretty(self).expect("could not serialize to JSON")
     }
 }
 
@@ -201,36 +234,35 @@ impl Component for Model {
         Model {
             store: StorageService::new(Area::Local),
             file: File {
-                next_reference: 1000,
                 nodes: vec![
                     Node {
-                        reference: 111,
+                        reference: "111".to_string(),
                         value: Value::FunctionDefinition(FunctionDefinitionValue {
                             label: Label {
                                 name: "main".to_string(),
                                 colour: "red".to_string(),
                             },
                             arguments: vec![],
-                            body: 123,
+                            body: "123".to_string(),
                         }),
                     },
                     Node {
-                        reference: 124,
+                        reference: "124".to_string(),
                         value: Value::Int(123),
                     },
                     Node {
-                        reference: 12,
+                        reference: "12".to_string(),
                         value: Value::FunctionDefinition(FunctionDefinitionValue {
                             label: Label {
                                 name: "factorial".to_string(),
                                 colour: "red".to_string(),
                             },
-                            arguments: vec![222],
-                            body: 228,
+                            arguments: vec!["222".to_string()],
+                            body: "228".to_string(),
                         }),
                     },
                     Node {
-                        reference: 222,
+                        reference: "222".to_string(),
                         value: Value::Pattern(PatternValue {
                             label: Label {
                                 name: "x".to_string(),
@@ -239,42 +271,42 @@ impl Component for Model {
                         }),
                     },
                     Node {
-                        reference: 228,
+                        reference: "228".to_string(),
                         value: Value::BinaryOperator(BinaryOperatorValue {
                             operator: "*".to_string(),
-                            left: 1231,
-                            right: 1232,
+                            left: "1231".to_string(),
+                            right: "1232".to_string(),
                         }),
                     },
                     Node {
-                        reference: 1231,
-                        value: Value::Ref(222),
+                        reference: "1231".to_string(),
+                        value: Value::Ref("222".to_string()),
                     },
                     Node {
-                        reference: 1232,
+                        reference: "1232".to_string(),
                         value: Value::FunctionCall(FunctionCallValue {
-                            function: 12,
-                            arguments: vec![229],
+                            function: "12".to_string(),
+                            arguments: vec!["229".to_string()],
                         }),
                     },
                     Node {
-                        reference: 229,
+                        reference: "229".to_string(),
                         value: Value::BinaryOperator(BinaryOperatorValue {
                             operator: "-".to_string(),
-                            left: 230,
-                            right: 231,
+                            left: "230".to_string(),
+                            right: "231".to_string(),
                         }),
                     },
                     Node {
-                        reference: 230,
-                        value: Value::Ref(222),
+                        reference: "230".to_string(),
+                        value: Value::Ref("222".to_string()),
                     },
                     Node {
-                        reference: 231,
+                        reference: "231".to_string(),
                         value: Value::Int(1),
                     },
                 ],
-                bindings: vec![111, 12],
+                bindings: vec!["111".to_string(), "12".to_string()],
             },
             path: VecDeque::new(),
         }
@@ -287,7 +319,7 @@ impl Component for Model {
                 self.path = path;
             }
             Msg::Rename(reference, name) => {
-                if let Some(node) = self.lookup_mut(reference) {
+                if let Some(node) = self.lookup_mut(&reference) {
                     node.rename(name);
                 }
             }
@@ -310,10 +342,32 @@ impl Component for Model {
                 }));
                 if let Some(node) = self
                     .current()
-                    .and_then(|reference| self.lookup_mut(reference))
+                    .and_then(|reference| self.lookup_mut(&reference))
                 {
                     if let Value::FunctionDefinition(ref mut v) = node.value {
                         v.arguments.push(reference);
+                    }
+                }
+            }
+            Msg::AddItem => {
+                let reference = self.file.add_node(Value::Hole);
+                if let Some(node) = self
+                    .current()
+                    .and_then(|reference| self.lookup_mut(&reference))
+                {
+                    if let Value::List(ref mut v) = node.value {
+                        v.items.push(reference);
+                    }
+                }
+            }
+            Msg::AddExpression => {
+                let reference = self.file.add_node(Value::Hole);
+                if let Some(node) = self
+                    .current()
+                    .and_then(|reference| self.lookup_mut(&reference))
+                {
+                    if let Value::Block(ref mut v) = node.value {
+                        v.expressions.push(reference);
                     }
                 }
             }
@@ -326,12 +380,25 @@ impl Component for Model {
                                 colour: "red".to_string(),
                             },
                             arguments: vec![],
-                            body: 11111,
+                            body: "11111".to_string(),
                         }));
                 self.file.bindings.push(reference);
             }
             Msg::SetValue(v) => {
                 let reference = self.file.add_node(v);
+                let current = self.current().unwrap_or(invalid_ref());
+                if let Some(node) = self
+                    .parent()
+                    .and_then(|reference| self.lookup_mut(&reference))
+                {
+                    node.map_ref(|r| {
+                        if *r == current {
+                            reference.clone()
+                        } else {
+                            r.to_string()
+                        }
+                    });
+                }
             }
         };
         true
@@ -340,13 +407,12 @@ impl Component for Model {
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
-        let selected_node = self
+        let selected_node_json = self
             .path
             .back()
-            .and_then(|reference| self.lookup(*reference))
-            .unwrap_or(&ERROR_NODE);
-        let serialized_node =
-            serde_json::to_string_pretty(selected_node).expect("could not serialize to JSON");
+            .and_then(|reference| self.lookup(reference))
+            .map(|n| n.to_json())
+            .unwrap_or("JSON ERROR".to_string());
         html! {
             <div>
                 <div>{ "LINC" }</div>
@@ -356,7 +422,7 @@ impl Renderable<Model> for Model {
                     <div class="column">{ self.view_file_json(&self.file) }</div>
                     <div class="column">
                         <div>{ format!("Path: {:?}", self.path) }</div>
-                        <pre class="column">{ serialized_node }</pre>
+                        <pre class="column">{ selected_node_json }</pre>
                     </div>
                 </div>
             </div>
@@ -372,6 +438,11 @@ struct Action {
 impl Model {
     fn current(&self) -> Option<Ref> {
         self.path.back().cloned()
+    }
+
+    fn parent(&self) -> Option<Ref> {
+        let i = self.path.len() - 2;
+        self.path.get(i).cloned()
     }
 
     fn view_actions(&self) -> Html<Model> {
@@ -405,6 +476,10 @@ impl Model {
                 })),
             },
             Action {
+                text: "+expr".to_string(),
+                msg: Msg::AddExpression,
+            },
+            Action {
                 text: "[]".to_string(),
                 msg: Msg::SetValue(Value::List(ListValue { items: vec![] })),
             },
@@ -413,27 +488,31 @@ impl Model {
                 msg: Msg::SetValue(Value::List(ListValue { items: vec![] })),
             },
             Action {
+                text: "+item".to_string(),
+                msg: Msg::AddItem,
+            },
+            Action {
                 text: "If (◆) then ◆".to_string(),
                 msg: Msg::SetValue(Value::If(IfValue {
-                    conditional: -1,
-                    true_body: -1,
-                    false_body: -1,
+                    conditional: invalid_ref(),
+                    true_body: invalid_ref(),
+                    false_body: invalid_ref(),
                 })),
             },
             Action {
                 text: "If (☆) then ◆".to_string(),
                 msg: Msg::SetValue(Value::If(IfValue {
-                    conditional: -1,
-                    true_body: -1,
-                    false_body: -1,
+                    conditional: invalid_ref(),
+                    true_body: invalid_ref(),
+                    false_body: invalid_ref(),
                 })),
             },
             Action {
                 text: "If (◆) then ☆".to_string(),
                 msg: Msg::SetValue(Value::If(IfValue {
-                    conditional: -1,
-                    true_body: -1,
-                    false_body: -1,
+                    conditional: invalid_ref(),
+                    true_body: invalid_ref(),
+                    false_body: invalid_ref(),
                 })),
             },
             Action {
@@ -459,9 +538,8 @@ impl Model {
     }
 
     fn view_file(&self, file: &File) -> Html<Model> {
-        let serialized = serde_json::to_string_pretty(file).expect("could not serialize to JSON");
         html! {
-            <div>{ for file.bindings.iter().map(|v| self.view_binding(*v)) }</div>
+            <div>{ for file.bindings.iter().map(|v| self.view_binding(v)) }</div>
         }
     }
 
@@ -473,24 +551,33 @@ impl Model {
     }
 
     fn view_label(&self, label: &Label, path: Path) -> Html<Model> {
-        let reference = path.back().unwrap_or(&-1).clone();
+        let reference = path.back().unwrap_or(&invalid_ref()).clone();
         html! {
-            <input oninput=|e| Msg::Rename(reference, e.value)
+            <input oninput=|e| Msg::Rename(reference.clone(), e.value)
                 type="text"
                 value=label.name/>
         }
     }
 
-    fn view_binding(&self, reference: Ref) -> Html<Model> {
-        let node = self.lookup(reference).unwrap_or(&ERROR_NODE);
+    fn view_binding(&self, reference: &Ref) -> Html<Model> {
+        let node = self
+            .lookup(reference)
+            .map(|n| self.view_node(n, VecDeque::new()))
+            .unwrap_or(self.view_invalid());
         html! {
-            <div>{ self.view_node(node, VecDeque::new()) }</div>
+            <div>{ node }</div>
+        }
+    }
+
+    fn view_invalid(&self) -> Html<Model> {
+        html! {
+            <div>{ "ERROR" }</div>
         }
     }
 
     fn view_node(&self, node: &Node, mut path: Path) -> Html<Model> {
-        let reference = node.reference;
-        path.push_back(reference);
+        let reference = node.reference.clone();
+        path.push_back(reference.clone());
         let selected = match self.current() {
             None => false,
             Some(selected_reference) => selected_reference == reference,
@@ -498,8 +585,8 @@ impl Model {
         let target = match self.selected_node() {
             None => false,
             Some(n) => {
-                if let Value::Ref(target_reference) = n.value {
-                    target_reference == reference
+                if let Value::Ref(ref target_reference) = n.value {
+                    *target_reference == reference
                 } else {
                     false
                 }
@@ -541,7 +628,7 @@ impl Model {
                 html! { <span>{ v }</span> }
             }
             Value::Ref(reference) => {
-                let node = self.lookup(*reference);
+                let node = self.lookup(reference);
                 let text = node
                     .and_then(|n| n.label())
                     .map(|l| l.name.clone())
@@ -550,10 +637,13 @@ impl Model {
             }
             Value::Binding(v) => {
                 let label = self.view_label(&v.label, path.clone());
-                let value = self.lookup(v.value).unwrap_or(&ERROR_NODE);
+                let value = self
+                    .lookup(&v.value)
+                    .map(|n| self.view_node(n, path.clone()))
+                    .unwrap_or(self.view_invalid());
                 html! {
                     <span>
-                    { label }{ "=" }{ self.view_node(value, path.clone()) }
+                    { label }{ "=" }{ value }
                     </span>
                 }
             }
@@ -564,14 +654,42 @@ impl Model {
                     </span>
                 }
             }
-            Value::Block(_) => {
-                html! { <span>{ "xxx" }</span> }
+            Value::Block(v) => {
+                let mut expressions = v
+                    .expressions
+                    .iter()
+                    .filter_map(|r| self.lookup(r))
+                    .map(|n| self.view_node(n, path.clone()));
+                html! {
+                    <span>
+                    { "{" }
+                    { for expressions }
+                    { "}" }
+                    </span>
+                }
             }
-            Value::List(_) => {
-                html! { <span>{ "xxx" }</span> }
+            Value::List(v) => {
+                let mut items = v
+                    .items
+                    .iter()
+                    .filter_map(|r| self.lookup(r))
+                    .map(|n| self.view_node(n, path.clone()));
+                html! {
+                    <span>
+                    { "[" }{ for items }{ "]" }
+                    </span>
+                }
             }
-            Value::If(_) => {
-                html! { <span>{ "xxx" }</span> }
+            Value::If(v) => {
+                let conditional = self
+                    .lookup(&v.conditional)
+                    .map(|n| self.view_node(n, path.clone()))
+                    .unwrap_or(self.view_invalid());
+                html! {
+                    <span>
+                    { "if" }{ conditional }
+                    </span>
+                }
             }
             Value::FunctionDefinition(v) => {
                 let label = self.view_label(&v.label, path.clone());
@@ -579,19 +697,22 @@ impl Model {
                     .arguments
                     .iter()
                     // TODO: We should not filter out invalid nodes.
-                    .filter_map(|r| self.lookup(*r))
+                    .filter_map(|r| self.lookup(r))
                     .map(|n| self.view_node(n, path.clone()));
-                let body = self.lookup(v.body).unwrap_or(&ERROR_NODE);
+                let body = self
+                    .lookup(&v.body)
+                    .map(|n| self.view_node(n, path.clone()))
+                    .unwrap_or(self.view_invalid());
                 html! {
                     <span>
                     { "fn" }{ label }
                     { "(" }{ for args }{ ")" }
-                    { self.view_node(body, path.clone()) }
+                    { body }
                     </span>
                 }
             }
             Value::FunctionCall(v) => {
-                let node = self.file.lookup(v.function);
+                let node = self.file.lookup(&v.function);
                 let function_name = node
                     .and_then(|n| n.label())
                     .map(|l| l.name.clone())
@@ -600,7 +721,7 @@ impl Model {
                     .arguments
                     .iter()
                     // TODO: We should not filter out invalid nodes.
-                    .filter_map(|r| self.lookup(*r))
+                    .filter_map(|r| self.lookup(r))
                     .map(|n| self.view_node(n, path.clone()));
                 html! {
                     <span>
@@ -610,13 +731,19 @@ impl Model {
                 }
             }
             Value::BinaryOperator(v) => {
-                let left = self.lookup(v.left).unwrap_or(&ERROR_NODE);
-                let right = self.lookup(v.right).unwrap_or(&ERROR_NODE);
+                let left = self
+                    .lookup(&v.left)
+                    .map(|n| self.view_node(n, path.clone()))
+                    .unwrap_or(self.view_invalid());
+                let right = self
+                    .lookup(&v.right)
+                    .map(|n| self.view_node(n, path.clone()))
+                    .unwrap_or(self.view_invalid());
                 html! {
                     <span>
-                    { self.view_node(left, path.clone()) }
+                    { left }
                     { &v.operator }
-                    { self.view_node(right, path.clone()) }
+                    { right }
                     </span>
                 }
             }
