@@ -1,22 +1,18 @@
 #![recursion_limit = "256"]
 
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 use yew::services::storage::{Area, StorageService};
 use yew::{html, Component, ComponentLink, Html, Renderable, ShouldRender};
 
 type Ref = i32;
 
+type Path = VecDeque<Ref>;
+
 pub struct Model {
     file: File,
     store: StorageService,
-    selected: Option<Ref>,
-    cursor: Option<Cursor>,
-}
-
-#[derive(Debug)]
-pub struct Cursor {
-    node: Ref,
-    offset: usize,
+    path: Path,
 }
 
 impl Model {
@@ -28,13 +24,15 @@ impl Model {
     }
 
     fn selected_node(&self) -> Option<&Node> {
-        self.selected.and_then(|reference| self.lookup(reference))
+        self.path
+            .back()
+            .and_then(|reference| self.lookup(*reference))
     }
 }
 
 #[derive(Clone)]
 pub enum Msg {
-    Select(Ref),
+    Select(Path),
     Rename(Ref, String),
 
     Store,
@@ -278,16 +276,15 @@ impl Component for Model {
                 ],
                 bindings: vec![111, 12],
             },
-            selected: None,
-            cursor: None,
+            path: VecDeque::new(),
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         const KEY: &str = "linc_file";
         match msg {
-            Msg::Select(reference) => {
-                self.selected = Some(reference);
+            Msg::Select(path) => {
+                self.path = path;
             }
             Msg::Rename(reference, name) => {
                 if let Some(node) = self.lookup_mut(reference) {
@@ -312,7 +309,7 @@ impl Component for Model {
                     },
                 }));
                 if let Some(node) = self
-                    .selected
+                    .current()
                     .and_then(|reference| self.lookup_mut(reference))
                 {
                     if let Value::FunctionDefinition(ref mut v) = node.value {
@@ -333,8 +330,9 @@ impl Component for Model {
                         }));
                 self.file.bindings.push(reference);
             }
-
-            Msg::SetValue(v) => {}
+            Msg::SetValue(v) => {
+                let reference = self.file.add_node(v);
+            }
         };
         true
     }
@@ -343,8 +341,9 @@ impl Component for Model {
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         let selected_node = self
-            .selected
-            .and_then(|reference| self.lookup(reference))
+            .path
+            .back()
+            .and_then(|reference| self.lookup(*reference))
             .unwrap_or(&ERROR_NODE);
         let serialized_node =
             serde_json::to_string_pretty(selected_node).expect("could not serialize to JSON");
@@ -356,8 +355,7 @@ impl Renderable<Model> for Model {
                     <div class="column">{ self.view_file(&self.file) }</div>
                     <div class="column">{ self.view_file_json(&self.file) }</div>
                     <div class="column">
-                        <div>{ format!("Cursor: {:?}", self.cursor) }</div>
-                        <div>{ format!("Selected: {:?}", self.selected) }</div>
+                        <div>{ format!("Path: {:?}", self.path) }</div>
                         <pre class="column">{ serialized_node }</pre>
                     </div>
                 </div>
@@ -372,6 +370,10 @@ struct Action {
 }
 
 impl Model {
+    fn current(&self) -> Option<Ref> {
+        self.path.back().cloned()
+    }
+
     fn view_actions(&self) -> Html<Model> {
         let actions = vec![
             Action {
@@ -470,7 +472,8 @@ impl Model {
         }
     }
 
-    fn view_label(&self, label: &Label, reference: Ref) -> Html<Model> {
+    fn view_label(&self, label: &Label, path: Path) -> Html<Model> {
+        let reference = path.back().unwrap_or(&-1).clone();
         html! {
             <input oninput=|e| Msg::Rename(reference, e.value)
                 type="text"
@@ -481,13 +484,14 @@ impl Model {
     fn view_binding(&self, reference: Ref) -> Html<Model> {
         let node = self.lookup(reference).unwrap_or(&ERROR_NODE);
         html! {
-            <div>{ self.view_node(node) }</div>
+            <div>{ self.view_node(node, VecDeque::new()) }</div>
         }
     }
 
-    fn view_node(&self, node: &Node) -> Html<Model> {
+    fn view_node(&self, node: &Node, mut path: Path) -> Html<Model> {
         let reference = node.reference;
-        let selected = match self.selected {
+        path.push_back(reference);
+        let selected = match self.current() {
             None => false,
             Some(selected_reference) => selected_reference == reference,
         };
@@ -501,7 +505,6 @@ impl Model {
                 }
             }
         };
-        // TODO: Use Vec.
         let mut classes = vec!["node".to_string()];
         if selected {
             classes.push("selected".to_string());
@@ -509,14 +512,15 @@ impl Model {
         if target {
             classes.push("target".to_string());
         }
+        let value = self.view_value(&node.value, path.clone());
         html! {
-            <div class=classes.join(" ") onclick=|_| Msg::Select(reference)>
-                <span>{ self.view_value(&node.value, reference) }</span>
+            <div class=classes.join(" ") onclick=|_| Msg::Select(path.clone())>
+                <span>{ value }</span>
             </div>
         }
     }
 
-    fn view_value(&self, value: &Value, reference: Ref) -> Html<Model> {
+    fn view_value(&self, value: &Value, path: Path) -> Html<Model> {
         match value {
             Value::Hole => {
                 html! { <span>{ "@" }</span> }
@@ -545,18 +549,18 @@ impl Model {
                 html! { <span>{ text }</span> }
             }
             Value::Binding(v) => {
-                let label = self.view_label(&v.label, reference);
+                let label = self.view_label(&v.label, path.clone());
                 let value = self.lookup(v.value).unwrap_or(&ERROR_NODE);
                 html! {
                     <span>
-                    { label }{ "=" }{ self.view_node(value) }
+                    { label }{ "=" }{ self.view_node(value, path.clone()) }
                     </span>
                 }
             }
             Value::Pattern(v) => {
                 html! {
                     <span>
-                    { self.view_label(&v.label, reference) }
+                    { self.view_label(&v.label, path.clone()) }
                     </span>
                 }
             }
@@ -570,19 +574,19 @@ impl Model {
                 html! { <span>{ "xxx" }</span> }
             }
             Value::FunctionDefinition(v) => {
-                let label = self.view_label(&v.label, reference);
+                let label = self.view_label(&v.label, path.clone());
                 let mut args = v
                     .arguments
                     .iter()
                     // TODO: We should not filter out invalid nodes.
                     .filter_map(|r| self.lookup(*r))
-                    .map(|n| self.view_node(n));
+                    .map(|n| self.view_node(n, path.clone()));
                 let body = self.lookup(v.body).unwrap_or(&ERROR_NODE);
                 html! {
                     <span>
                     { "fn" }{ label }
                     { "(" }{ for args }{ ")" }
-                    { self.view_node(body) }
+                    { self.view_node(body, path.clone()) }
                     </span>
                 }
             }
@@ -597,7 +601,7 @@ impl Model {
                     .iter()
                     // TODO: We should not filter out invalid nodes.
                     .filter_map(|r| self.lookup(*r))
-                    .map(|n| self.view_node(n));
+                    .map(|n| self.view_node(n, path.clone()));
                 html! {
                     <span>
                     { function_name }
@@ -610,9 +614,9 @@ impl Model {
                 let right = self.lookup(v.right).unwrap_or(&ERROR_NODE);
                 html! {
                     <span>
-                    { self.view_node(left) }
+                    { self.view_node(left, path.clone()) }
                     { &v.operator }
-                    { self.view_node(right) }
+                    { self.view_node(right, path.clone()) }
                     </span>
                 }
             }
