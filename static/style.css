@@ -25,3 +25,7 @@
 .column {
   flex: 1;
 }
+
+.block {
+  margin-left: 40px;
+}
