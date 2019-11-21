@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use yew::services::storage::{Area, StorageService};
-use yew::{Html, Component, ComponentLink, Renderable, ShouldRender};
+use yew::{html, Component, ComponentLink, Html, ShouldRender};
 
 pub type Ref = String;
 
@@ -241,6 +241,29 @@ pub struct Label {
 impl Component for Model {
     type Message = Msg;
     type Properties = ();
+
+    fn view(&self) -> Html<Self> {
+        let selected_node_json = self
+            .path
+            .back()
+            .and_then(|reference| self.lookup(reference))
+            .map(|n| n.to_json())
+            .unwrap_or("JSON ERROR".to_string());
+        html! {
+            <div>
+                <div>{ "LINC" }</div>
+                <div>{ self.view_actions() }</div>
+                <div class="wrapper">
+                    <div class="column">{ self.view_file(&self.file) }</div>
+                    <div class="column">{ self.view_file_json(&self.file) }</div>
+                    <div class="column">
+                        <div>{ format!("Path: {:?}", self.path) }</div>
+                        <pre class="column">{ selected_node_json }</pre>
+                    </div>
+                </div>
+            </div>
+        }
+    }
 
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
         Model {

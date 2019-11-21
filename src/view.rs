@@ -1,35 +1,10 @@
 use std::collections::VecDeque;
-use yew::{html, Html, Renderable};
+use yew::{html, Html};
 
 use crate::types::*;
 
-impl Renderable<Model> for Model {
-    fn view(&self) -> Html<Self> {
-        let selected_node_json = self
-            .path
-            .back()
-            .and_then(|reference| self.lookup(reference))
-            .map(|n| n.to_json())
-            .unwrap_or("JSON ERROR".to_string());
-        html! {
-            <div>
-                <div>{ "LINC" }</div>
-                <div>{ self.view_actions() }</div>
-                <div class="wrapper">
-                    <div class="column">{ self.view_file(&self.file) }</div>
-                    <div class="column">{ self.view_file_json(&self.file) }</div>
-                    <div class="column">
-                        <div>{ format!("Path: {:?}", self.path) }</div>
-                        <pre class="column">{ selected_node_json }</pre>
-                    </div>
-                </div>
-            </div>
-        }
-    }
-}
-
 impl Model {
-    fn view_actions(&self) -> Html<Model> {
+    pub fn view_actions(&self) -> Html<Model> {
         let actions = vec![
             Action {
                 text: "store".to_string(),
@@ -121,13 +96,13 @@ impl Model {
         }
     }
 
-    fn view_file(&self, file: &File) -> Html<Model> {
+    pub fn view_file(&self, file: &File) -> Html<Model> {
         html! {
             <div>{ for file.bindings.iter().map(|v| self.view_binding(v)) }</div>
         }
     }
 
-    fn view_file_json(&self, file: &File) -> Html<Model> {
+    pub fn view_file_json(&self, file: &File) -> Html<Model> {
         let serialized = serde_json::to_string_pretty(file).expect("could not serialize to JSON");
         html! {
             <pre>{ serialized }</pre>
