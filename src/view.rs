@@ -277,8 +277,13 @@ impl Model {
                     .lookup(&v.return_type)
                     .map(|n| self.view_node(n, path.clone()))
                     .unwrap_or(self.view_invalid());
+
+                let mut p = path.clone();
+                p.push_back("xxx".to_string());
+
                 html! {
                     <span>
+                    <div onclick=|_| Msg::Select(p.clone())>{ "#" }</div>
                     { "fn" }{ label }
                     { "(" }{ for args }{ ")" }
                     { "->" }{ return_type }

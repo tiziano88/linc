@@ -13,6 +13,7 @@ pub fn new_ref() -> Ref {
     uuid::Uuid::new_v4().to_hyphenated().to_string()
 }
 
+// TODO: VecDeque<Selector>.
 pub type Path = VecDeque<Ref>;
 
 pub struct Model {
@@ -211,6 +212,8 @@ pub struct FunctionDefinitionValue {
     pub label: Label,
     pub arguments: Vec<Ref>,
     pub return_type: Ref,
+    pub outer_attributes: Vec<Ref>,
+    pub inner_attributes: Vec<Ref>,
     pub body: Ref,
 }
 
@@ -278,6 +281,8 @@ impl Component for Model {
                                 colour: "red".to_string(),
                             },
                             arguments: vec![],
+                            outer_attributes: vec![],
+                            inner_attributes: vec![],
                             return_type: invalid_ref(),
                             body: "123".to_string(),
                         }),
@@ -294,6 +299,8 @@ impl Component for Model {
                                 colour: "red".to_string(),
                             },
                             arguments: vec!["222".to_string()],
+                            outer_attributes: vec![],
+                            inner_attributes: vec![],
                             return_type: invalid_ref(),
                             body: "228".to_string(),
                         }),
@@ -417,6 +424,8 @@ impl Component for Model {
                                 colour: "red".to_string(),
                             },
                             arguments: vec![],
+                            outer_attributes: vec![],
+                            inner_attributes: vec![],
                             return_type: invalid_ref(),
                             body: "11111".to_string(),
                         }));
