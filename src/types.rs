@@ -11,8 +11,7 @@ pub fn invalid_ref() -> Ref {
 }
 
 pub fn new_ref() -> Ref {
-    "xxx".to_string()
-    // uuid::Uuid::new_v4().to_hyphenated().to_string()
+    uuid::Uuid::new_v4().to_hyphenated().to_string()
 }
 
 // TODO: VecDeque<Selector>.

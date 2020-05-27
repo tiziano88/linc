@@ -12,5 +12,5 @@ yew = "*"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 console_error_panic_hook = "*"
-# uuid = { version = "*", features = ["stdweb", "v4"] }
+uuid = { version = "*", features = ["wasm-bindgen", "v4"] }
 wasm-bindgen = "*"
