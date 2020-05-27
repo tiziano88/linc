@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
-use yew::services::storage::{Area, StorageService};
-use yew::{html, Component, ComponentLink, Html, ShouldRender};
+use yew::prelude::*;
+use yew::services::storage::Area;
+use yew::services::StorageService;
 
 pub type Ref = String;
 
@@ -10,7 +11,8 @@ pub fn invalid_ref() -> Ref {
 }
 
 pub fn new_ref() -> Ref {
-    uuid::Uuid::new_v4().to_hyphenated().to_string()
+    "xxx".to_string()
+    // uuid::Uuid::new_v4().to_hyphenated().to_string()
 }
 
 // TODO: VecDeque<Selector>.
@@ -20,6 +22,7 @@ pub struct Model {
     pub file: File,
     pub store: StorageService,
     pub path: Path,
+    pub link: ComponentLink<Self>,
 }
 
 impl Model {
@@ -245,7 +248,7 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         let selected_node_json = self
             .path
             .back()
@@ -268,9 +271,9 @@ impl Component for Model {
         }
     }
 
-    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         Model {
-            store: StorageService::new(Area::Local),
+            store: StorageService::new(Area::Local).expect("could not create storage service"),
             file: File {
                 nodes: vec![
                     Node {
@@ -353,7 +356,12 @@ impl Component for Model {
                 bindings: vec!["111".to_string(), "12".to_string()],
             },
             path: VecDeque::new(),
+            link,
         }
+    }
+
+    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
+        false
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {

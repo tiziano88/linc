@@ -4,9 +4,13 @@ version = "0.1.0"
 authors = ["Tiziano Santoro <tiziano88@gmail.com>"]
 edition = "2018"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 yew = "*"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 console_error_panic_hook = "*"
-uuid = { version = "*", features = ["stdweb", "v4"] }
+# uuid = { version = "*", features = ["stdweb", "v4"] }
+wasm-bindgen = "*"

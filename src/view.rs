@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
-use yew::{html, Html};
+use yew::prelude::*;
 
 use crate::types::*;
 
 impl Model {
-    pub fn view_actions(&self) -> Html<Model> {
+    pub fn view_actions(&self) -> Html {
         let actions = vec![
             Action {
                 text: "store".to_string(),
@@ -79,7 +79,7 @@ impl Model {
                 msg: Msg::SetValue(Value::Int(0)),
             },
         ];
-        let mut actions = actions.iter().map(|a| self.view_action(a));
+        let actions = actions.iter().map(|a| self.view_action(a));
         html! {
             <div>
             { for actions }
@@ -87,38 +87,42 @@ impl Model {
         }
     }
 
-    fn view_action(&self, action: &Action) -> Html<Model> {
-        let m = action.msg.clone();
+    fn view_action(&self, action: &Action) -> Html {
+        let msg = action.msg.clone();
+        let callback = self.link.callback(move |_: MouseEvent| msg.clone());
         html! {
-            <div class="action" onclick=|_| m.clone()>
+            <div class="action" onclick=callback>
             { &action.text }
             </div>
         }
     }
 
-    pub fn view_file(&self, file: &File) -> Html<Model> {
+    pub fn view_file(&self, file: &File) -> Html {
         html! {
             <div>{ for file.bindings.iter().map(|v| self.view_binding(v)) }</div>
         }
     }
 
-    pub fn view_file_json(&self, file: &File) -> Html<Model> {
+    pub fn view_file_json(&self, file: &File) -> Html {
         let serialized = serde_json::to_string_pretty(file).expect("could not serialize to JSON");
         html! {
             <pre>{ serialized }</pre>
         }
     }
 
-    fn view_label(&self, label: &Label, path: Path) -> Html<Model> {
+    fn view_label(&self, label: &Label, path: Path) -> Html {
         let reference = path.back().unwrap_or(&invalid_ref()).clone();
+        let callback = self
+            .link
+            .callback(move |e: InputData| Msg::Rename(reference.clone(), e.value));
         html! {
-            <input oninput=|e| Msg::Rename(reference.clone(), e.value)
+            <input oninput=callback
                 type="text"
                 value=label.name/>
         }
     }
 
-    fn view_binding(&self, reference: &Ref) -> Html<Model> {
+    fn view_binding(&self, reference: &Ref) -> Html {
         let node = self
             .lookup(reference)
             .map(|n| self.view_node(n, VecDeque::new()))
@@ -128,13 +132,13 @@ impl Model {
         }
     }
 
-    fn view_invalid(&self) -> Html<Model> {
+    fn view_invalid(&self) -> Html {
         html! {
             <span>{ "ERROR" }</span>
         }
     }
 
-    fn view_node(&self, node: &Node, mut path: Path) -> Html<Model> {
+    fn view_node(&self, node: &Node, mut path: Path) -> Html {
         let reference = node.reference.clone();
         path.push_back(reference.clone());
         let selected = match self.current() {
@@ -159,14 +163,17 @@ impl Model {
             classes.push("target".to_string());
         }
         let value = self.view_value(&node.value, path.clone());
+        let callback = self
+            .link
+            .callback(move |_: MouseEvent| Msg::Select(path.clone()));
         html! {
-            <div class=classes.join(" ") onclick=|_| Msg::Select(path.clone())>
+            <div class=classes.join(" ") onclick=callback>
                 <span>{ value }</span>
             </div>
         }
     }
 
-    fn view_value(&self, value: &Value, path: Path) -> Html<Model> {
+    fn view_value(&self, value: &Value, path: Path) -> Html {
         match value {
             Value::Hole => {
                 html! { <span>{ "@" }</span> }
@@ -214,7 +221,7 @@ impl Model {
                 }
             }
             Value::Block(v) => {
-                let mut expressions = v
+                let expressions = v
                     .expressions
                     .iter()
                     .filter_map(|r| self.lookup(r))
@@ -228,7 +235,7 @@ impl Model {
                 }
             }
             Value::List(v) => {
-                let mut items = v
+                let items = v
                     .items
                     .iter()
                     .filter_map(|r| self.lookup(r))
@@ -263,7 +270,7 @@ impl Model {
             }
             Value::FunctionDefinition(v) => {
                 let label = self.view_label(&v.label, path.clone());
-                let mut args = v
+                let args = v
                     .arguments
                     .iter()
                     // TODO: We should not filter out invalid nodes.
@@ -281,9 +288,12 @@ impl Model {
                 let mut p = path.clone();
                 p.push_back("xxx".to_string());
 
+                let callback = self
+                    .link
+                    .callback(move |_: MouseEvent| Msg::Select(p.clone()));
                 html! {
                     <span>
-                    <div onclick=|_| Msg::Select(p.clone())>{ "#" }</div>
+                    <div onclick=callback>{ "#" }</div>
                     { "fn" }{ label }
                     { "(" }{ for args }{ ")" }
                     { "->" }{ return_type }
@@ -297,7 +307,7 @@ impl Model {
                     .and_then(|n| n.label())
                     .map(|l| l.name.clone())
                     .unwrap_or("<UNKNOWN>".to_string());
-                let mut args = v
+                let args = v
                     .arguments
                     .iter()
                     // TODO: We should not filter out invalid nodes.
