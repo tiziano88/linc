@@ -31,7 +31,7 @@ pub fn append(path: &Path, selector: Selector) -> Path {
 pub struct Model {
     pub file: File,
     pub store: StorageService,
-    pub path: Path,
+    pub cursor: Path,
     pub link: ComponentLink<Self>,
 }
 
@@ -211,11 +211,6 @@ pub struct ListValue {
     pub items: Vec<Ref>,
 }
 
-pub struct ListItem {
-    pub value: Ref,
-    pub next: Ref,
-}
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct IfValue {
     pub conditional: Ref,
@@ -273,10 +268,10 @@ impl Component for Model {
                 <div>{ "LINC" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="wrapper">
-                    <div class="column">{ self.view_file(&self.file) }</div>
+                    <div class="column">{ self.view_file(&self.file, self.cursor) }</div>
                     <div class="column">{ self.view_file_json(&self.file) }</div>
                     <div class="column">
-                        <div>{ format!("Path: {:?}", self.path) }</div>
+                        <div>{ format!("Cursor: {:?}", self.cursor) }</div>
                     </div>
                </div>
             </div>
@@ -367,7 +362,7 @@ impl Component for Model {
                 ],
                 bindings: vec!["111".to_string(), "12".to_string()],
             },
-            path: VecDeque::new(),
+            cursor: VecDeque::new(),
             link,
         }
     }
@@ -380,7 +375,7 @@ impl Component for Model {
         const KEY: &str = "linc_file";
         match msg {
             Msg::Select(path) => {
-                self.path = path;
+                self.cursor = path;
             }
             Msg::Rename(reference, name) => {
                 if let Some(node) = self.lookup_mut(&reference) {
