@@ -14,8 +14,19 @@ pub fn new_ref() -> Ref {
     uuid::Uuid::new_v4().to_hyphenated().to_string()
 }
 
-// TODO: VecDeque<Selector>.
-pub type Path = VecDeque<Ref>;
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Selector {
+    Field(String),
+    Index(usize),
+}
+
+pub type Path = VecDeque<Selector>;
+
+pub fn append(path: &Path, selector: Selector) -> Path {
+    let mut new_path = path.clone();
+    new_path.push_back(selector);
+    new_path
+}
 
 pub struct Model {
     pub file: File,
@@ -31,19 +42,19 @@ impl Model {
     pub fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
         self.file.lookup_mut(reference)
     }
-    pub fn selected_node(&self) -> Option<&Node> {
-        self.path
-            .back()
-            .and_then(|reference| self.lookup(reference))
-    }
-    pub fn current(&self) -> Option<Ref> {
-        self.path.back().cloned()
-    }
+    // pub fn selected_node(&self) -> Option<&Node> {
+    //     self.path
+    //         .back()
+    //         .and_then(|reference| self.lookup(reference))
+    // }
+    // pub fn current(&self) -> Option<Ref> {
+    //     self.path.back().cloned()
+    // }
 
-    pub fn parent(&self) -> Option<Ref> {
-        let i = self.path.len() - 2;
-        self.path.get(i).cloned()
-    }
+    // pub fn parent(&self) -> Option<Ref> {
+    //     let i = self.path.len() - 2;
+    //     self.path.get(i).cloned()
+    // }
 }
 
 #[derive(Clone)]
@@ -53,6 +64,9 @@ pub enum Msg {
 
     Store,
     Load,
+
+    Prev,
+    Next,
 
     AddArgument,
     AddItem,
@@ -248,12 +262,12 @@ impl Component for Model {
     type Properties = ();
 
     fn view(&self) -> Html {
-        let selected_node_json = self
-            .path
-            .back()
-            .and_then(|reference| self.lookup(reference))
-            .map(|n| n.to_json())
-            .unwrap_or("JSON ERROR".to_string());
+        // let selected_node_json = self
+        //     .path
+        //     .back()
+        //     .and_then(|reference| self.lookup(reference))
+        //     .map(|n| n.to_json())
+        //     .unwrap_or("JSON ERROR".to_string());
         html! {
             <div>
                 <div>{ "LINC" }</div>
@@ -263,9 +277,8 @@ impl Component for Model {
                     <div class="column">{ self.view_file_json(&self.file) }</div>
                     <div class="column">
                         <div>{ format!("Path: {:?}", self.path) }</div>
-                        <pre class="column">{ selected_node_json }</pre>
                     </div>
-                </div>
+               </div>
             </div>
         }
     }
@@ -375,6 +388,9 @@ impl Component for Model {
                 }
             }
 
+            Msg::Prev => {}
+            Msg::Next => {}
+            // Parent
             Msg::Store => {
                 self.store.store(KEY, yew::format::Json(&self.file));
             }
@@ -385,42 +401,42 @@ impl Component for Model {
             }
 
             Msg::AddArgument => {
-                let reference = self.file.add_node(Value::Pattern(PatternValue {
-                    label: Label {
-                        name: "xxx".to_string(),
-                        colour: "red".to_string(),
-                    },
-                }));
-                if let Some(node) = self
-                    .current()
-                    .and_then(|reference| self.lookup_mut(&reference))
-                {
-                    if let Value::FunctionDefinition(ref mut v) = node.value {
-                        v.arguments.push(reference);
-                    }
-                }
+                // let reference = self.file.add_node(Value::Pattern(PatternValue {
+                //     label: Label {
+                //         name: "xxx".to_string(),
+                //         colour: "red".to_string(),
+                //     },
+                // }));
+                // if let Some(node) = self
+                //     .current()
+                //     .and_then(|reference| self.lookup_mut(&reference))
+                // {
+                //     if let Value::FunctionDefinition(ref mut v) = node.value {
+                //         v.arguments.push(reference);
+                //     }
+                // }
             }
             Msg::AddItem => {
-                let reference = self.file.add_node(Value::Hole);
-                if let Some(node) = self
-                    .current()
-                    .and_then(|reference| self.lookup_mut(&reference))
-                {
-                    if let Value::List(ref mut v) = node.value {
-                        v.items.push(reference);
-                    }
-                }
+                // let reference = self.file.add_node(Value::Hole);
+                // if let Some(node) = self
+                //     .current()
+                //     .and_then(|reference| self.lookup_mut(&reference))
+                // {
+                //     if let Value::List(ref mut v) = node.value {
+                //         v.items.push(reference);
+                //     }
+                // }
             }
             Msg::AddExpression => {
-                let reference = self.file.add_node(Value::Hole);
-                if let Some(node) = self
-                    .current()
-                    .and_then(|reference| self.lookup_mut(&reference))
-                {
-                    if let Value::Block(ref mut v) = node.value {
-                        v.expressions.push(reference);
-                    }
-                }
+                // let reference = self.file.add_node(Value::Hole);
+                // if let Some(node) = self
+                //     .current()
+                //     .and_then(|reference| self.lookup_mut(&reference))
+                // {
+                //     if let Value::Block(ref mut v) = node.value {
+                //         v.expressions.push(reference);
+                //     }
+                // }
             }
             Msg::NewFn => {
                 let reference =
@@ -439,20 +455,20 @@ impl Component for Model {
                 self.file.bindings.push(reference);
             }
             Msg::SetValue(v) => {
-                let reference = self.file.add_node(v);
-                let current = self.current().unwrap_or(invalid_ref());
-                if let Some(node) = self
-                    .parent()
-                    .and_then(|reference| self.lookup_mut(&reference))
-                {
-                    node.map_ref(|r| {
-                        if *r == current {
-                            reference.clone()
-                        } else {
-                            r.to_string()
-                        }
-                    });
-                }
+                // let reference = self.file.add_node(v);
+                // let current = self.current().unwrap_or(invalid_ref());
+                // if let Some(node) = self
+                //     .parent()
+                //     .and_then(|reference| self.lookup_mut(&reference))
+                // {
+                //     node.map_ref(|r| {
+                //         if *r == current {
+                //             reference.clone()
+                //         } else {
+                //             r.to_string()
+                //         }
+                //     });
+                // }
             }
         };
         true

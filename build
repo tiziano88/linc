@@ -6,4 +6,3 @@ set -o xtrace
 set -o pipefail
 
 wasm-pack build --target=web --out-name=wasm --out-dir=./static
-python3 -m http.server 8000

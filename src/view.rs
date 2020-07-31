@@ -15,6 +15,14 @@ impl Model {
                 msg: Msg::Load,
             },
             Action {
+                text: "prev".to_string(),
+                msg: Msg::Prev,
+            },
+            Action {
+                text: "next".to_string(),
+                msg: Msg::Next,
+            },
+            Action {
                 text: "+arg".to_string(),
                 msg: Msg::AddArgument,
             },
@@ -99,7 +107,7 @@ impl Model {
 
     pub fn view_file(&self, file: &File) -> Html {
         html! {
-            <div>{ for file.bindings.iter().map(|v| self.view_binding(v)) }</div>
+            <div>{ for file.bindings.iter().enumerate().map(|(i, v)| self.view_binding(v, vec![Selector::Index(i)].into())) }</div>
         }
     }
 
@@ -110,8 +118,7 @@ impl Model {
         }
     }
 
-    fn view_label(&self, label: &Label, path: Path) -> Html {
-        let reference = path.back().unwrap_or(&invalid_ref()).clone();
+    fn view_label(&self, reference: Ref, label: &Label) -> Html {
         let callback = self
             .link
             .callback(move |e: InputData| Msg::Rename(reference.clone(), e.value));
@@ -122,10 +129,10 @@ impl Model {
         }
     }
 
-    fn view_binding(&self, reference: &Ref) -> Html {
+    fn view_binding(&self, reference: &Ref, path: Path) -> Html {
         let node = self
             .lookup(reference)
-            .map(|n| self.view_node(n, VecDeque::new()))
+            .map(|n| self.view_node(n, path))
             .unwrap_or(self.view_invalid());
         html! {
             <div>{ node }</div>
@@ -138,42 +145,47 @@ impl Model {
         }
     }
 
-    fn view_node(&self, node: &Node, mut path: Path) -> Html {
+    // fn view_node_list(&self, node: &[Ref], path: Path) -> Html {}
+
+    fn view_node(&self, node: &Node, path: Path) -> Html {
         let reference = node.reference.clone();
-        path.push_back(reference.clone());
-        let selected = match self.current() {
-            None => false,
-            Some(selected_reference) => selected_reference == reference,
-        };
-        let target = match self.selected_node() {
-            None => false,
-            Some(n) => {
-                if let Value::Ref(ref target_reference) = n.value {
-                    *target_reference == reference
-                } else {
-                    false
-                }
-            }
-        };
+        // let selected = remaining_path.empty();
+        // let target = match self.selected_node() {
+        //     None => false,
+        //     Some(n) => {
+        //         if let Value::Ref(ref target_reference) = n.value {
+        //             *target_reference == reference
+        //         } else {
+        //             false
+        //         }
+        //     }
+        // };
         let mut classes = vec!["node".to_string()];
-        if selected {
-            classes.push("selected".to_string());
-        }
-        if target {
-            classes.push("target".to_string());
-        }
-        let value = self.view_value(&node.value, path.clone());
+        // if selected {
+        //     classes.push("selected".to_string());
+        // }
+        // if target {
+        //     classes.push("target".to_string());
+        // }
+        let value = self.view_value(node.reference.clone(), &node.value, path.clone());
+        let sp = format!("{:?}", path);
         let callback = self
             .link
             .callback(move |_: MouseEvent| Msg::Select(path.clone()));
         html! {
-            <div class=classes.join(" ") onclick=callback>
+            <div class=classes.join(" ") onclick=callback path={sp}>
                 <span>{ value }</span>
             </div>
         }
     }
 
-    fn view_value(&self, value: &Value, path: Path) -> Html {
+    fn callback_child<IN>(&self, path: &Path, child: Selector) -> Callback<IN> {
+        let mut path = path.clone();
+        path.push_back(child);
+        self.link.callback(move |_: IN| Msg::Select(path.clone()))
+    }
+
+    fn view_value(&self, reference: Ref, value: &Value, path: Path) -> Html {
         match value {
             Value::Hole => {
                 html! { <span>{ "@" }</span> }
@@ -202,21 +214,27 @@ impl Model {
                 html! { <span>{ text }</span> }
             }
             Value::Binding(v) => {
-                let label = self.view_label(&v.label, path.clone());
+                let label = self.view_label(reference, &v.label);
                 let value = self
                     .lookup(&v.value)
                     .map(|n| self.view_node(n, path.clone()))
                     .unwrap_or(self.view_invalid());
+                let label_callback =
+                    self.callback_child(&path, Selector::Field("label".to_string()));
+                let value_callback =
+                    self.callback_child(&path, Selector::Field("value".to_string()));
                 html! {
                     <span>
-                    { label }{ "=" }{ value }
+                        <span onclick=label_callback>{ label }</span>
+                        { "=" }
+                        <span onclick=value_callback>{ value }</span>
                     </span>
                 }
             }
             Value::Pattern(v) => {
                 html! {
                     <span>
-                    { self.view_label(&v.label, path.clone()) }
+                    { self.view_label(reference, &v.label) }
                     </span>
                 }
             }
@@ -249,16 +267,25 @@ impl Model {
             Value::If(v) => {
                 let conditional = self
                     .lookup(&v.conditional)
-                    .map(|n| self.view_node(n, path.clone()))
+                    .map(|n| {
+                        self.view_node(n, append(&path, Selector::Field("conditional".to_string())))
+                    })
                     .unwrap_or(self.view_invalid());
+
                 let true_body = self
                     .lookup(&v.true_body)
-                    .map(|n| self.view_node(n, path.clone()))
+                    .map(|n| {
+                        self.view_node(n, append(&path, Selector::Field("true_body".to_string())))
+                    })
                     .unwrap_or(self.view_invalid());
+
                 let false_body = self
                     .lookup(&v.false_body)
-                    .map(|n| self.view_node(n, path.clone()))
+                    .map(|n| {
+                        self.view_node(n, append(&path, Selector::Field("true_body".to_string())))
+                    })
                     .unwrap_or(self.view_invalid());
+
                 html! {
                     <span>
                     { "if" }{ conditional }
@@ -269,24 +296,27 @@ impl Model {
                 }
             }
             Value::FunctionDefinition(v) => {
-                let label = self.view_label(&v.label, path.clone());
+                let label = self.view_label(reference, &v.label);
+
                 let args = v
                     .arguments
                     .iter()
                     // TODO: We should not filter out invalid nodes.
                     .filter_map(|r| self.lookup(r))
-                    .map(|n| self.view_node(n, path.clone()));
+                    .map(|n| self.view_node(n, append(&path, Selector::Field("args".to_string()))));
                 let body = self
                     .lookup(&v.body)
-                    .map(|n| self.view_node(n, path.clone()))
+                    .map(|n| self.view_node(n, append(&path, Selector::Field("body".to_string()))))
                     .unwrap_or(self.view_invalid());
                 let return_type = self
                     .lookup(&v.return_type)
-                    .map(|n| self.view_node(n, path.clone()))
+                    .map(|n| {
+                        self.view_node(n, append(&path, Selector::Field("return_type".to_string())))
+                    })
                     .unwrap_or(self.view_invalid());
 
                 let mut p = path.clone();
-                p.push_back("xxx".to_string());
+                // p.push_back("xxx".to_string());
 
                 let callback = self
                     .link
@@ -307,12 +337,14 @@ impl Model {
                     .and_then(|n| n.label())
                     .map(|l| l.name.clone())
                     .unwrap_or("<UNKNOWN>".to_string());
+                let args_path = append(&path, Selector::Field("arguments".to_string()));
                 let args = v
                     .arguments
                     .iter()
                     // TODO: We should not filter out invalid nodes.
                     .filter_map(|r| self.lookup(r))
-                    .map(|n| self.view_node(n, path.clone()));
+                    .enumerate()
+                    .map(|(i, n)| self.view_node(n, append(&args_path, Selector::Index(i))));
                 html! {
                     <span>
                     { function_name }
@@ -323,11 +355,11 @@ impl Model {
             Value::BinaryOperator(v) => {
                 let left = self
                     .lookup(&v.left)
-                    .map(|n| self.view_node(n, path.clone()))
+                    .map(|n| self.view_node(n, append(&path, Selector::Field("left".to_string()))))
                     .unwrap_or(self.view_invalid());
                 let right = self
                     .lookup(&v.right)
-                    .map(|n| self.view_node(n, path.clone()))
+                    .map(|n| self.view_node(n, append(&path, Selector::Field("right".to_string()))))
                     .unwrap_or(self.view_invalid());
                 html! {
                     <span>
