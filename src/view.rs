@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use yew::prelude::*;
 
 use crate::types::*;
@@ -107,7 +106,7 @@ impl Model {
 
     pub fn view_file(&self, file: &File, cursor: Path) -> Html {
         html! {
-            <div>{ for file.bindings.iter().enumerate().map(|(i, v)| self.view_binding(v, vec![Selector::Index(i)].into(), cursor.clone())) }</div>
+            <div>{ for file.bindings.iter().enumerate().map(|(i, v)| self.view_binding(v, vec![Selector::Index(i)].into(), sub_cursor(&Some(cursor.clone()), Selector::Index(i)))) }</div>
         }
     }
 
@@ -130,29 +129,53 @@ impl Model {
         }
     }
 
-    fn view_binding(&self, reference: &Ref, path: Path, cursor: Path) -> Html {
+    fn view_binding(&self, reference: &Ref, path: Path, cursor: Option<Path>) -> Html {
         let node = self.view_node(reference, path, cursor);
         html! {
             <div>{ node }</div>
         }
     }
 
-    fn view_node_list(&self, references: &[Ref], path: Path, cursor: Path) -> Html {
+    fn view_node_list(&self, references: &[Ref], path: Path, cursor: Option<Path>) -> Html {
         let sp = format!("{:?}", path);
-        let nodes = references
-            .iter()
-            .enumerate()
-            .map(|(i, n)| self.view_node(n, append(&path, Selector::Index(i)), cursor.clone()));
+        let selected = match &cursor {
+            Some(cursor) => cursor.is_empty(),
+            None => false,
+        };
+        let mut classes = vec!["node".to_string()];
+        if selected {
+            classes.push("selected".to_string());
+        }
+        let nodes = references.iter().enumerate().map(|(i, n)| {
+            self.view_node(
+                n,
+                append(&path, Selector::Index(i)),
+                sub_cursor(&cursor, Selector::Index(i)),
+            )
+        });
         let path = path.clone();
         let callback = self
             .link
             .callback(move |_: MouseEvent| Msg::Select(path.clone()));
         html! {
-            <div class="node" onclick=callback path={sp}>{ for nodes }</div>
+            <div class=classes.join(" ") onclick=callback path={sp}>{ for nodes }</div>
         }
     }
 
-    fn view_node(&self, reference: &Ref, path: Path, cursor: Path) -> Html {
+    fn view_node(&self, reference: &Ref, path: Path, cursor: Option<Path>) -> Html {
+        let selected = match &cursor {
+            Some(cursor) => cursor.is_empty(),
+            None => false,
+        };
+        let mut classes = vec!["node".to_string()];
+        if selected {
+            classes.push("selected".to_string());
+        }
+        let sp = format!("{:?}", path);
+        let path_clone = path.clone();
+        let callback = self
+            .link
+            .callback(move |_: MouseEvent| Msg::Select(path_clone.clone()));
         match self.lookup(reference) {
             Some(node) => {
                 // let selected = remaining_path.empty();
@@ -166,18 +189,10 @@ impl Model {
                 //         }
                 //     }
                 // };
-                let mut classes = vec!["node".to_string()];
-                // if selected {
-                //     classes.push("selected".to_string());
-                // }
                 // if target {
                 //     classes.push("target".to_string());
                 // }
                 let value = self.view_value(&node.reference, &node.value, path.clone(), cursor);
-                let sp = format!("{:?}", path);
-                let callback = self
-                    .link
-                    .callback(move |_: MouseEvent| Msg::Select(path.clone()));
                 html! {
                     <div class=classes.join(" ") onclick=callback path={sp}>
                         <span>{ value }</span>
@@ -186,7 +201,7 @@ impl Model {
             }
             None => {
                 html! {
-                    <div>
+                    <div class=classes.join(" ") onclick=callback path={sp}>
                         <span>{ "error" }</span>
                     </div>
                 }
@@ -200,7 +215,7 @@ impl Model {
         self.link.callback(move |_: IN| Msg::Select(path.clone()))
     }
 
-    fn view_value(&self, reference: &Ref, value: &Value, path: Path, cursor: Path) -> Html {
+    fn view_value(&self, reference: &Ref, value: &Value, path: Path, cursor: Option<Path>) -> Html {
         match value {
             Value::Hole => {
                 html! { <span>{ "@" }</span> }
@@ -278,19 +293,19 @@ impl Model {
                 let conditional = self.view_node(
                     &v.conditional,
                     append(&path, Selector::Field("conditional".to_string())),
-                    cursor.clone(),
+                    sub_cursor(&cursor, Selector::Field("conditional".to_string())),
                 );
 
                 let true_body = self.view_node(
                     &v.true_body,
                     append(&path, Selector::Field("true_body".to_string())),
-                    cursor.clone(),
+                    sub_cursor(&cursor, Selector::Field("true_body".to_string())),
                 );
 
                 let false_body = self.view_node(
                     &v.false_body,
-                    append(&path, Selector::Field("true_body".to_string())),
-                    cursor.clone(),
+                    append(&path, Selector::Field("false_body".to_string())),
+                    sub_cursor(&cursor, Selector::Field("false_body".to_string())),
                 );
 
                 html! {
@@ -308,28 +323,22 @@ impl Model {
                 let args = self.view_node_list(
                     v.arguments.as_ref(),
                     append(&path, Selector::Field("args".to_string())),
-                    cursor.clone(),
+                    sub_cursor(&cursor, Selector::Field("args".to_string())),
                 );
                 let body = self.view_node(
                     &v.body,
                     append(&path, Selector::Field("body".to_string())),
-                    cursor.clone(),
+                    sub_cursor(&cursor, Selector::Field("body".to_string())),
                 );
                 let return_type = self.view_node(
                     &v.return_type,
                     append(&path, Selector::Field("return_type".to_string())),
-                    cursor.clone(),
+                    sub_cursor(&cursor, Selector::Field("return_type".to_string())),
                 );
 
-                let mut p = path.clone();
-                // p.push_back("xxx".to_string());
-
-                let callback = self
-                    .link
-                    .callback(move |_: MouseEvent| Msg::Select(p.clone()));
                 html! {
                     <span>
-                    <div onclick=callback>{ "#" }</div>
+                    <div>{ "#" }</div>
                     { "fn" }{ label }
                     { "(" }{ args }{ ")" }
                     { "->" }{ return_type }
@@ -346,7 +355,7 @@ impl Model {
                 let args = self.view_node_list(
                     v.arguments.as_ref(),
                     append(&path, Selector::Field("arguments".to_string())),
-                    cursor,
+                    sub_cursor(&cursor, Selector::Field("arguments".to_string())),
                 );
                 html! {
                     <span>
@@ -359,12 +368,12 @@ impl Model {
                 let left = self.view_node(
                     &v.left,
                     append(&path, Selector::Field("left".to_string())),
-                    cursor.clone(),
+                    sub_cursor(&cursor, Selector::Field("left".to_string())),
                 );
                 let right = self.view_node(
                     &v.right,
                     append(&path, Selector::Field("right".to_string())),
-                    cursor.clone(),
+                    sub_cursor(&cursor, Selector::Field("right".to_string())),
                 );
                 html! {
                     <span>

@@ -35,6 +35,15 @@ pub struct Model {
     pub link: ComponentLink<Self>,
 }
 
+pub fn sub_cursor(cursor: &Option<Path>, selector: Selector) -> Option<Path> {
+    let cursor = cursor.clone();
+    if Some(selector) == cursor.clone().and_then(|v| v.clone().front().cloned()) {
+        cursor.map(|mut v| v.split_off(1))
+    } else {
+        None
+    }
+}
+
 impl Model {
     pub fn lookup(&self, reference: &Ref) -> Option<&Node> {
         self.file.lookup(reference)
@@ -42,6 +51,9 @@ impl Model {
     pub fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
         self.file.lookup_mut(reference)
     }
+    // pub fn lookup_path(&self, path: Path) -> Option<&Node> {
+    //     let head = path.pop_front();
+    // }
     // pub fn selected_node(&self) -> Option<&Node> {
     //     self.path
     //         .back()
@@ -112,13 +124,6 @@ impl File {
 pub struct Node {
     pub reference: Ref,
     pub value: Value,
-}
-
-fn invalid_node() -> Node {
-    Node {
-        reference: "".to_string(),
-        value: Value::Hole,
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -268,7 +273,7 @@ impl Component for Model {
                 <div>{ "LINC" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="wrapper">
-                    <div class="column">{ self.view_file(&self.file, self.cursor) }</div>
+                    <div class="column">{ self.view_file(&self.file, self.cursor.clone()) }</div>
                     <div class="column">{ self.view_file_json(&self.file) }</div>
                     <div class="column">
                         <div>{ format!("Cursor: {:?}", self.cursor) }</div>
