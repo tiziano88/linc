@@ -14,3 +14,5 @@ serde = { version = "1.0", features = ["derive"] }
 console_error_panic_hook = "*"
 uuid = { version = "*", features = ["wasm-bindgen", "v4"] }
 wasm-bindgen = "*"
+log = "0.4"
+web_logger = "0.2"

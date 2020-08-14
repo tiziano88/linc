@@ -51,9 +51,32 @@ impl Model {
     pub fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
         self.file.lookup_mut(reference)
     }
-    // pub fn lookup_path(&self, path: Path) -> Option<&Node> {
-    //     let head = path.pop_front();
-    // }
+    pub fn lookup_path(&self, path: Path) -> Option<&Node> {
+        let mut path = path;
+        let head = path.pop_front();
+        let i = match head {
+            Some(Selector::Index(i)) => i,
+            _ => return None,
+        };
+        let mut reference = self.file.bindings[i].clone();
+        let mut node = self.lookup(&reference)?;
+        while let Some(selector) = path.pop_front() {
+            node = self.lookup(&reference)?;
+            match self.lookup(&reference) {
+                Some(node) => match node.child(selector) {
+                    Some(Child::Single(r)) => reference = r.clone(),
+                    Some(Child::Multiple(rs)) => match path.pop_front() {
+                        Some(Selector::Index(i)) => reference = rs[i].clone(),
+                        _ => return None,
+                    },
+                    None => return None,
+                },
+                None => return None,
+            }
+        }
+        node = self.lookup(&reference)?;
+        Some(&node)
+    }
     // pub fn selected_node(&self) -> Option<&Node> {
     //     self.path
     //         .back()
@@ -121,13 +144,13 @@ impl File {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Node {
     pub reference: Ref,
     pub value: Value,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Value {
     Hole,
 
@@ -203,7 +226,28 @@ impl Node {
     pub fn child(&self, selector: Selector) -> Option<Child> {
         child(&self.value, selector)
     }
-    // pub fn next(&self, selector: Selector) -> Option<Selector> {}
+    pub fn next(&self, selector: Selector) -> Option<Selector> {
+        match &self.value {
+            Value::FunctionDefinition(v) => match &selector {
+                Selector::Field(f) if f == "args" => Some(Selector::Field("body".to_string())),
+                Selector::Field(f) if f == "body" => {
+                    Some(Selector::Field("return_type".to_string()))
+                }
+                Selector::Field(f) if f == "return_type" => None,
+                _ => None,
+            },
+            Value::FunctionCall(v) => match &selector {
+                Selector::Field(f) if f == "args" => None,
+                _ => None,
+            },
+            Value::BinaryOperator(v) => match &selector {
+                Selector::Field(f) if f == "left" => Some(Selector::Field("right".to_string())),
+                Selector::Field(f) if f == "right" => None,
+                _ => None,
+            },
+            _ => None,
+        }
+    }
 }
 
 pub fn child(value: &Value, selector: Selector) -> Option<Child> {
@@ -227,35 +271,35 @@ pub fn child(value: &Value, selector: Selector) -> Option<Child> {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BindingValue {
     pub label: Label,
     pub value: Ref,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PatternValue {
     pub label: Label,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BlockValue {
     pub expressions: Vec<Ref>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ListValue {
     pub items: Vec<Ref>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct IfValue {
     pub conditional: Ref,
     pub true_body: Ref,
     pub false_body: Ref,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FunctionDefinitionValue {
     pub label: Label,
     pub arguments: Vec<Ref>,
@@ -265,25 +309,25 @@ pub struct FunctionDefinitionValue {
     pub body: Ref,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FunctionCallValue {
     pub function: Ref,
     pub arguments: Vec<Ref>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BinaryOperatorValue {
     pub operator: String,
     pub left: Ref,
     pub right: Ref,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Pattern {
     pub label: Label,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Label {
     pub name: String,
     pub colour: String,
@@ -423,7 +467,17 @@ impl Component for Model {
             Msg::Prev => {}
             Msg::Next => {
                 let mut parent = self.cursor.clone();
-                parent.pop_back();
+                let last = parent.pop_back().expect("no last");
+                log::info!("last: {:?}", last);
+                log::info!("parent: {:?}", parent);
+                let parent_node = self.lookup_path(parent.clone()).expect("no parent");
+                log::info!("parent: {:?}", parent_node);
+                let next = parent_node.next(last).expect("no next");
+                log::info!("next: {:?}", next);
+
+                let mut new = parent.clone();
+                new.push_back(next);
+                self.cursor = new;
             }
             Msg::Parent => {
                 self.cursor.pop_back();
