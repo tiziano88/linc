@@ -227,14 +227,25 @@ impl Node {
         child(&self.value, selector)
     }
 
+    pub fn first(&self) -> Option<Selector> {
+        match &self.value {
+            Value::FunctionDefinition(v) => Some(Selector::Field("args".to_string())),
+            Value::FunctionCall(v) => Some(Selector::Field("args".to_string())),
+            Value::BinaryOperator(v) => Some(Selector::Field("left".to_string())),
+            _ => None,
+        }
+    }
+
     pub fn next(&self, selector: Selector) -> Option<Selector> {
         match &self.value {
             Value::FunctionDefinition(v) => match &selector {
-                Selector::Field(f) if f == "args" => Some(Selector::Field("body".to_string())),
-                Selector::Field(f) if f == "body" => {
+                Selector::Field(f) if f == "args" => {
                     Some(Selector::Field("return_type".to_string()))
                 }
-                Selector::Field(f) if f == "return_type" => None,
+                Selector::Field(f) if f == "return_type" => {
+                    Some(Selector::Field("body".to_string()))
+                }
+                Selector::Field(f) if f == "body" => None,
                 _ => None,
             },
             Value::FunctionCall(v) => match &selector {
@@ -467,18 +478,31 @@ impl Component for Model {
 
             Msg::Prev => {}
             Msg::Next => {
-                let mut parent = self.cursor.clone();
-                let last = parent.pop_back().expect("no last");
-                log::info!("last: {:?}", last);
-                log::info!("parent: {:?}", parent);
-                let parent_node = self.lookup_path(parent.clone()).expect("no parent");
-                log::info!("parent: {:?}", parent_node);
-                let next = parent_node.next(last).expect("no next");
-                log::info!("next: {:?}", next);
-
-                let mut new = parent.clone();
-                new.push_back(next);
-                self.cursor = new;
+                let current = self.lookup_path(self.cursor.clone()).expect("no current");
+                match current.first() {
+                    Some(next) => {
+                        let mut new = self.cursor.clone();
+                        new.push_back(next);
+                        self.cursor = new;
+                    }
+                    None => {
+                        let mut parent = self.cursor.clone();
+                        let last = parent.pop_back().expect("no last");
+                        log::info!("last: {:?}", last);
+                        log::info!("parent: {:?}", parent);
+                        let parent_node = self.lookup_path(parent.clone()).expect("no parent");
+                        log::info!("parent: {:?}", parent_node);
+                        match parent_node.next(last) {
+                            Some(next) => {
+                                log::info!("next: {:?}", next);
+                                let mut new = parent.clone();
+                                new.push_back(next);
+                                self.cursor = new;
+                            }
+                            None => {}
+                        }
+                    }
+                }
             }
             Msg::Parent => {
                 self.cursor.pop_back();
