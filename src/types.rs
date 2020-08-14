@@ -226,6 +226,7 @@ impl Node {
     pub fn child(&self, selector: Selector) -> Option<Child> {
         child(&self.value, selector)
     }
+
     pub fn next(&self, selector: Selector) -> Option<Selector> {
         match &self.value {
             Value::FunctionDefinition(v) => match &selector {
