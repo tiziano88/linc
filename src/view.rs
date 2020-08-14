@@ -22,6 +22,10 @@ impl Model {
                 msg: Msg::Next,
             },
             Action {
+                text: "parent".to_string(),
+                msg: Msg::Parent,
+            },
+            Action {
                 text: "+arg".to_string(),
                 msg: Msg::AddArgument,
             },
@@ -215,6 +219,22 @@ impl Model {
         self.link.callback(move |_: IN| Msg::Select(path.clone()))
     }
 
+    fn view_child(
+        &self,
+        value: &Value,
+        path: &Path,
+        cursor: &Option<Path>,
+        selector: Selector,
+    ) -> Html {
+        let path = append(&path, selector.clone());
+        let cursor = sub_cursor(&cursor, selector.clone());
+        match child(value, selector) {
+            Some(Child::Single(reference)) => self.view_node(&reference, path, cursor),
+            Some(Child::Multiple(references)) => self.view_node_list(&references, path, cursor),
+            None => html! { <span>{ "???" }</span> },
+        }
+    }
+
     fn view_value(&self, reference: &Ref, value: &Value, path: Path, cursor: Option<Path>) -> Html {
         match value {
             Value::Hole => {
@@ -290,24 +310,24 @@ impl Model {
                 }
             }
             Value::If(v) => {
-                let conditional = self.view_node(
-                    &v.conditional,
-                    append(&path, Selector::Field("conditional".to_string())),
-                    sub_cursor(&cursor, Selector::Field("conditional".to_string())),
+                let conditional = self.view_child(
+                    value,
+                    &path,
+                    &cursor,
+                    Selector::Field("conditional".to_string()),
                 );
-
-                let true_body = self.view_node(
-                    &v.true_body,
-                    append(&path, Selector::Field("true_body".to_string())),
-                    sub_cursor(&cursor, Selector::Field("true_body".to_string())),
+                let true_body = self.view_child(
+                    value,
+                    &path,
+                    &cursor,
+                    Selector::Field("true_body".to_string()),
                 );
-
-                let false_body = self.view_node(
-                    &v.false_body,
-                    append(&path, Selector::Field("false_body".to_string())),
-                    sub_cursor(&cursor, Selector::Field("false_body".to_string())),
+                let false_body = self.view_child(
+                    value,
+                    &path,
+                    &cursor,
+                    Selector::Field("false_body".to_string()),
                 );
-
                 html! {
                     <span>
                     { "if" }{ conditional }
@@ -320,20 +340,15 @@ impl Model {
             Value::FunctionDefinition(v) => {
                 let label = self.view_label(reference, &v.label);
 
-                let args = self.view_node_list(
-                    v.arguments.as_ref(),
-                    append(&path, Selector::Field("args".to_string())),
-                    sub_cursor(&cursor, Selector::Field("args".to_string())),
-                );
-                let body = self.view_node(
-                    &v.body,
-                    append(&path, Selector::Field("body".to_string())),
-                    sub_cursor(&cursor, Selector::Field("body".to_string())),
-                );
-                let return_type = self.view_node(
-                    &v.return_type,
-                    append(&path, Selector::Field("return_type".to_string())),
-                    sub_cursor(&cursor, Selector::Field("return_type".to_string())),
+                let args =
+                    self.view_child(value, &path, &cursor, Selector::Field("args".to_string()));
+                let body =
+                    self.view_child(value, &path, &cursor, Selector::Field("body".to_string()));
+                let return_type = self.view_child(
+                    value,
+                    &path,
+                    &cursor,
+                    Selector::Field("return_type".to_string()),
                 );
 
                 html! {
@@ -352,11 +367,8 @@ impl Model {
                     .and_then(|n| n.label())
                     .map(|l| l.name.clone())
                     .unwrap_or("<UNKNOWN>".to_string());
-                let args = self.view_node_list(
-                    v.arguments.as_ref(),
-                    append(&path, Selector::Field("arguments".to_string())),
-                    sub_cursor(&cursor, Selector::Field("arguments".to_string())),
-                );
+                let args =
+                    self.view_child(value, &path, &cursor, Selector::Field("args".to_string()));
                 html! {
                     <span>
                     { function_name }
@@ -365,16 +377,10 @@ impl Model {
                 }
             }
             Value::BinaryOperator(v) => {
-                let left = self.view_node(
-                    &v.left,
-                    append(&path, Selector::Field("left".to_string())),
-                    sub_cursor(&cursor, Selector::Field("left".to_string())),
-                );
-                let right = self.view_node(
-                    &v.right,
-                    append(&path, Selector::Field("right".to_string())),
-                    sub_cursor(&cursor, Selector::Field("right".to_string())),
-                );
+                let left =
+                    self.view_child(value, &path, &cursor, Selector::Field("left".to_string()));
+                let right =
+                    self.view_child(value, &path, &cursor, Selector::Field("right".to_string()));
                 html! {
                     <span>
                     { left }

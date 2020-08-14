@@ -79,6 +79,7 @@ pub enum Msg {
 
     Prev,
     Next,
+    Parent,
 
     AddArgument,
     AddItem,
@@ -147,6 +148,11 @@ pub enum Value {
     BinaryOperator(BinaryOperatorValue),
 }
 
+pub enum Child {
+    Single(Ref),
+    Multiple(Vec<Ref>),
+}
+
 impl Node {
     pub fn label(&self) -> Option<&Label> {
         match &self.value {
@@ -192,6 +198,32 @@ impl Node {
 
     pub fn to_json(&self) -> String {
         serde_json::to_string_pretty(self).expect("could not serialize to JSON")
+    }
+
+    pub fn child(&self, selector: Selector) -> Option<Child> {
+        child(&self.value, selector)
+    }
+    // pub fn next(&self, selector: Selector) -> Option<Selector> {}
+}
+
+pub fn child(value: &Value, selector: Selector) -> Option<Child> {
+    match &value {
+        Value::FunctionDefinition(v) => match &selector {
+            Selector::Field(f) if f == "args" => Some(Child::Multiple(v.arguments.clone())),
+            Selector::Field(f) if f == "body" => Some(Child::Single(v.body.clone())),
+            Selector::Field(f) if f == "return_type" => Some(Child::Single(v.return_type.clone())),
+            _ => None,
+        },
+        Value::FunctionCall(v) => match &selector {
+            Selector::Field(f) if f == "args" => Some(Child::Multiple(v.arguments.clone())),
+            _ => None,
+        },
+        Value::BinaryOperator(v) => match &selector {
+            Selector::Field(f) if f == "left" => Some(Child::Single(v.left.clone())),
+            Selector::Field(f) if f == "right" => Some(Child::Single(v.right.clone())),
+            _ => None,
+        },
+        _ => None,
     }
 }
 
@@ -389,8 +421,13 @@ impl Component for Model {
             }
 
             Msg::Prev => {}
-            Msg::Next => {}
-            // Parent
+            Msg::Next => {
+                let mut parent = self.cursor.clone();
+                parent.pop_back();
+            }
+            Msg::Parent => {
+                self.cursor.pop_back();
+            }
             Msg::Store => {
                 self.store.store(KEY, yew::format::Json(&self.file));
             }
