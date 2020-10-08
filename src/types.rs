@@ -1,4 +1,6 @@
+use maplit::hashmap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use yew::prelude::*;
 use yew::services::storage::Area;
@@ -15,9 +17,16 @@ pub fn new_ref() -> Ref {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Selector {
-    Field(String),
-    Index(usize),
+pub struct Selector {
+    pub field: String,
+    pub index: Option<usize>,
+}
+
+pub fn field(name: &str) -> Selector {
+    Selector {
+        field: name.to_string(),
+        index: None,
+    }
 }
 
 pub type Path = VecDeque<Selector>;
@@ -52,6 +61,7 @@ impl Model {
         self.file.lookup_mut(reference)
     }
     pub fn lookup_path(&self, path: Path) -> Option<&Node> {
+        /*
         let mut path = path;
         let head = path.pop_front();
         let i = match head {
@@ -76,6 +86,8 @@ impl Model {
         }
         node = self.lookup(&reference)?;
         Some(&node)
+        */
+        None
     }
     // pub fn selected_node(&self) -> Option<&Node> {
     //     self.path
@@ -114,8 +126,8 @@ pub enum Msg {
 
 #[derive(Serialize, Deserialize)]
 pub struct File {
-    pub bindings: Vec<Ref>,
     pub nodes: Vec<Node>,
+    pub root: Ref,
 }
 
 impl File {
@@ -159,16 +171,23 @@ pub enum Value {
     Float(f32),
     String(String),
 
-    Ref(Ref),
-    Binding(BindingValue),
-    Pattern(PatternValue),
+    Inner(Inner),
+    // Ref(Ref),
+    // Binding(BindingValue),
+    // Pattern(PatternValue),
 
-    Block(BlockValue),
-    List(ListValue),
-    If(IfValue),
-    FunctionDefinition(FunctionDefinitionValue),
-    FunctionCall(FunctionCallValue),
-    BinaryOperator(BinaryOperatorValue),
+    // Block(BlockValue),
+    // List(ListValue),
+    // If(IfValue),
+    // FunctionDefinition(FunctionDefinitionValue),
+    // FunctionCall(FunctionCallValue),
+    // BinaryOperator(BinaryOperatorValue),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Inner {
+    pub kind: String,
+    pub children: HashMap<String, Vec<Ref>>,
 }
 
 pub enum Child {
@@ -176,30 +195,36 @@ pub enum Child {
     Multiple(Vec<Ref>),
 }
 
-impl Node {
-    pub fn label(&self) -> Option<&Label> {
-        match &self.value {
-            Value::Binding(ref v) => Some(&v.label),
-            Value::Pattern(ref v) => Some(&v.label),
-            Value::FunctionDefinition(ref v) => Some(&v.label),
-            _ => None,
-        }
-    }
+pub enum FieldType {
+    Single,
+    Repeated,
+}
 
-    pub fn rename(&mut self, name: String) {
-        match &mut self.value {
-            Value::Binding(ref mut v) => v.label.name = name,
-            Value::Pattern(ref mut v) => v.label.name = name,
-            Value::FunctionDefinition(ref mut v) => v.label.name = name,
-            _ => {}
-        }
-    }
+impl Node {
+    // pub fn label(&self) -> Option<&Label> {
+    //     match &self.value {
+    //         Value::Binding(ref v) => Some(&v.label),
+    //         Value::Pattern(ref v) => Some(&v.label),
+    //         Value::FunctionDefinition(ref v) => Some(&v.label),
+    //         _ => None,
+    //     }
+    // }
+
+    // pub fn rename(&mut self, name: String) {
+    //     match &mut self.value {
+    //         Value::Binding(ref mut v) => v.label.name = name,
+    //         Value::Pattern(ref mut v) => v.label.name = name,
+    //         Value::FunctionDefinition(ref mut v) => v.label.name = name,
+    //         _ => {}
+    //     }
+    // }
 
     pub fn map_ref<F>(&mut self, mut f: F)
     where
         F: FnMut(&Ref) -> Ref,
     {
         match &mut self.value {
+            /*
             Value::Block(ref mut v) => {
                 v.expressions = v.expressions.iter().map(f).collect();
             }
@@ -215,6 +240,7 @@ impl Node {
                 v.body = f(&v.body);
                 v.arguments = v.arguments.iter().map(f).collect();
             }
+            */
             _ => {}
         }
     }
@@ -229,15 +255,18 @@ impl Node {
 
     pub fn first(&self) -> Option<Selector> {
         match &self.value {
+            /*
             Value::FunctionDefinition(v) => Some(Selector::Field("args".to_string())),
             Value::FunctionCall(v) => Some(Selector::Field("args".to_string())),
             Value::BinaryOperator(v) => Some(Selector::Field("left".to_string())),
+            */
             _ => None,
         }
     }
 
     pub fn next(&self, selector: Selector) -> Option<Selector> {
         match &self.value {
+            /*
             Value::FunctionDefinition(v) => match &selector {
                 Selector::Field(f) if f == "args" => {
                     Some(Selector::Field("return_type".to_string()))
@@ -257,6 +286,7 @@ impl Node {
                 Selector::Field(f) if f == "right" => None,
                 _ => None,
             },
+            */
             _ => None,
         }
     }
@@ -264,6 +294,7 @@ impl Node {
 
 pub fn child(value: &Value, selector: Selector) -> Option<Child> {
     match &value {
+        /*
         Value::FunctionDefinition(v) => match &selector {
             Selector::Field(f) if f == "args" => Some(Child::Multiple(v.arguments.clone())),
             Selector::Field(f) if f == "body" => Some(Child::Single(v.body.clone())),
@@ -279,6 +310,7 @@ pub fn child(value: &Value, selector: Selector) -> Option<Child> {
             Selector::Field(f) if f == "right" => Some(Child::Single(v.right.clone())),
             _ => None,
         },
+        */
         _ => None,
     }
 }
@@ -361,7 +393,7 @@ impl Component for Model {
                 <div>{ "LINC" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="wrapper">
-                    <div class="column">{ self.view_file(&self.file, self.cursor.clone()) }</div>
+                    <div class="column">{ self.view_file(&self.file) }</div>
                     <div class="column">{ self.view_file_json(&self.file) }</div>
                     <div class="column">
                         <div>{ format!("Cursor: {:?}", self.cursor) }</div>
@@ -377,83 +409,146 @@ impl Component for Model {
             file: File {
                 nodes: vec![
                     Node {
-                        reference: "111".to_string(),
-                        value: Value::FunctionDefinition(FunctionDefinitionValue {
-                            label: Label {
-                                name: "main".to_string(),
-                                colour: "red".to_string(),
+                        reference: "101010".to_string(),
+                        value: Value::Inner(Inner {
+                            kind: "document".to_string(),
+                            children: hashmap! {
+                                "bindings".to_string() => vec!["111".to_string(), "12".to_string()],
                             },
-                            arguments: vec![],
-                            outer_attributes: vec![],
-                            inner_attributes: vec![],
-                            return_type: invalid_ref(),
-                            body: "123".to_string(),
                         }),
+                    },
+                    Node {
+                        reference: "111".to_string(),
+                        value: Value::Inner(Inner {
+                            kind: "function_definition".to_string(),
+                            children: hashmap! {
+                                "name".to_string() => vec!["125".to_string()],
+                                "arguments".to_string() => vec![],
+                                "outer_attributes".to_string() => vec![],
+                                "inner_attributes".to_string() => vec![],
+                                "return_type".to_string() => vec![],
+                                "body".to_string() => vec!["123".to_string()],
+                            },
+                        }),
+                        // value: Value::FunctionDefinition(FunctionDefinitionValue {
+                        //     label: Label {
+                        //         name: "main".to_string(),
+                        //         colour: "red".to_string(),
+                        //     },
+                        //     arguments: vec![],
+                        //     outer_attributes: vec![],
+                        //     inner_attributes: vec![],
+                        //     return_type: invalid_ref(),
+                        //     body: "123".to_string(),
+                        // }),
                     },
                     Node {
                         reference: "124".to_string(),
                         value: Value::Int(123),
                     },
                     Node {
+                        reference: "125".to_string(),
+                        value: Value::String("main".to_string()),
+                    },
+                    Node {
                         reference: "12".to_string(),
-                        value: Value::FunctionDefinition(FunctionDefinitionValue {
-                            label: Label {
-                                name: "factorial".to_string(),
-                                colour: "red".to_string(),
+                        value: Value::Inner(Inner {
+                            kind: "function_definition".to_string(),
+                            children: hashmap! {
+                                "name".to_string() => vec!["126".to_string()],
+                                "arguments".to_string() => vec!["222".to_string()],
+                                "outer_attributes".to_string() => vec![],
+                                "inner_attributes".to_string() => vec![],
+                                "return_type".to_string() => vec![],
+                                "body".to_string() => vec!["228".to_string()],
                             },
-                            arguments: vec!["222".to_string()],
-                            outer_attributes: vec![],
-                            inner_attributes: vec![],
-                            return_type: invalid_ref(),
-                            body: "228".to_string(),
                         }),
+                        // value: Value::FunctionDefinition(FunctionDefinitionValue {
+                        //     label: Label {
+                        //         name: "factorial".to_string(),
+                        //         colour: "red".to_string(),
+                        //     },
+                        //     arguments: vec!["222".to_string()],
+                        //     outer_attributes: vec![],
+                        //     inner_attributes: vec![],
+                        //     return_type: invalid_ref(),
+                        //     body: "228".to_string(),
+                        // }),
+                    },
+                    Node {
+                        reference: "126".to_string(),
+                        value: Value::String("factorial".to_string()),
                     },
                     Node {
                         reference: "222".to_string(),
-                        value: Value::Pattern(PatternValue {
-                            label: Label {
-                                name: "x".to_string(),
-                                colour: "".to_string(),
+                        value: Value::Inner(Inner {
+                            kind: "pattern".to_string(),
+                            children: hashmap! {
+                                "name".to_string() => vec!["2223".to_string()],
                             },
                         }),
                     },
                     Node {
+                        reference: "2223".to_string(),
+                        value: Value::String("x".to_string()),
+                    },
+                    Node {
                         reference: "228".to_string(),
-                        value: Value::BinaryOperator(BinaryOperatorValue {
-                            operator: "*".to_string(),
-                            left: "1231".to_string(),
-                            right: "1232".to_string(),
+                        value: Value::Inner(Inner {
+                            kind: "binary_operator".to_string(),
+                            children: hashmap! {
+                                "operator".to_string() => vec![],
+                                "left".to_string() => vec!["1231".to_string()],
+                                "right".to_string() => vec!["1232".to_string()]
+                            },
                         }),
                     },
                     Node {
                         reference: "1231".to_string(),
-                        value: Value::Ref("222".to_string()),
+                        value: Value::Inner(Inner {
+                            kind: "ref".to_string(),
+                            children: hashmap! {
+                                "target".to_string() => vec!["222".to_string()],
+                            },
+                        }),
                     },
                     Node {
                         reference: "1232".to_string(),
-                        value: Value::FunctionCall(FunctionCallValue {
-                            function: "12".to_string(),
-                            arguments: vec!["229".to_string()],
+                        value: Value::Inner(Inner {
+                            kind: "function_call".to_string(),
+                            children: hashmap! {
+                                "function".to_string() => vec!["12".to_string()],
+                                "arguments".to_string() => vec!["229".to_string()]
+                            },
                         }),
                     },
                     Node {
                         reference: "229".to_string(),
-                        value: Value::BinaryOperator(BinaryOperatorValue {
-                            operator: "-".to_string(),
-                            left: "230".to_string(),
-                            right: "231".to_string(),
+                        value: Value::Inner(Inner {
+                            kind: "binary_operator".to_string(),
+                            // TODO: -
+                            children: hashmap! {
+                                "operator".to_string() => vec![],
+                                "left".to_string() => vec!["230".to_string()],
+                                "right".to_string() => vec!["231".to_string()]
+                            },
                         }),
                     },
                     Node {
                         reference: "230".to_string(),
-                        value: Value::Ref("222".to_string()),
+                        value: Value::Inner(Inner {
+                            kind: "ref".to_string(),
+                            children: hashmap! {
+                                "target".to_string() => vec!["222".to_string()],
+                            },
+                        }),
                     },
                     Node {
                         reference: "231".to_string(),
                         value: Value::Int(1),
                     },
                 ],
-                bindings: vec!["111".to_string(), "12".to_string()],
+                root: "101010".to_string(),
             },
             cursor: VecDeque::new(),
             link,
@@ -471,38 +566,38 @@ impl Component for Model {
                 self.cursor = path;
             }
             Msg::Rename(reference, name) => {
-                if let Some(node) = self.lookup_mut(&reference) {
-                    node.rename(name);
-                }
+                // if let Some(node) = self.lookup_mut(&reference) {
+                //     node.rename(name);
+                // }
             }
 
             Msg::Prev => {}
             Msg::Next => {
-                let current = self.lookup_path(self.cursor.clone()).expect("no current");
-                match current.first() {
-                    Some(next) => {
-                        let mut new = self.cursor.clone();
-                        new.push_back(next);
-                        self.cursor = new;
-                    }
-                    None => {
-                        let mut parent = self.cursor.clone();
-                        let last = parent.pop_back().expect("no last");
-                        log::info!("last: {:?}", last);
-                        log::info!("parent: {:?}", parent);
-                        let parent_node = self.lookup_path(parent.clone()).expect("no parent");
-                        log::info!("parent: {:?}", parent_node);
-                        match parent_node.next(last) {
-                            Some(next) => {
-                                log::info!("next: {:?}", next);
-                                let mut new = parent.clone();
-                                new.push_back(next);
-                                self.cursor = new;
-                            }
-                            None => {}
-                        }
-                    }
-                }
+                // let current = self.lookup_path(self.cursor.clone()).expect("no current");
+                // match current.first() {
+                //     Some(next) => {
+                //         let mut new = self.cursor.clone();
+                //         new.push_back(next);
+                //         self.cursor = new;
+                //     }
+                //     None => {
+                //         let mut parent = self.cursor.clone();
+                //         let last = parent.pop_back().expect("no last");
+                //         log::info!("last: {:?}", last);
+                //         log::info!("parent: {:?}", parent);
+                //         let parent_node = self.lookup_path(parent.clone()).expect("no parent");
+                //         log::info!("parent: {:?}", parent_node);
+                //         match parent_node.next(last) {
+                //             Some(next) => {
+                //                 log::info!("next: {:?}", next);
+                //                 let mut new = parent.clone();
+                //                 new.push_back(next);
+                //                 self.cursor = new;
+                //             }
+                //             None => {}
+                //         }
+                //     }
+                // }
             }
             Msg::Parent => {
                 self.cursor.pop_back();
@@ -555,20 +650,20 @@ impl Component for Model {
                 // }
             }
             Msg::NewFn => {
-                let reference =
-                    self.file
-                        .add_node(Value::FunctionDefinition(FunctionDefinitionValue {
-                            label: Label {
-                                name: "xxx".to_string(),
-                                colour: "red".to_string(),
-                            },
-                            arguments: vec![],
-                            outer_attributes: vec![],
-                            inner_attributes: vec![],
-                            return_type: invalid_ref(),
-                            body: "11111".to_string(),
-                        }));
-                self.file.bindings.push(reference);
+                // let reference =
+                //     self.file
+                //         .add_node(Value::FunctionDefinition(FunctionDefinitionValue {
+                //             label: Label {
+                //                 name: "xxx".to_string(),
+                //                 colour: "red".to_string(),
+                //             },
+                //             arguments: vec![],
+                //             outer_attributes: vec![],
+                //             inner_attributes: vec![],
+                //             return_type: invalid_ref(),
+                //             body: "11111".to_string(),
+                //         }));
+                // self.file.bindings.push(reference);
             }
             Msg::SetValue(v) => {
                 // let reference = self.file.add_node(v);
