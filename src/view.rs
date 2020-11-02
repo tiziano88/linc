@@ -112,7 +112,7 @@ impl Model {
     pub fn view_file(&self, file: &File) -> Html {
         let node = self.view_node(&file.root, &Path::new());
         html! {
-            <div>{ node }</div>
+            <pre>{ node }</pre>
         }
     }
 
@@ -151,15 +151,16 @@ impl Model {
             path[l - 1].index = Some(i);
             self.view_node(n, &path)
         });
-        // let path = path.clone();
-        // let callback = self
-        //     .link
-        //     .callback(move |_: MouseEvent| Msg::Select(path.clone()));
+        let path = path.clone();
+        let callback = self
+            .link
+            .callback(move |_: MouseEvent| Msg::Select(path.clone()));
         html! {
-            <>
+            <span onclick=callback>
+                <span>{ "[" }</span>
                 { for nodes }
-                <span>{ "⊕" }</span>
-            </>
+                <span>{ "]" }</span>
+            </span>
         }
     }
 
@@ -178,7 +179,7 @@ impl Model {
         let callback = self
             .link
             .callback(move |_: MouseEvent| Msg::Select(path_clone.clone()));
-        match self.lookup(reference) {
+        let value = match self.lookup(reference) {
             Some(node) => {
                 // let selected = remaining_path.empty();
                 // let target = match self.selected_node() {
@@ -194,21 +195,19 @@ impl Model {
                 // if target {
                 //     classes.push("target".to_string());
                 // }
-                let value = self.view_value(&node.reference, &node.value, &path);
-                html! {
-                    <div class=classes.join(" ") onclick=callback>
-                        <span>{ value }</span>
-                    </div>
-                }
+                self.view_value(&node.reference, &node.value, &path)
             }
             // <div class=classes.join(" ") onclick=callback path={sp}>
             None => {
                 html! {
-                    <div class=classes.join(" ")>
                         <span>{ "error" }</span>
-                    </div>
                 }
             }
+        };
+        html! {
+            <div class=classes.join(" ") onclick=callback>
+                { value }
+            </div>
         }
     }
 

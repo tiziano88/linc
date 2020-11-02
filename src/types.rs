@@ -413,7 +413,11 @@ impl Component for Model {
                         value: Value::Inner(Inner {
                             kind: "document".to_string(),
                             children: hashmap! {
-                                "bindings".to_string() => vec!["111".to_string(), "12".to_string()],
+                                "bindings".to_string() => vec![
+                                    "111".to_string(),
+                                    "12".to_string(),
+                                    "87498273489273".to_string(),
+                                ],
                             },
                         }),
                     },
@@ -427,20 +431,9 @@ impl Component for Model {
                                 "outer_attributes".to_string() => vec![],
                                 "inner_attributes".to_string() => vec![],
                                 "return_type".to_string() => vec![],
-                                "body".to_string() => vec!["123".to_string()],
+                                "body".to_string() => vec!["99999999".to_string()],
                             },
                         }),
-                        // value: Value::FunctionDefinition(FunctionDefinitionValue {
-                        //     label: Label {
-                        //         name: "main".to_string(),
-                        //         colour: "red".to_string(),
-                        //     },
-                        //     arguments: vec![],
-                        //     outer_attributes: vec![],
-                        //     inner_attributes: vec![],
-                        //     return_type: invalid_ref(),
-                        //     body: "123".to_string(),
-                        // }),
                     },
                     Node {
                         reference: "124".to_string(),
@@ -463,17 +456,6 @@ impl Component for Model {
                                 "body".to_string() => vec!["228".to_string()],
                             },
                         }),
-                        // value: Value::FunctionDefinition(FunctionDefinitionValue {
-                        //     label: Label {
-                        //         name: "factorial".to_string(),
-                        //         colour: "red".to_string(),
-                        //     },
-                        //     arguments: vec!["222".to_string()],
-                        //     outer_attributes: vec![],
-                        //     inner_attributes: vec![],
-                        //     return_type: invalid_ref(),
-                        //     body: "228".to_string(),
-                        // }),
                     },
                     Node {
                         reference: "126".to_string(),
@@ -546,6 +528,21 @@ impl Component for Model {
                     Node {
                         reference: "231".to_string(),
                         value: Value::Int(1),
+                    },
+                    // Nameless function.
+                    Node {
+                        reference: "87498273489273".to_string(),
+                        value: Value::Inner(Inner {
+                            kind: "function_definition".to_string(),
+                            children: hashmap! {
+                                "name".to_string() => vec![],
+                                "arguments".to_string() => vec![],
+                                "outer_attributes".to_string() => vec![],
+                                "inner_attributes".to_string() => vec![],
+                                "return_type".to_string() => vec![],
+                                "body".to_string() => vec![],
+                            },
+                        }),
                     },
                 ],
                 root: "101010".to_string(),
