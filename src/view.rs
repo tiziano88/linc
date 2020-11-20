@@ -141,7 +141,7 @@ impl Model {
             "ref" => &["target"],
             "binary_operator" => &["left", "right"],
             "function_definition" => &["name", "arguments", "return_type", "body"],
-            "pattern" => &["name"],
+            // "pattern" => &["name"],
             "function_call" => &["arguments"],
             _ => &[],
         }
