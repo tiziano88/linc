@@ -135,6 +135,67 @@ impl Model {
         }
     }
 
+    pub fn traverse_fields(kind: &str) -> &[&str] {
+        match kind {
+            "document" => &["bindings"],
+            "ref" => &["target"],
+            "binary_operator" => &["left", "right"],
+            "function_definition" => &["name", "arguments", "return_type", "body"],
+            "pattern" => &["name"],
+            "function_call" => &["arguments"],
+            _ => &[],
+        }
+    }
+
+    pub fn flatten_paths(&self, reference: &Ref, base: Path) -> Vec<Path> {
+        log::info!("flatten: {:?} {:?}", reference, base);
+        fn expand_field(v: &Inner, field: &str) -> Vec<Selector> {
+            let this = crate::types::field(field);
+            let children = v.children[field]
+                .iter()
+                .enumerate()
+                .map(|(n, _)| Selector {
+                    field: "bindings".to_string(),
+                    index: Some(n),
+                })
+                .collect::<Vec<_>>();
+            let mut v = vec![this];
+            v.extend(children);
+            v
+        }
+        match &self.lookup(reference) {
+            Some(node) => match &node.value {
+                Value::Inner(v) => {
+                    let mut paths = vec![];
+                    for field in Model::traverse_fields(v.kind.as_ref()) {
+                        // paths.push(append(&base, crate::types::field(field)));
+                        for (n, child) in v.children[*field].iter().enumerate() {
+                            let new_base = append(
+                                &base,
+                                Selector {
+                                    field: field.to_string(),
+                                    index: Some(n),
+                                },
+                            );
+                            paths.push(new_base.clone());
+                            log::info!("child: {:?}[{:?}]->{:?}", reference, field, child);
+                            paths.extend(self.flatten_paths(child, new_base));
+                        }
+                    }
+                    paths
+                    // fields
+                    //     .iter()
+                    //     .map(|f| expand_field(v, f))
+                    //     .flatten()
+                    //     .map(|s| append(&base, s))
+                    //     .collect()
+                }
+                _ => vec![],
+            },
+            None => vec![],
+        }
+    }
+
     fn view_node_list(&self, references: &[Ref], path: &Path) -> Html {
         // let sp = format!("{:?}", path);
         // let selected = match &cursor {

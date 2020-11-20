@@ -60,10 +60,24 @@ impl Model {
     pub fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
         self.file.lookup_mut(reference)
     }
-    pub fn lookup_path(&self, path: Path) -> Option<&Node> {
+    pub fn lookup_path(&self, reference: &Ref, relative_path: Path) -> Option<Ref> {
+        let mut path = relative_path;
+        match path.pop_front() {
+            Some(head) => {
+                let base = self.lookup(reference).unwrap();
+                match &base.value {
+                    Value::Inner(v) => {
+                        let children = &v.children[&head.field];
+                        let r = children[head.index.unwrap()].clone();
+                        self.lookup_path(&r, path)
+                    }
+                    _ => None,
+                }
+            }
+            None => Some(reference.clone()),
+        }
+
         /*
-        let mut path = path;
-        let head = path.pop_front();
         let i = match head {
             Some(Selector::Index(i)) => i,
             _ => return None,
@@ -87,7 +101,6 @@ impl Model {
         node = self.lookup(&reference)?;
         Some(&node)
         */
-        None
     }
     // pub fn selected_node(&self) -> Option<&Node> {
     //     self.path
@@ -568,33 +581,21 @@ impl Component for Model {
                 // }
             }
 
-            Msg::Prev => {}
+            // TODO: sibling vs inner
+            Msg::Prev => {
+                let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
+                log::info!("paths: {:?}", flattened_paths);
+                let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
+                log::info!("current: {:?}", current_path_index);
+                self.cursor = flattened_paths[current_path_index.unwrap() - 1].clone();
+            }
+            // Preorder tree traversal.
             Msg::Next => {
-                // let current = self.lookup_path(self.cursor.clone()).expect("no current");
-                // match current.first() {
-                //     Some(next) => {
-                //         let mut new = self.cursor.clone();
-                //         new.push_back(next);
-                //         self.cursor = new;
-                //     }
-                //     None => {
-                //         let mut parent = self.cursor.clone();
-                //         let last = parent.pop_back().expect("no last");
-                //         log::info!("last: {:?}", last);
-                //         log::info!("parent: {:?}", parent);
-                //         let parent_node = self.lookup_path(parent.clone()).expect("no parent");
-                //         log::info!("parent: {:?}", parent_node);
-                //         match parent_node.next(last) {
-                //             Some(next) => {
-                //                 log::info!("next: {:?}", next);
-                //                 let mut new = parent.clone();
-                //                 new.push_back(next);
-                //                 self.cursor = new;
-                //             }
-                //             None => {}
-                //         }
-                //     }
-                // }
+                let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
+                log::info!("paths: {:?}", flattened_paths);
+                let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
+                log::info!("current: {:?}", current_path_index);
+                self.cursor = flattened_paths[current_path_index.unwrap() + 1].clone();
             }
             Msg::Parent => {
                 self.cursor.pop_back();
