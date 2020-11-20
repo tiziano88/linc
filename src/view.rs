@@ -166,15 +166,11 @@ impl Model {
 
     // fn view_node(&self, reference: &Ref, path: Path, cursor: Option<Path>) -> Html {
     fn view_node(&self, reference: &Ref, path: &Path) -> Html {
-        // let selected = match &cursor {
-        //     Some(cursor) => cursor.is_empty(),
-        //     None => false,
-        // };
+        let selected = path == &self.cursor;
         let mut classes = vec!["node".to_string()];
-        // if selected {
-        //     classes.push("selected".to_string());
-        // }
-        // let sp = format!("{:?}", path);
+        if selected {
+            classes.push("selected".to_string());
+        }
         let path_clone = path.clone();
         let callback = self
             .link
