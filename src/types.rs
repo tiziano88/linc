@@ -664,8 +664,29 @@ impl Component for Model {
                 // self.file.bindings.push(reference);
             }
             Msg::SetValue(v) => {
-                // let reference = self.file.add_node(v);
-                // let current = self.current().unwrap_or(invalid_ref());
+                let new_ref = self.file.add_node(v);
+
+                let mut parent_cursor = self.cursor.clone();
+                let selector = parent_cursor.pop_back().unwrap();
+                log::info!("selector: {:?}", selector);
+                let parent_ref = self.lookup_path(&self.file.root, parent_cursor).unwrap();
+                log::info!("parent ref: {:?}", parent_ref);
+                let parent = self.lookup_mut(&parent_ref).unwrap();
+                log::info!("parent: {:?}", parent);
+
+                match &mut parent.value {
+                    Value::Inner(ref mut inner) => {
+                        // If the field does not exist, create a default one.
+                        let children = inner.children.entry(selector.field).or_default();
+                        match selector.index {
+                            Some(i) => children[i] = new_ref,
+                            // Cursor is pointing to a field but not a specific child, create the first child.
+                            None => children.push(new_ref),
+                        }
+                    }
+                    _ => {}
+                }
+
                 // if let Some(node) = self
                 //     .parent()
                 //     .and_then(|reference| self.lookup_mut(&reference))

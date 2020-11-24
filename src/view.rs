@@ -69,6 +69,13 @@ impl Model {
                     children: HashMap::new(),
                 })),
             },
+            Action {
+                text: "***".to_string(),
+                msg: Msg::SetValue(Value::Inner(Inner {
+                    kind: "binary_operator".to_string(),
+                    children: HashMap::new(),
+                })),
+            },
             /*
             Action {
                 text: "If (☆) then ◆".to_string(),
@@ -139,6 +146,7 @@ impl Model {
         match kind {
             "document" => &["bindings"],
             "ref" => &["target"],
+            "if" => &["condition", "true_body", "false_body"],
             "binary_operator" => &["left", "right"],
             "function_definition" => &["name", "arguments", "return_type", "body"],
             // "pattern" => &["name"],
@@ -168,8 +176,42 @@ impl Model {
                 Value::Inner(v) => {
                     let mut paths = vec![];
                     for field in Model::traverse_fields(v.kind.as_ref()) {
+                        match v.children.get(*field) {
+                            Some(children) => {
+                                for (n, child) in children.iter().enumerate() {
+                                    let new_base = append(
+                                        &base,
+                                        Selector {
+                                            field: field.to_string(),
+                                            index: Some(n),
+                                        },
+                                    );
+                                    paths.push(new_base.clone());
+                                    log::info!("child: {:?}[{:?}]->{:?}", reference, field, child);
+                                    paths.extend(self.flatten_paths(child, new_base));
+                                }
+                            }
+                            None => {
+                                let new_base = append(
+                                    &base,
+                                    Selector {
+                                        field: field.to_string(),
+                                        index: None,
+                                    },
+                                );
+                                paths.push(new_base.clone());
+                            }
+                        }
                         // paths.push(append(&base, crate::types::field(field)));
-                        for (n, child) in v.children[*field].iter().enumerate() {
+                        /*
+                        for (n, child) in v
+                            .children
+                            .get(*field)
+                            .cloned()
+                            .unwrap_or_default()
+                            .iter()
+                            .enumerate()
+                        {
                             let new_base = append(
                                 &base,
                                 Selector {
@@ -181,6 +223,7 @@ impl Model {
                             log::info!("child: {:?}[{:?}]->{:?}", reference, field, child);
                             paths.extend(self.flatten_paths(child, new_base));
                         }
+                        */
                     }
                     paths
                     // fields
@@ -299,7 +342,7 @@ impl Model {
             },
         );
         // let cursor = sub_cursor(&cursor, field(field_name));
-        match value.children.get(field_name).unwrap().get(0) {
+        match value.children.get(field_name).and_then(|v| v.get(0)) {
             Some(n) => self.view_node(n, &path),
             None => self.view_node_list(&[], &path),
         }
@@ -362,6 +405,20 @@ impl Model {
                         { left }
                         { "***" }
                         { right }
+                        </span>
+                    }
+                }
+                "if" => {
+                    let condition = self.view_child(&v, "condition", &path);
+                    let true_body = self.view_child(&v, "true_body", &path);
+                    let false_body = self.view_child(&v, "false_body", &path);
+                    html! {
+                        <span>
+                        { "if" }{ condition }{ "{" }
+                        { true_body }
+                        { "}" }{ "else" }{ "{" }
+                        { false_body }
+                        { "}" }
                         </span>
                     }
                 }
@@ -475,7 +532,7 @@ impl Model {
             //     }
             // }
             // Value::If(v) => {
-            //     let conditional = self.view_child(value, &path, &cursor, field("conditional"));
+            //     let conditional = self.view_child(value, &path, &cursor, field("condition"));
             //     let true_body = self.view_child(value, &path, &cursor, field("true_body"));
             //     let false_body = self.view_child(value, &path, &cursor, field("false_body"));
             //     html! {
