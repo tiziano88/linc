@@ -344,7 +344,10 @@ impl Model {
         // let cursor = sub_cursor(&cursor, field(field_name));
         match value.children.get(field_name).and_then(|v| v.get(0)) {
             Some(n) => self.view_node(n, &path),
-            None => self.view_node_list(&[], &path),
+            // Empty list vs hole vs special value?
+            // TODO: How to traverse nested lists in preorder?
+            None => self.view_node(&"-".to_string(), &path),
+            // None => self.view_node_list(&[], &path),
         }
     }
 

@@ -679,7 +679,10 @@ impl Component for Model {
                         // If the field does not exist, create a default one.
                         let children = inner.children.entry(selector.field).or_default();
                         match selector.index {
-                            Some(i) => children[i] = new_ref,
+                            Some(i) => match children.get_mut(i) {
+                                Some(c) => *c = new_ref,
+                                None => children.push(new_ref),
+                            },
                             // Cursor is pointing to a field but not a specific child, create the first child.
                             None => children.push(new_ref),
                         }
