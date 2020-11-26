@@ -76,6 +76,20 @@ impl Model {
                     children: HashMap::new(),
                 })),
             },
+            Action {
+                text: "struct".to_string(),
+                msg: Msg::SetValue(Value::Inner(Inner {
+                    kind: "struct".to_string(),
+                    children: HashMap::new(),
+                })),
+            },
+            Action {
+                text: "enum".to_string(),
+                msg: Msg::SetValue(Value::Inner(Inner {
+                    kind: "enum".to_string(),
+                    children: HashMap::new(),
+                })),
+            },
             /*
             Action {
                 text: "If (☆) then ◆".to_string(),
@@ -142,6 +156,7 @@ impl Model {
         }
     }
 
+    // TODO: Make this the primary schema, and include shape of child refs.
     pub fn traverse_fields(kind: &str) -> &[&str] {
         match kind {
             "document" => &["bindings"],
@@ -149,6 +164,8 @@ impl Model {
             "if" => &["condition", "true_body", "false_body"],
             "binary_operator" => &["left", "right"],
             "function_definition" => &["name", "arguments", "return_type", "body"],
+            "struct" => &["name", "fields"],
+            "enum" => &["name", "variants"],
             // "pattern" => &["name"],
             "function_call" => &["arguments"],
             _ => &[],
@@ -438,6 +455,28 @@ impl Model {
                         { "(" }{ args }{ ")" }
                         { "->" }{ return_type }
                         { "{" }<div class="block">{ body }</div>{ "}" }
+                        </span>
+                    }
+                }
+                "struct" => {
+                    let label = self.view_child(&v, "name", &path);
+                    let fields = self.view_children(&v, "fields", &path);
+
+                    html! {
+                        <span>
+                        { "struct" }{ label }
+                        { "{" }{ fields }{ "}" }
+                        </span>
+                    }
+                }
+                "enum" => {
+                    let label = self.view_child(&v, "name", &path);
+                    let variants = self.view_children(&v, "variants", &path);
+
+                    html! {
+                        <span>
+                        { "enum" }{ label }
+                        { "{" }{ variants }{ "}" }
                         </span>
                     }
                 }
