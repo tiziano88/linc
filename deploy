@@ -4,11 +4,11 @@ readonly TARGET_DIR=$PWD/../linc-gh-pages
 
 rm -rf $TARGET_DIR/*
 
-(
-  wasm-pack build --release --out-dir=$TARGET_DIR
-)
+./build
+cp -r ./static/{snippets,index.html,style.css,wasm.js,wasm_bg.wasm} $TARGET_DIR
 (
   cd $TARGET_DIR
+  git add .
   git commit --all --message=deploy-$(date --iso-8601=seconds)
   git push
 )
