@@ -102,10 +102,11 @@ impl Model {
     //     self.path.back().cloned()
     // }
 
-    // pub fn parent(&self) -> Option<Ref> {
-    //     let i = self.path.len() - 2;
-    //     self.path.get(i).cloned()
-    // }
+    pub fn parent_ref(&self) -> Option<Ref> {
+        let mut parent_cursor = self.cursor.clone();
+        parent_cursor.pop_back().unwrap();
+        self.lookup_path(&self.file.root, parent_cursor)
+    }
 }
 
 #[derive(Clone)]
@@ -513,10 +514,8 @@ impl Component for Model {
             Msg::SetValue(v) => {
                 let new_ref = self.file.add_node(v);
 
-                let mut parent_cursor = self.cursor.clone();
-                let selector = parent_cursor.pop_back().unwrap();
-                log::info!("selector: {:?}", selector);
-                let parent_ref = self.lookup_path(&self.file.root, parent_cursor).unwrap();
+                let selector = self.cursor.back().unwrap().clone();
+                let parent_ref = self.parent_ref().unwrap();
                 log::info!("parent ref: {:?}", parent_ref);
                 let parent = self.lookup_mut(&parent_ref).unwrap();
                 log::info!("parent: {:?}", parent);

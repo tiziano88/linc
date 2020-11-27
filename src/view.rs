@@ -124,7 +124,10 @@ impl Model {
                 msg: Msg::SetValue(Value::Int(0)),
             },
         ];
-        let actions = actions.iter().map(|a| self.view_action(a));
+        let actions = actions
+            .iter()
+            .filter(|a| self.is_valid_action(a))
+            .map(|a| self.view_action(a));
 
         let oninput = self
             .link
@@ -140,6 +143,56 @@ impl Model {
             <div class="action" onclick=onclick>{ "Set Value" }</div>
             { for actions }
             </div>
+        }
+    }
+
+    fn is_valid_action(&self, action: &Action) -> bool {
+        match &action.msg {
+            Msg::SetValue(new_value) => match self.cursor.back() {
+                Some(selector) => {
+                    let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
+                    match &parent.value {
+                        Value::Inner(v) => {
+                            match &RUST_SCHEMA
+                                .kinds
+                                .iter()
+                                .find(|k| k.name == v.kind)
+                                .unwrap()
+                                .fields
+                                .iter()
+                                .find(|f| f.name == selector.field)
+                                .unwrap()
+                                .type_
+                            {
+                                Type::String => {
+                                    if let Value::String(_) = new_value {
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                Type::Bool => {
+                                    if let Value::Bool(_) = new_value {
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                Type::Ref => {
+                                    if let Value::Inner(_) = new_value {
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                            }
+                        }
+                        _ => true,
+                    }
+                }
+                None => true,
+            },
+            _ => true,
         }
     }
 
