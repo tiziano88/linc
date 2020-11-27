@@ -90,6 +90,18 @@ impl Model {
                     children: HashMap::new(),
                 })),
             },
+            Action {
+                text: "false".to_string(),
+                msg: Msg::SetValue(Value::Bool(false)),
+            },
+            Action {
+                text: "true".to_string(),
+                msg: Msg::SetValue(Value::Bool(true)),
+            },
+            Action {
+                text: "0".to_string(),
+                msg: Msg::SetValue(Value::Int(0)),
+            },
             /*
             Action {
                 text: "If (☆) then ◆".to_string(),
@@ -113,8 +125,19 @@ impl Model {
             },
         ];
         let actions = actions.iter().map(|a| self.view_action(a));
+
+        let oninput = self
+            .link
+            .callback(move |e: InputData| Msg::SetText(e.value));
+        let text = self.text.clone();
+        let onclick = self
+            .link
+            .callback(move |_: MouseEvent| Msg::SetValue(Value::String(text.clone())));
+
         html! {
             <div>
+            <input oninput=oninput></input>
+            <div class="action" onclick=onclick>{ "Set Value" }</div>
             { for actions }
             </div>
         }
@@ -156,8 +179,12 @@ impl Model {
         }
     }
 
-    // TODO: Make this the primary schema, and include shape of child refs.
-    pub fn traverse_fields(kind: &str) -> &[&str] {
+    pub fn traverse_fields(kind: &str) -> Vec<&str> {
+        match RUST_SCHEMA.kinds.iter().find(|k| k.name == kind) {
+            Some(kind) => kind.fields.iter().map(|f| f.name).collect(),
+            None => Vec::new(),
+        }
+        /*
         match kind {
             "document" => &["bindings"],
             "ref" => &["target"],
@@ -170,30 +197,17 @@ impl Model {
             "function_call" => &["arguments"],
             _ => &[],
         }
+        */
     }
 
     pub fn flatten_paths(&self, reference: &Ref, base: Path) -> Vec<Path> {
         log::info!("flatten: {:?} {:?}", reference, base);
-        fn expand_field(v: &Inner, field: &str) -> Vec<Selector> {
-            let this = crate::types::field(field);
-            let children = v.children[field]
-                .iter()
-                .enumerate()
-                .map(|(n, _)| Selector {
-                    field: "bindings".to_string(),
-                    index: Some(n),
-                })
-                .collect::<Vec<_>>();
-            let mut v = vec![this];
-            v.extend(children);
-            v
-        }
         match &self.lookup(reference) {
             Some(node) => match &node.value {
                 Value::Inner(v) => {
                     let mut paths = vec![];
                     for field in Model::traverse_fields(v.kind.as_ref()) {
-                        match v.children.get(*field) {
+                        match v.children.get(field) {
                             Some(children) => {
                                 for (n, child) in children.iter().enumerate() {
                                     let new_base = append(
@@ -447,10 +461,13 @@ impl Model {
                     let args = self.view_children(&v, "arguments", &path);
                     let body = self.view_child(&v, "body", &path);
                     let return_type = self.view_child(&v, "return_type", &path);
+                    let async_ = self.view_child(&v, "async", &path);
+                    let pub_ = self.view_child(&v, "pub", &path);
 
                     html! {
                         <span>
                         <div>{ "#" }</div>
+                        { pub_ }
                         { "fn" }{ label }
                         { "(" }{ args }{ ")" }
                         { "->" }{ return_type }

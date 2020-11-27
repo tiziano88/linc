@@ -1,4 +1,3 @@
-use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -42,15 +41,7 @@ pub struct Model {
     pub store: StorageService,
     pub cursor: Path,
     pub link: ComponentLink<Self>,
-}
-
-pub fn sub_cursor(cursor: &Option<Path>, selector: Selector) -> Option<Path> {
-    let cursor = cursor.clone();
-    if Some(selector) == cursor.clone().and_then(|v| v.clone().front().cloned()) {
-        cursor.map(|mut v| v.split_off(1))
-    } else {
-        None
-    }
+    pub text: String,
 }
 
 impl Model {
@@ -135,6 +126,8 @@ pub enum Msg {
     NewFn,
 
     SetValue(Value),
+
+    SetText(String),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -185,16 +178,6 @@ pub enum Value {
     String(String),
 
     Inner(Inner),
-    // Ref(Ref),
-    // Binding(BindingValue),
-    // Pattern(PatternValue),
-
-    // Block(BlockValue),
-    // List(ListValue),
-    // If(IfValue),
-    // FunctionDefinition(FunctionDefinitionValue),
-    // FunctionCall(FunctionCallValue),
-    // BinaryOperator(BinaryOperatorValue),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -419,147 +402,8 @@ impl Component for Model {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         Model {
             store: StorageService::new(Area::Local).expect("could not create storage service"),
-            file: File {
-                nodes: vec![
-                    Node {
-                        reference: "101010".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "document".to_string(),
-                            children: hashmap! {
-                                "bindings".to_string() => vec![
-                                    "111".to_string(),
-                                    "12".to_string(),
-                                    "87498273489273".to_string(),
-                                ],
-                            },
-                        }),
-                    },
-                    Node {
-                        reference: "111".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "function_definition".to_string(),
-                            children: hashmap! {
-                                "name".to_string() => vec!["125".to_string()],
-                                "arguments".to_string() => vec![],
-                                "outer_attributes".to_string() => vec![],
-                                "inner_attributes".to_string() => vec![],
-                                "return_type".to_string() => vec![],
-                                "body".to_string() => vec!["99999999".to_string()],
-                            },
-                        }),
-                    },
-                    Node {
-                        reference: "124".to_string(),
-                        value: Value::Int(123),
-                    },
-                    Node {
-                        reference: "125".to_string(),
-                        value: Value::String("main".to_string()),
-                    },
-                    Node {
-                        reference: "12".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "function_definition".to_string(),
-                            children: hashmap! {
-                                "name".to_string() => vec!["126".to_string()],
-                                "arguments".to_string() => vec!["222".to_string()],
-                                "outer_attributes".to_string() => vec![],
-                                "inner_attributes".to_string() => vec![],
-                                "return_type".to_string() => vec![],
-                                "body".to_string() => vec!["228".to_string()],
-                            },
-                        }),
-                    },
-                    Node {
-                        reference: "126".to_string(),
-                        value: Value::String("factorial".to_string()),
-                    },
-                    Node {
-                        reference: "222".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "pattern".to_string(),
-                            children: hashmap! {
-                                "name".to_string() => vec!["2223".to_string()],
-                            },
-                        }),
-                    },
-                    Node {
-                        reference: "2223".to_string(),
-                        value: Value::String("x".to_string()),
-                    },
-                    Node {
-                        reference: "228".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "binary_operator".to_string(),
-                            children: hashmap! {
-                                "operator".to_string() => vec![],
-                                "left".to_string() => vec!["1231".to_string()],
-                                "right".to_string() => vec!["1232".to_string()]
-                            },
-                        }),
-                    },
-                    Node {
-                        reference: "1231".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "ref".to_string(),
-                            children: hashmap! {
-                                "target".to_string() => vec!["222".to_string()],
-                            },
-                        }),
-                    },
-                    Node {
-                        reference: "1232".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "function_call".to_string(),
-                            children: hashmap! {
-                                "function".to_string() => vec!["12".to_string()],
-                                "arguments".to_string() => vec!["229".to_string()]
-                            },
-                        }),
-                    },
-                    Node {
-                        reference: "229".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "binary_operator".to_string(),
-                            // TODO: -
-                            children: hashmap! {
-                                "operator".to_string() => vec![],
-                                "left".to_string() => vec!["230".to_string()],
-                                "right".to_string() => vec!["231".to_string()]
-                            },
-                        }),
-                    },
-                    Node {
-                        reference: "230".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "ref".to_string(),
-                            children: hashmap! {
-                                "target".to_string() => vec!["222".to_string()],
-                            },
-                        }),
-                    },
-                    Node {
-                        reference: "231".to_string(),
-                        value: Value::Int(1),
-                    },
-                    // Nameless function.
-                    Node {
-                        reference: "87498273489273".to_string(),
-                        value: Value::Inner(Inner {
-                            kind: "function_definition".to_string(),
-                            children: hashmap! {
-                                "name".to_string() => vec![],
-                                "arguments".to_string() => vec![],
-                                "outer_attributes".to_string() => vec![],
-                                "inner_attributes".to_string() => vec![],
-                                "return_type".to_string() => vec![],
-                                "body".to_string() => vec![],
-                            },
-                        }),
-                    },
-                ],
-                root: "101010".to_string(),
-            },
+            text: "".to_string(),
+            file: super::initial::initial(),
             cursor: VecDeque::new(),
             link,
         }
@@ -663,6 +507,9 @@ impl Component for Model {
                 //         }));
                 // self.file.bindings.push(reference);
             }
+            Msg::SetText(v) => {
+                self.text = v;
+            }
             Msg::SetValue(v) => {
                 let new_ref = self.file.add_node(v);
 
@@ -711,4 +558,274 @@ impl Component for Model {
 pub struct Action {
     pub text: String,
     pub msg: Msg,
+}
+
+pub const MARKDOWN_SCHEMA: Schema = Schema {
+    kinds: &[
+        Kind {
+            name: "document",
+            fields: &[Field {
+                name: "paragraphs",
+                type_: Type::Ref,
+                multiplicity: Multiplicity::Repeated,
+                validator: whatever,
+            }],
+        },
+        Kind {
+            name: "paragraph",
+            fields: &[Field {
+                name: "text",
+                type_: Type::String,
+                multiplicity: Multiplicity::Single,
+                validator: whatever,
+            }],
+        },
+        Kind {
+            name: "list",
+            fields: &[Field {
+                name: "items",
+                type_: Type::Ref,
+                multiplicity: Multiplicity::Repeated,
+                validator: whatever,
+            }],
+        },
+    ],
+};
+
+pub const RUST_SCHEMA: Schema = Schema {
+    kinds: &[
+        Kind {
+            name: "document",
+            fields: &[Field {
+                name: "bindings",
+                type_: Type::Ref,
+                multiplicity: Multiplicity::Repeated,
+                validator: whatever,
+            }],
+        },
+        Kind {
+            name: "block",
+            fields: &[Field {
+                name: "statements",
+                type_: Type::Ref,
+                multiplicity: Multiplicity::Repeated,
+                validator: whatever,
+            }],
+        },
+        Kind {
+            name: "if",
+            fields: &[
+                Field {
+                    name: "condition", // Expression
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "true_body", // Expression
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "false_body", // Expression
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+        },
+        Kind {
+            name: "binary_operator",
+            fields: &[
+                Field {
+                    name: "left",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "right",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+        },
+        Kind {
+            name: "function_definition",
+            fields: &[
+                Field {
+                    name: "pub",
+                    type_: Type::Bool,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "async",
+                    type_: Type::Bool,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "name",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "arguments", // Pattern
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Repeated,
+                    validator: whatever,
+                },
+                Field {
+                    name: "return_type", // Type
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "body", // Expression
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+        },
+        Kind {
+            name: "pattern",
+            fields: &[
+                Field {
+                    name: "name",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "type", // Type
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+        },
+        Kind {
+            name: "let",
+            fields: &[
+                Field {
+                    name: "name",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "type", // Type
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "value", // Expression
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+        },
+        Kind {
+            name: "type",
+            fields: &[
+                Field {
+                    name: "name",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                // Generic type parameters.
+                Field {
+                    name: "arguments",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Repeated,
+                    validator: whatever,
+                },
+            ],
+        },
+        Kind {
+            name: "function_call",
+            fields: &[Field {
+                name: "arguments", // Expression
+                type_: Type::Ref,
+                multiplicity: Multiplicity::Repeated,
+                validator: whatever,
+            }],
+        },
+        Kind {
+            name: "struct",
+            fields: &[
+                Field {
+                    name: "name",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "fields", // Pattern
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Repeated,
+                    validator: whatever,
+                },
+            ],
+        },
+        Kind {
+            name: "enum",
+            fields: &[
+                Field {
+                    name: "name",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "variants",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Repeated,
+                    validator: whatever,
+                },
+            ],
+        },
+    ],
+};
+
+type Validator = fn(Value) -> bool;
+
+fn whatever(_: Value) -> bool {
+    true
+}
+
+pub struct Schema {
+    pub kinds: &'static [Kind],
+}
+
+pub struct Kind {
+    pub name: &'static str,
+    pub fields: &'static [Field],
+}
+
+pub struct Field {
+    pub name: &'static str,
+    pub type_: Type,
+    pub multiplicity: Multiplicity,
+    pub validator: Validator,
+}
+
+pub enum Type {
+    Bool,
+    String,
+    Ref,
+}
+
+pub enum Multiplicity {
+    Single,
+    Repeated,
 }

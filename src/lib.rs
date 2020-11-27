@@ -4,6 +4,7 @@ use types::Model;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 
+mod initial;
 mod types;
 mod view;
 
