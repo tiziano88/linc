@@ -1,0 +1,31 @@
+.node {
+  border: 1px solid;
+  padding: 5px;
+  display: inline-block;
+}
+
+.selected {
+  color: red;
+}
+
+.target {
+  color: blue;
+}
+
+.action {
+  border: 1px solid;
+  padding: 5px;
+  display: inline-block;
+}
+
+.wrapper {
+  display: flex;
+}
+
+.column {
+  flex: 1;
+}
+
+.block {
+  margin-left: 40px;
+}
