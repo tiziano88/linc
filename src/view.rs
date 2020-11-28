@@ -5,7 +5,12 @@ use std::collections::HashMap;
 
 impl Model {
     pub fn view_actions(&self) -> Html {
+        let text = self.text.clone();
         let actions = vec![
+            Action {
+                text: "Set Value".to_string(),
+                msg: Msg::SetValue(Value::String(text.clone())),
+            },
             Action {
                 text: "store".to_string(),
                 msg: Msg::Store,
@@ -132,10 +137,6 @@ impl Model {
         let oninput = self
             .link
             .callback(move |e: InputData| Msg::SetText(e.value));
-        let text = self.text.clone();
-        let onclick = self
-            .link
-            .callback(move |_: MouseEvent| Msg::SetValue(Value::String(text.clone())));
 
         html! {
             <div>
@@ -143,7 +144,6 @@ impl Model {
               class="focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm text-black placeholder-gray-500 border border-gray-200 rounded-md py-2 pl-10"
               oninput=oninput
             ></input>
-            <button class="action hover:bg-blue-200 hover:text-blue-800 group flex items-center rounded-md bg-blue-100 text-blue-600 text-sm font-medium px-4 py-2" onclick=onclick>{ "Set Value" }</button>
             { for actions }
             </div>
         }
@@ -156,7 +156,7 @@ impl Model {
                     let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
                     match &parent.value {
                         Value::Inner(v) => {
-                            match &RUST_SCHEMA
+                            let field = &RUST_SCHEMA
                                 .kinds
                                 .iter()
                                 .find(|k| k.name == v.kind)
@@ -164,12 +164,11 @@ impl Model {
                                 .fields
                                 .iter()
                                 .find(|f| f.name == selector.field)
-                                .unwrap()
-                                .type_
-                            {
+                                .unwrap();
+                            match field.type_ {
                                 Type::String => {
                                     if let Value::String(_) = new_value {
-                                        true
+                                        (field.validator)(new_value)
                                     } else {
                                         false
                                     }
@@ -181,13 +180,7 @@ impl Model {
                                         false
                                     }
                                 }
-                                Type::Ref => {
-                                    if let Value::Inner(_) = new_value {
-                                        true
-                                    } else {
-                                        false
-                                    }
-                                }
+                                Type::Ref => true,
                             }
                         }
                         _ => true,

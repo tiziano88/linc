@@ -678,7 +678,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     name: "name",
                     type_: Type::String,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
+                    validator: identifier,
                 },
                 Field {
                     name: "arguments", // Pattern
@@ -707,7 +707,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     name: "name",
                     type_: Type::String,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
+                    validator: identifier,
                 },
                 Field {
                     name: "type", // Type
@@ -724,7 +724,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     name: "name",
                     type_: Type::String,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
+                    validator: identifier,
                 },
                 Field {
                     name: "type", // Type
@@ -774,7 +774,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     name: "name",
                     type_: Type::String,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
+                    validator: identifier,
                 },
                 Field {
                     name: "fields", // Pattern
@@ -791,7 +791,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     name: "name",
                     type_: Type::String,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
+                    validator: identifier,
                 },
                 Field {
                     name: "variants",
@@ -804,10 +804,17 @@ pub const RUST_SCHEMA: Schema = Schema {
     ],
 };
 
-type Validator = fn(Value) -> bool;
+type Validator = fn(&Value) -> bool;
 
-fn whatever(_: Value) -> bool {
+fn whatever(_: &Value) -> bool {
     true
+}
+
+fn identifier(v: &Value) -> bool {
+    match v {
+        Value::String(v) => !v.contains(' '),
+        _ => false,
+    }
 }
 
 pub struct Schema {
