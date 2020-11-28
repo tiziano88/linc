@@ -432,7 +432,11 @@ impl Component for Model {
                 log::info!("paths: {:?}", flattened_paths);
                 let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
                 log::info!("current: {:?}", current_path_index);
-                self.cursor = flattened_paths[current_path_index.unwrap() - 1].clone();
+                if let Some(current_path_index) = current_path_index {
+                    if let Some(path) = flattened_paths.get(current_path_index - 1) {
+                        self.cursor = path.clone();
+                    }
+                }
             }
             // Preorder tree traversal.
             Msg::Next => {
@@ -440,7 +444,11 @@ impl Component for Model {
                 log::info!("paths: {:?}", flattened_paths);
                 let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
                 log::info!("current: {:?}", current_path_index);
-                self.cursor = flattened_paths[current_path_index.unwrap() + 1].clone();
+                if let Some(current_path_index) = current_path_index {
+                    if let Some(path) = flattened_paths.get(current_path_index + 1) {
+                        self.cursor = path.clone();
+                    }
+                }
             }
             Msg::Parent => {
                 self.cursor.pop_back();

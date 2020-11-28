@@ -139,8 +139,11 @@ impl Model {
 
         html! {
             <div>
-            <input oninput=oninput></input>
-            <div class="action" onclick=onclick>{ "Set Value" }</div>
+            <input
+              class="focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm text-black placeholder-gray-500 border border-gray-200 rounded-md py-2 pl-10"
+              oninput=oninput
+            ></input>
+            <button class="action hover:bg-blue-200 hover:text-blue-800 group flex items-center rounded-md bg-blue-100 text-blue-600 text-sm font-medium px-4 py-2" onclick=onclick>{ "Set Value" }</button>
             { for actions }
             </div>
         }
@@ -200,9 +203,11 @@ impl Model {
         let msg = action.msg.clone();
         let callback = self.link.callback(move |_: MouseEvent| msg.clone());
         html! {
-            <div class="action" onclick=callback>
-            { &action.text }
-            </div>
+            <button
+              class="action hover:bg-blue-200 hover:text-blue-800 group flex items-center rounded-md bg-blue-100 text-blue-600 text-sm font-medium px-4 py-2"
+              onclick=callback>
+                { &action.text }
+            </button>
         }
     }
 
