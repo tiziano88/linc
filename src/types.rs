@@ -42,6 +42,7 @@ pub struct Model {
     pub cursor: Path,
     pub link: ComponentLink<Self>,
     pub command: String,
+    pub parsed_command: Option<Value>,
 }
 
 impl Model {
@@ -467,6 +468,7 @@ impl Component for Model {
         Model {
             store: StorageService::new(Area::Local).expect("could not create storage service"),
             command: "".to_string(),
+            parsed_command: None,
             file: super::initial::initial(),
             cursor: VecDeque::new(),
             link,
@@ -580,20 +582,28 @@ impl Component for Model {
                 // self.file.bindings.push(reference);
             }
             Msg::SetCommand(v) => {
+                self.parsed_command = self.parse_command(&v);
                 self.command = v;
             }
             Msg::CommandKey(v) => {
                 log::info!("key: {}", v.code());
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match v.code().as_ref() {
-                    "Enter" => match self.parse_command(&self.command) {
+                    "Enter" => match self.parsed_command.clone() {
                         Some(value) => {
                             self.set_value(value);
+                            self.parsed_command = None;
                             self.command = "".to_string();
                             self.next();
                         }
                         None => log::info!("invalid command: {}", self.command),
                     },
+                    "Tab" => {
+                        self.next();
+                    }
+                    "ArrowRight" => {
+                        self.next();
+                    }
                     _ => {}
                 }
             }
