@@ -108,8 +108,66 @@ impl Model {
         self.lookup_path(&self.file.root, parent_cursor)
     }
 
-    fn parse_command(&self, command: &str) -> Option<Action> {
-        None
+    fn parse_command(&self, command: &str) -> Option<Value> {
+        match command {
+            "if" => Some(Value::Inner(Inner {
+                kind: "if".to_string(),
+                children: HashMap::new(),
+            })),
+            "==" => Some(Value::Inner(Inner {
+                kind: "binary_operator".to_string(),
+                children: HashMap::new(),
+            })),
+            "false" => Some(Value::Bool(false)),
+            "true" => Some(Value::Bool(true)),
+            _ => {
+                if let Some(v) = command.strip_prefix('"') {
+                    Some(Value::String(v.to_string()))
+                } else if let Ok(v) = command.parse::<i32>() {
+                    Some(Value::Int(v))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    fn next(&mut self) {
+        let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
+        log::info!("paths: {:?}", flattened_paths);
+        let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
+        log::info!("current: {:?}", current_path_index);
+        if let Some(current_path_index) = current_path_index {
+            if let Some(path) = flattened_paths.get(current_path_index + 1) {
+                self.cursor = path.clone();
+            }
+        }
+    }
+
+    fn set_value(&mut self, v: Value) {
+        let new_ref = self.file.add_node(v);
+
+        let selector = self.cursor.back().unwrap().clone();
+        let parent_ref = self.parent_ref().unwrap();
+        log::info!("parent ref: {:?}", parent_ref);
+        let parent = self.lookup_mut(&parent_ref).unwrap();
+        log::info!("parent: {:?}", parent);
+
+        match &mut parent.value {
+            Value::Inner(ref mut inner) => {
+                // If the field does not exist, create a default one.
+                let children = inner.children.entry(selector.field).or_default();
+                match selector.index {
+                    Some(i) => match children.get_mut(i) {
+                        Some(c) => *c = new_ref,
+                        None => children.push(new_ref),
+                    },
+                    // Cursor is pointing to a field but not a specific child, create the first child.
+                    None => children.push(new_ref),
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -528,34 +586,19 @@ impl Component for Model {
                 log::info!("key: {}", v.code());
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match v.code().as_ref() {
-                    "Enter" => if let Some(action) = self.parse_command(&self.command) {},
+                    "Enter" => match self.parse_command(&self.command) {
+                        Some(value) => {
+                            self.set_value(value);
+                            self.command = "".to_string();
+                            self.next();
+                        }
+                        None => log::info!("invalid command: {}", self.command),
+                    },
                     _ => {}
                 }
             }
             Msg::SetValue(v) => {
-                let new_ref = self.file.add_node(v);
-
-                let selector = self.cursor.back().unwrap().clone();
-                let parent_ref = self.parent_ref().unwrap();
-                log::info!("parent ref: {:?}", parent_ref);
-                let parent = self.lookup_mut(&parent_ref).unwrap();
-                log::info!("parent: {:?}", parent);
-
-                match &mut parent.value {
-                    Value::Inner(ref mut inner) => {
-                        // If the field does not exist, create a default one.
-                        let children = inner.children.entry(selector.field).or_default();
-                        match selector.index {
-                            Some(i) => match children.get_mut(i) {
-                                Some(c) => *c = new_ref,
-                                None => children.push(new_ref),
-                            },
-                            // Cursor is pointing to a field but not a specific child, create the first child.
-                            None => children.push(new_ref),
-                        }
-                    }
-                    _ => {}
-                }
+                self.set_value(v);
 
                 // if let Some(node) = self
                 //     .parent()
