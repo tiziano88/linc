@@ -5,11 +5,11 @@ use std::collections::HashMap;
 
 impl Model {
     pub fn view_actions(&self) -> Html {
-        let text = self.text.clone();
+        let command = self.command.clone();
         let actions = vec![
             Action {
                 text: "Set Value".to_string(),
-                msg: Msg::SetValue(Value::String(text.clone())),
+                msg: Msg::SetValue(Value::String(command.clone())),
             },
             Action {
                 text: "store".to_string(),
@@ -136,13 +136,17 @@ impl Model {
 
         let oninput = self
             .link
-            .callback(move |e: InputData| Msg::SetText(e.value));
+            .callback(move |e: InputData| Msg::SetCommand(e.value));
+        let onkeypress = self
+            .link
+            .callback(move |e: KeyboardEvent| Msg::CommandKey(e));
 
         html! {
             <div>
             <input
               class="focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm text-black placeholder-gray-500 border border-gray-200 rounded-md py-2 pl-10"
               oninput=oninput
+              onkeydown=onkeypress
             ></input>
             { for actions }
             </div>

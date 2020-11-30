@@ -41,7 +41,7 @@ pub struct Model {
     pub store: StorageService,
     pub cursor: Path,
     pub link: ComponentLink<Self>,
-    pub text: String,
+    pub command: String,
 }
 
 impl Model {
@@ -107,6 +107,10 @@ impl Model {
         parent_cursor.pop_back().unwrap();
         self.lookup_path(&self.file.root, parent_cursor)
     }
+
+    fn parse_command(&self, command: &str) -> Option<Action> {
+        None
+    }
 }
 
 #[derive(Clone)]
@@ -128,7 +132,8 @@ pub enum Msg {
 
     SetValue(Value),
 
-    SetText(String),
+    SetCommand(String),
+    CommandKey(KeyboardEvent),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -403,7 +408,7 @@ impl Component for Model {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         Model {
             store: StorageService::new(Area::Local).expect("could not create storage service"),
-            text: "".to_string(),
+            command: "".to_string(),
             file: super::initial::initial(),
             cursor: VecDeque::new(),
             link,
@@ -516,8 +521,16 @@ impl Component for Model {
                 //         }));
                 // self.file.bindings.push(reference);
             }
-            Msg::SetText(v) => {
-                self.text = v;
+            Msg::SetCommand(v) => {
+                self.command = v;
+            }
+            Msg::CommandKey(v) => {
+                log::info!("key: {}", v.code());
+                // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
+                match v.code().as_ref() {
+                    "Enter" => if let Some(action) = self.parse_command(&self.command) {},
+                    _ => {}
+                }
             }
             Msg::SetValue(v) => {
                 let new_ref = self.file.add_node(v);
