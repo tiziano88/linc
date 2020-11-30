@@ -184,11 +184,6 @@ pub enum Msg {
     Next,
     Parent,
 
-    AddArgument,
-    AddItem,
-    AddExpression,
-    NewFn,
-
     SetValue(Value),
 
     SetCommand(String),
@@ -526,61 +521,6 @@ impl Component for Model {
                     self.file = file;
                 }
             }
-
-            Msg::AddArgument => {
-                // let reference = self.file.add_node(Value::Pattern(PatternValue {
-                //     label: Label {
-                //         name: "xxx".to_string(),
-                //         colour: "red".to_string(),
-                //     },
-                // }));
-                // if let Some(node) = self
-                //     .current()
-                //     .and_then(|reference| self.lookup_mut(&reference))
-                // {
-                //     if let Value::FunctionDefinition(ref mut v) = node.value {
-                //         v.arguments.push(reference);
-                //     }
-                // }
-            }
-            Msg::AddItem => {
-                // let reference = self.file.add_node(Value::Hole);
-                // if let Some(node) = self
-                //     .current()
-                //     .and_then(|reference| self.lookup_mut(&reference))
-                // {
-                //     if let Value::List(ref mut v) = node.value {
-                //         v.items.push(reference);
-                //     }
-                // }
-            }
-            Msg::AddExpression => {
-                // let reference = self.file.add_node(Value::Hole);
-                // if let Some(node) = self
-                //     .current()
-                //     .and_then(|reference| self.lookup_mut(&reference))
-                // {
-                //     if let Value::Block(ref mut v) = node.value {
-                //         v.expressions.push(reference);
-                //     }
-                // }
-            }
-            Msg::NewFn => {
-                // let reference =
-                //     self.file
-                //         .add_node(Value::FunctionDefinition(FunctionDefinitionValue {
-                //             label: Label {
-                //                 name: "xxx".to_string(),
-                //                 colour: "red".to_string(),
-                //             },
-                //             arguments: vec![],
-                //             outer_attributes: vec![],
-                //             inner_attributes: vec![],
-                //             return_type: invalid_ref(),
-                //             body: "11111".to_string(),
-                //         }));
-                // self.file.bindings.push(reference);
-            }
             Msg::SetCommand(v) => {
                 self.parsed_command = self.parse_command(&v);
                 self.command = v;
@@ -598,30 +538,17 @@ impl Component for Model {
                         }
                         None => log::info!("invalid command: {}", self.command),
                     },
-                    "Tab" => {
-                        self.next();
-                    }
-                    "ArrowRight" => {
-                        self.next();
-                    }
+                    // "Tab" => {
+                    //     self.next();
+                    // }
+                    // "ArrowRight" => {
+                    //     self.next();
+                    // }
                     _ => {}
                 }
             }
             Msg::SetValue(v) => {
                 self.set_value(v);
-
-                // if let Some(node) = self
-                //     .parent()
-                //     .and_then(|reference| self.lookup_mut(&reference))
-                // {
-                //     node.map_ref(|r| {
-                //         if *r == current {
-                //             reference.clone()
-                //         } else {
-                //             r.to_string()
-                //         }
-                //     });
-                // }
             }
         };
         true

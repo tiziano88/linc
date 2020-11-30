@@ -31,14 +31,6 @@ impl Model {
                 text: "parent".to_string(),
                 msg: Msg::Parent,
             },
-            Action {
-                text: "+arg".to_string(),
-                msg: Msg::AddArgument,
-            },
-            Action {
-                text: "+fn".to_string(),
-                msg: Msg::NewFn,
-            },
             // Action {
             //     text: "{}".to_string(),
             //     msg: Msg::SetValue(Value::Block(BlockValue {
@@ -51,10 +43,6 @@ impl Model {
             //         expressions: vec![],
             //     })),
             // },
-            Action {
-                text: "+expr".to_string(),
-                msg: Msg::AddExpression,
-            },
             // Action {
             //     text: "[]".to_string(),
             //     msg: Msg::SetValue(Value::List(ListValue { items: vec![] })),
@@ -63,10 +51,6 @@ impl Model {
             //     text: "[☆]".to_string(),
             //     msg: Msg::SetValue(Value::List(ListValue { items: vec![] })),
             // },
-            Action {
-                text: "+item".to_string(),
-                msg: Msg::AddItem,
-            },
             Action {
                 text: "If (◆) then ◆".to_string(),
                 msg: Msg::SetValue(Value::Inner(Inner {
