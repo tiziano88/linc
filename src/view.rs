@@ -240,25 +240,11 @@ impl Model {
         }
     }
 
-    pub fn traverse_fields(kind: &str) -> Vec<&str> {
+    pub fn traverse_fields(kind: &str) -> &[Field] {
         match RUST_SCHEMA.kinds.iter().find(|k| k.name == kind) {
-            Some(kind) => kind.fields.iter().map(|f| f.name).collect(),
-            None => Vec::new(),
+            Some(kind) => kind.fields,
+            None => &[],
         }
-        /*
-        match kind {
-            "document" => &["bindings"],
-            "ref" => &["target"],
-            "if" => &["condition", "true_body", "false_body"],
-            "binary_operator" => &["left", "right"],
-            "function_definition" => &["name", "arguments", "return_type", "body"],
-            "struct" => &["name", "fields"],
-            "enum" => &["name", "variants"],
-            // "pattern" => &["name"],
-            "function_call" => &["arguments"],
-            _ => &[],
-        }
-        */
     }
 
     pub fn flatten_paths(&self, reference: &Ref, base: Path) -> Vec<Path> {
@@ -268,31 +254,50 @@ impl Model {
                 Value::Inner(v) => {
                     let mut paths = vec![];
                     for field in Model::traverse_fields(v.kind.as_ref()) {
-                        match v.children.get(field) {
+                        match v.children.get(field.name) {
                             Some(children) => {
                                 for (n, child) in children.iter().enumerate() {
                                     let new_base = append(
                                         &base,
                                         Selector {
-                                            field: field.to_string(),
+                                            field: field.name.to_string(),
                                             index: Some(n),
                                         },
                                     );
                                     paths.push(new_base.clone());
-                                    log::info!("child: {:?}[{:?}]->{:?}", reference, field, child);
+                                    log::info!(
+                                        "child: {:?}[{:?}]->{:?}",
+                                        reference,
+                                        field.name,
+                                        child
+                                    );
                                     paths.extend(self.flatten_paths(child, new_base));
                                 }
                             }
-                            None => {
-                                let new_base = append(
-                                    &base,
-                                    Selector {
-                                        field: field.to_string(),
-                                        index: None,
-                                    },
-                                );
-                                paths.push(new_base.clone());
-                            }
+                            None => match field.multiplicity {
+                                // If single field, skip directly to the first (and only) child.
+                                Multiplicity::Single => {
+                                    let new_base = append(
+                                        &base,
+                                        Selector {
+                                            field: field.name.to_string(),
+                                            index: Some(0),
+                                        },
+                                    );
+                                    paths.push(new_base.clone());
+                                }
+                                // If repeated field, stay on the parent.
+                                Multiplicity::Repeated => {
+                                    let new_base = append(
+                                        &base,
+                                        Selector {
+                                            field: field.name.to_string(),
+                                            index: None,
+                                        },
+                                    );
+                                    paths.push(new_base.clone());
+                                }
+                            },
                         }
                         // paths.push(append(&base, crate::types::field(field)));
                         /*
@@ -451,10 +456,6 @@ impl Model {
         self.view_node_list(&children, &path)
     }
 
-    fn view_field(&self, value: &Inner, field_name: &str, field_type: FieldType) {}
-
-    fn validate(&self, value: &Value, field_name: &str) {}
-
     fn view_value(&self, reference: &Ref, value: &Value, path: &Path) -> Html {
         match value {
             Value::Hole => {
@@ -493,13 +494,48 @@ impl Model {
                     }
                 }
                 "binary_operator" => {
+                    let operator = self.view_child(&v, "operator", &path);
                     let left = self.view_child(&v, "left", &path);
                     let right = self.view_child(&v, "right", &path);
                     html! {
                         <span>
                         { left }
-                        { "***" }
+                        { operator }
                         { right }
+                        </span>
+                    }
+                }
+                "accessor" => {
+                    let object = self.view_child(&v, "object", &path);
+                    let field = self.view_child(&v, "field", &path);
+                    html! {
+                        <span>
+                        { object }
+                        { "." }
+                        { field }
+                        </span>
+                    }
+                }
+                "binding" => {
+                    let name = self.view_child(&v, "name", &path);
+                    let value = self.view_child(&v, "value", &path);
+                    html! {
+                        <span>
+                        { "let" }
+                        { name }
+                        { "=" }
+                        { value }
+                        </span>
+                    }
+                }
+                "qualify" => {
+                    let parent = self.view_child(&v, "parent", &path);
+                    let child = self.view_child(&v, "child", &path);
+                    html! {
+                        <span>
+                        { parent }
+                        { "::" }
+                        { child }
                         </span>
                     }
                 }
@@ -571,17 +607,7 @@ impl Model {
                     }
                 }
                 "function_call" => {
-                    let function = self.lookup(&v.children["function"][0]).unwrap();
-                    let function_name = if let Value::Inner(v) = &function.value {
-                        let name = self.lookup(&v.children["name"][0]).unwrap();
-                        if let Value::String(v) = &name.value {
-                            v.clone()
-                        } else {
-                            "error".to_string()
-                        }
-                    } else {
-                        "error".to_string()
-                    };
+                    let function = self.view_child(&v, "function", path);
                     // let function_name = self.view_children(&v, "function");
                     // let function_name = "xxx";
                     // .and_then(|n| n.label())
@@ -590,7 +616,7 @@ impl Model {
                     let args = self.view_children(&v, "arguments", path);
                     html! {
                         <span>
-                        { function_name }
+                        { function }
                         { "(" }{ args }{ ")" }
                         </span>
                     }

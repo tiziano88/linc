@@ -1,3 +1,4 @@
+use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -109,16 +110,51 @@ impl Model {
         self.lookup_path(&self.file.root, parent_cursor)
     }
 
+    pub fn current_ref(&self) -> Option<Ref> {
+        self.lookup_path(&self.file.root, self.cursor.clone())
+    }
+
     fn parse_command(&self, command: &str) -> Option<Value> {
-        match command {
+        let mut value = match command {
             "if" => Some(Value::Inner(Inner {
                 kind: "if".to_string(),
+                children: HashMap::new(),
+            })),
+            "fn" => Some(Value::Inner(Inner {
+                kind: "function_definition".to_string(),
                 children: HashMap::new(),
             })),
             "==" => Some(Value::Inner(Inner {
                 kind: "binary_operator".to_string(),
                 children: HashMap::new(),
             })),
+            "+" => Some(Value::Inner(Inner {
+                kind: "binary_operator".to_string(),
+                children: HashMap::new(),
+            })),
+            "-" => Some(Value::Inner(Inner {
+                kind: "binary_operator".to_string(),
+                children: HashMap::new(),
+            })),
+            "let" => Some(Value::Inner(Inner {
+                kind: "binding".to_string(),
+                children: HashMap::new(),
+            })),
+            "::" => Some(Value::Inner(Inner {
+                kind: "qualify".to_string(),
+                children: HashMap::new(),
+            })),
+            "." => Some(Value::Inner(Inner {
+                kind: "accessor".to_string(),
+                children: HashMap::new(),
+            })),
+            "(" => Some(Value::Inner(Inner {
+                kind: "function_call".to_string(),
+                children: HashMap::new(),
+            })),
+            "{" => None,
+            "[" => None,
+            "," => None,
             "false" => Some(Value::Bool(false)),
             "true" => Some(Value::Bool(true)),
             _ => {
@@ -129,6 +165,35 @@ impl Model {
                 } else {
                     None
                 }
+            }
+        };
+        if let Some(Value::Inner(ref mut inner)) = value {
+            let kind = RUST_SCHEMA
+                .kinds
+                .iter()
+                .find(|k| k.name == inner.kind)
+                .unwrap();
+            if let Some(inner_field) = kind.inner {
+                if let Some(reference) = self.current_ref() {
+                    inner
+                        .children
+                        .entry(inner_field.to_string())
+                        .or_default()
+                        .push(reference);
+                }
+            }
+        }
+        value
+    }
+
+    fn prev(&mut self) {
+        let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
+        log::info!("paths: {:?}", flattened_paths);
+        let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
+        log::info!("current: {:?}", current_path_index);
+        if let Some(current_path_index) = current_path_index {
+            if let Some(path) = flattened_paths.get(current_path_index - 1) {
+                self.cursor = path.clone();
             }
         }
     }
@@ -488,27 +553,29 @@ impl Component for Model {
 
             // TODO: sibling vs inner
             Msg::Prev => {
-                let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
-                log::info!("paths: {:?}", flattened_paths);
-                let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
-                log::info!("current: {:?}", current_path_index);
-                if let Some(current_path_index) = current_path_index {
-                    if let Some(path) = flattened_paths.get(current_path_index - 1) {
-                        self.cursor = path.clone();
-                    }
-                }
+                self.prev();
+                // let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
+                // log::info!("paths: {:?}", flattened_paths);
+                // let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
+                // log::info!("current: {:?}", current_path_index);
+                // if let Some(current_path_index) = current_path_index {
+                //     if let Some(path) = flattened_paths.get(current_path_index - 1) {
+                //         self.cursor = path.clone();
+                //     }
+                // }
             }
             // Preorder tree traversal.
             Msg::Next => {
-                let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
-                log::info!("paths: {:?}", flattened_paths);
-                let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
-                log::info!("current: {:?}", current_path_index);
-                if let Some(current_path_index) = current_path_index {
-                    if let Some(path) = flattened_paths.get(current_path_index + 1) {
-                        self.cursor = path.clone();
-                    }
-                }
+                self.next();
+                // let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
+                // log::info!("paths: {:?}", flattened_paths);
+                // let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
+                // log::info!("current: {:?}", current_path_index);
+                // if let Some(current_path_index) = current_path_index {
+                //     if let Some(path) = flattened_paths.get(current_path_index + 1) {
+                //         self.cursor = path.clone();
+                //     }
+                // }
             }
             Msg::Parent => {
                 self.cursor.pop_back();
@@ -538,12 +605,16 @@ impl Component for Model {
                         }
                         None => log::info!("invalid command: {}", self.command),
                     },
-                    // "Tab" => {
-                    //     self.next();
-                    // }
-                    // "ArrowRight" => {
-                    //     self.next();
-                    // }
+                    "Escape" => {
+                        self.parsed_command = None;
+                        self.command = "".to_string();
+                    }
+                    "ArrowRight" if self.command.is_empty() => {
+                        self.next();
+                    }
+                    "ArrowLeft" if self.command.is_empty() => {
+                        self.prev();
+                    }
                     _ => {}
                 }
             }
@@ -570,6 +641,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
+            inner: Some("paragraphs"),
         },
         Kind {
             name: "paragraph",
@@ -579,6 +651,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Single,
                 validator: whatever,
             }],
+            inner: Some("text"),
         },
         Kind {
             name: "list",
@@ -588,6 +661,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
+            inner: Some("items"),
         },
     ],
 };
@@ -602,6 +676,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
+            inner: None,
         },
         Kind {
             name: "block",
@@ -611,6 +686,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
+            inner: Some("statements"),
         },
         Kind {
             name: "if",
@@ -634,10 +710,53 @@ pub const RUST_SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
             ],
+            inner: Some("true_body"),
+        },
+        Kind {
+            name: "accessor",
+            fields: &[
+                Field {
+                    name: "object",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "field",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+            inner: Some("object"),
+        },
+        Kind {
+            name: "qualify",
+            fields: &[
+                Field {
+                    name: "parent",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "child",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+            inner: Some("parent"),
         },
         Kind {
             name: "binary_operator",
             fields: &[
+                Field {
+                    name: "operator",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: operator,
+                },
                 Field {
                     name: "left",
                     type_: Type::Ref,
@@ -651,6 +770,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
             ],
+            inner: Some("left"),
         },
         Kind {
             name: "function_definition",
@@ -692,6 +812,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
             ],
+            inner: None,
         },
         Kind {
             name: "pattern",
@@ -709,9 +830,10 @@ pub const RUST_SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
             ],
+            inner: None,
         },
         Kind {
-            name: "let",
+            name: "binding",
             fields: &[
                 Field {
                     name: "name",
@@ -732,6 +854,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
             ],
+            inner: Some("value"),
         },
         Kind {
             name: "type",
@@ -750,15 +873,25 @@ pub const RUST_SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
             ],
+            inner: None,
         },
         Kind {
             name: "function_call",
-            fields: &[Field {
-                name: "arguments", // Expression
-                type_: Type::Ref,
-                multiplicity: Multiplicity::Repeated,
-                validator: whatever,
-            }],
+            fields: &[
+                Field {
+                    name: "function",
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "arguments", // Expression
+                    type_: Type::Ref,
+                    multiplicity: Multiplicity::Repeated,
+                    validator: whatever,
+                },
+            ],
+            inner: None,
         },
         Kind {
             name: "struct",
@@ -776,6 +909,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
             ],
+            inner: None,
         },
         Kind {
             name: "enum",
@@ -793,6 +927,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
             ],
+            inner: None,
         },
     ],
 };
@@ -810,6 +945,13 @@ fn identifier(v: &Value) -> bool {
     }
 }
 
+fn operator(v: &Value) -> bool {
+    match v {
+        Value::String(v) => v == "==",
+        _ => false,
+    }
+}
+
 pub struct Schema {
     pub kinds: &'static [Kind],
 }
@@ -817,6 +959,7 @@ pub struct Schema {
 pub struct Kind {
     pub name: &'static str,
     pub fields: &'static [Field],
+    pub inner: Option<&'static str>,
 }
 
 pub struct Field {

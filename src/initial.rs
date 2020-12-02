@@ -100,7 +100,7 @@ pub fn initial() -> File {
                 value: Value::Inner(Inner {
                     kind: "function_call".to_string(),
                     children: hashmap! {
-                        "function".to_string() => vec!["12".to_string()],
+                        "function".to_string() => vec!["126".to_string()],
                         "arguments".to_string() => vec!["229".to_string()]
                     },
                 }),
