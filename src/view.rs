@@ -8,10 +8,6 @@ impl Model {
         let command = self.command.clone();
         let actions = vec![
             Action {
-                text: "Set Value".to_string(),
-                msg: Msg::SetValue(Value::String(command.clone())),
-            },
-            Action {
                 text: "store".to_string(),
                 msg: Msg::Store,
             },
@@ -31,86 +27,9 @@ impl Model {
                 text: "parent".to_string(),
                 msg: Msg::Parent,
             },
-            // Action {
-            //     text: "{}".to_string(),
-            //     msg: Msg::SetValue(Value::Block(BlockValue {
-            //         expressions: vec![],
-            //     })),
-            // },
-            // Action {
-            //     text: "{☆}".to_string(),
-            //     msg: Msg::SetValue(Value::Block(BlockValue {
-            //         expressions: vec![],
-            //     })),
-            // },
-            // Action {
-            //     text: "[]".to_string(),
-            //     msg: Msg::SetValue(Value::List(ListValue { items: vec![] })),
-            // },
-            // Action {
-            //     text: "[☆]".to_string(),
-            //     msg: Msg::SetValue(Value::List(ListValue { items: vec![] })),
-            // },
             Action {
-                text: "If (◆) then ◆".to_string(),
-                msg: Msg::SetValue(Value::Inner(Inner {
-                    kind: "if".to_string(),
-                    children: HashMap::new(),
-                })),
-            },
-            Action {
-                text: "***".to_string(),
-                msg: Msg::SetValue(Value::Inner(Inner {
-                    kind: "binary_operator".to_string(),
-                    children: HashMap::new(),
-                })),
-            },
-            Action {
-                text: "struct".to_string(),
-                msg: Msg::SetValue(Value::Inner(Inner {
-                    kind: "struct".to_string(),
-                    children: HashMap::new(),
-                })),
-            },
-            Action {
-                text: "enum".to_string(),
-                msg: Msg::SetValue(Value::Inner(Inner {
-                    kind: "enum".to_string(),
-                    children: HashMap::new(),
-                })),
-            },
-            Action {
-                text: "false".to_string(),
-                msg: Msg::SetValue(Value::Bool(false)),
-            },
-            Action {
-                text: "true".to_string(),
-                msg: Msg::SetValue(Value::Bool(true)),
-            },
-            Action {
-                text: "0".to_string(),
-                msg: Msg::SetValue(Value::Int(0)),
-            },
-            /*
-            Action {
-                text: "If (☆) then ◆".to_string(),
-                msg: Msg::SetValue(Value::If(IfValue {
-                    conditional: invalid_ref(),
-                    true_body: invalid_ref(),
-                    false_body: invalid_ref(),
-                })),
-            },
-            Action {
-                text: "If (◆) then ☆".to_string(),
-                msg: Msg::SetValue(Value::Inner(Inner {
-                    kind: "if".to_string(),
-                    children: HashMap::new(),
-                })),
-            },
-            */
-            Action {
-                text: "Int".to_string(),
-                msg: Msg::SetValue(Value::Int(0)),
+                text: "+item".to_string(),
+                msg: Msg::AddItem,
             },
         ];
         let actions = actions
@@ -228,6 +147,7 @@ impl Model {
         }
     }
 
+    /*
     fn view_label(&self, reference: &Ref, label: &Label) -> Html {
         let reference = reference.clone();
         let callback = self
@@ -239,6 +159,7 @@ impl Model {
                 value=label.name/>
         }
     }
+    */
 
     pub fn traverse_fields(kind: &str) -> &[Field] {
         match RUST_SCHEMA.kinds.iter().find(|k| k.name == kind) {
@@ -558,13 +479,13 @@ impl Model {
                     let args = self.view_children(&v, "arguments", &path);
                     let body = self.view_child(&v, "body", &path);
                     let return_type = self.view_child(&v, "return_type", &path);
-                    let async_ = self.view_child(&v, "async", &path);
-                    let pub_ = self.view_child(&v, "pub", &path);
+                    // let async_ = self.view_child(&v, "async", &path);
+                    // let pub_ = self.view_child(&v, "pub", &path);
 
                     html! {
                         <span>
                         <div>{ "#" }</div>
-                        { pub_ }
+                        // { pub_ }
                         { "fn" }{ label }
                         { "(" }{ args }{ ")" }
                         { "->" }{ return_type }

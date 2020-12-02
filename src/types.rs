@@ -120,6 +120,14 @@ impl Model {
                 kind: "if".to_string(),
                 children: HashMap::new(),
             })),
+            "enum" => Some(Value::Inner(Inner {
+                kind: "enum".to_string(),
+                children: HashMap::new(),
+            })),
+            "struct" => Some(Value::Inner(Inner {
+                kind: "struct".to_string(),
+                children: HashMap::new(),
+            })),
             "fn" => Some(Value::Inner(Inner {
                 kind: "function_definition".to_string(),
                 children: HashMap::new(),
@@ -240,7 +248,6 @@ impl Model {
 #[derive(Clone)]
 pub enum Msg {
     Select(Path),
-    Rename(Ref, String),
 
     Store,
     Load,
@@ -250,6 +257,7 @@ pub enum Msg {
     Parent,
 
     SetValue(Value),
+    AddItem,
 
     SetCommand(String),
     CommandKey(KeyboardEvent),
@@ -545,37 +553,14 @@ impl Component for Model {
             Msg::Select(path) => {
                 self.cursor = path;
             }
-            Msg::Rename(reference, name) => {
-                // if let Some(node) = self.lookup_mut(&reference) {
-                //     node.rename(name);
-                // }
-            }
 
             // TODO: sibling vs inner
             Msg::Prev => {
                 self.prev();
-                // let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
-                // log::info!("paths: {:?}", flattened_paths);
-                // let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
-                // log::info!("current: {:?}", current_path_index);
-                // if let Some(current_path_index) = current_path_index {
-                //     if let Some(path) = flattened_paths.get(current_path_index - 1) {
-                //         self.cursor = path.clone();
-                //     }
-                // }
             }
             // Preorder tree traversal.
             Msg::Next => {
                 self.next();
-                // let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
-                // log::info!("paths: {:?}", flattened_paths);
-                // let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
-                // log::info!("current: {:?}", current_path_index);
-                // if let Some(current_path_index) = current_path_index {
-                //     if let Some(path) = flattened_paths.get(current_path_index + 1) {
-                //         self.cursor = path.clone();
-                //     }
-                // }
             }
             Msg::Parent => {
                 self.cursor.pop_back();
@@ -586,6 +571,29 @@ impl Component for Model {
             Msg::Load => {
                 if let yew::format::Json(Ok(file)) = self.store.restore(KEY) {
                     self.file = file;
+                }
+            }
+            Msg::AddItem => {
+                let selector = self.cursor.back().unwrap().clone();
+                let parent_ref = self.parent_ref().unwrap();
+                let parent = self.lookup_mut(&parent_ref).unwrap();
+                let new_ref = "-1".to_string();
+                match &mut parent.value {
+                    Value::Inner(ref mut inner) => {
+                        log::info!("inner");
+                        // If the field does not exist, create a default one.
+                        let children = inner.children.entry(selector.field).or_default();
+                        match selector.index {
+                            Some(i) => {
+                                children.insert(i + 1, new_ref);
+                                // Select newly created element.
+                                self.cursor.back_mut().unwrap().index = Some(i + 1);
+                            }
+                            // Cursor is pointing to a field but not a specific child, create the first child.
+                            None => children.push(new_ref),
+                        }
+                    }
+                    _ => {}
                 }
             }
             Msg::SetCommand(v) => {
@@ -775,6 +783,7 @@ pub const RUST_SCHEMA: Schema = Schema {
         Kind {
             name: "function_definition",
             fields: &[
+                /*
                 Field {
                     name: "pub",
                     type_: Type::Bool,
@@ -787,6 +796,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
+                */
                 Field {
                     name: "name",
                     type_: Type::String,
