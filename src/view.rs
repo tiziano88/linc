@@ -1,11 +1,9 @@
 use yew::prelude::*;
 
 use crate::types::*;
-use std::collections::HashMap;
 
 impl Model {
     pub fn view_actions(&self) -> Html {
-        let command = self.command.clone();
         let actions = vec![
             Action {
                 text: "store".to_string(),
@@ -34,7 +32,7 @@ impl Model {
         ];
         let actions = actions
             .iter()
-            .filter(|a| self.is_valid_action(a))
+            // .filter(|a| self.is_valid_action(a))
             .map(|a| self.view_action(a));
 
         let oninput = self
@@ -78,46 +76,43 @@ impl Model {
         }
     }
 
-    fn is_valid_action(&self, action: &Action) -> bool {
-        match &action.msg {
-            Msg::SetValue(new_value) => match self.cursor.back() {
-                Some(selector) => {
-                    let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
-                    match &parent.value {
-                        Value::Inner(v) => {
-                            let field = &RUST_SCHEMA
-                                .kinds
-                                .iter()
-                                .find(|k| k.name == v.kind)
-                                .unwrap()
-                                .fields
-                                .iter()
-                                .find(|f| f.name == selector.field)
-                                .unwrap();
-                            match field.type_ {
-                                Type::String => {
-                                    if let Value::String(_) = new_value {
-                                        (field.validator)(new_value)
-                                    } else {
-                                        false
-                                    }
+    fn is_valid_value(&self, new_value: &Value) -> bool {
+        match self.cursor.back() {
+            Some(selector) => {
+                let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
+                match &parent.value {
+                    Value::Inner(v) => {
+                        let field = &RUST_SCHEMA
+                            .kinds
+                            .iter()
+                            .find(|k| k.name == v.kind)
+                            .unwrap()
+                            .fields
+                            .iter()
+                            .find(|f| f.name == selector.field)
+                            .unwrap();
+                        match field.type_ {
+                            Type::String => {
+                                if let Value::String(_) = new_value {
+                                    (field.validator)(new_value)
+                                } else {
+                                    false
                                 }
-                                Type::Bool => {
-                                    if let Value::Bool(_) = new_value {
-                                        true
-                                    } else {
-                                        false
-                                    }
-                                }
-                                Type::Ref => true,
                             }
+                            Type::Bool => {
+                                if let Value::Bool(_) = new_value {
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            Type::Ref => true,
                         }
-                        _ => true,
                     }
+                    _ => true,
                 }
-                None => true,
-            },
-            _ => true,
+            }
+            None => true,
         }
     }
 
@@ -146,20 +141,6 @@ impl Model {
             <pre>{ serialized }</pre>
         }
     }
-
-    /*
-    fn view_label(&self, reference: &Ref, label: &Label) -> Html {
-        let reference = reference.clone();
-        let callback = self
-            .link
-            .callback(move |e: InputData| Msg::Rename(reference.clone(), e.value));
-        html! {
-            <input oninput=callback
-                type="text"
-                value=label.name/>
-        }
-    }
-    */
 
     pub fn traverse_fields(kind: &str) -> &[Field] {
         match RUST_SCHEMA.kinds.iter().find(|k| k.name == kind) {
@@ -220,36 +201,8 @@ impl Model {
                                 }
                             },
                         }
-                        // paths.push(append(&base, crate::types::field(field)));
-                        /*
-                        for (n, child) in v
-                            .children
-                            .get(*field)
-                            .cloned()
-                            .unwrap_or_default()
-                            .iter()
-                            .enumerate()
-                        {
-                            let new_base = append(
-                                &base,
-                                Selector {
-                                    field: field.to_string(),
-                                    index: Some(n),
-                                },
-                            );
-                            paths.push(new_base.clone());
-                            log::info!("child: {:?}[{:?}]->{:?}", reference, field, child);
-                            paths.extend(self.flatten_paths(child, new_base));
-                        }
-                        */
                     }
                     paths
-                    // fields
-                    //     .iter()
-                    //     .map(|f| expand_field(v, f))
-                    //     .flatten()
-                    //     .map(|s| append(&base, s))
-                    //     .collect()
                 }
                 _ => vec![],
             },
@@ -258,15 +211,6 @@ impl Model {
     }
 
     fn view_node_list(&self, references: &[Ref], path: &Path) -> Html {
-        // let sp = format!("{:?}", path);
-        // let selected = match &cursor {
-        //     Some(cursor) => cursor.is_empty(),
-        //     None => false,
-        // };
-        let mut classes = vec!["node".to_string()];
-        // if selected {
-        //     classes.push("selected".to_string());
-        // }
         let nodes = references.iter().enumerate().map(|(i, n)| {
             let mut path = path.clone();
             let l = path.len();
@@ -298,27 +242,10 @@ impl Model {
             .link
             .callback(move |_: MouseEvent| Msg::Select(path_clone.clone()));
         let value = match self.lookup(reference) {
-            Some(node) => {
-                // let selected = remaining_path.empty();
-                // let target = match self.selected_node() {
-                //     None => false,
-                //     Some(n) => {
-                //         if let Value::Ref(ref target_reference) = n.value {
-                //             *target_reference == reference
-                //         } else {
-                //             false
-                //         }
-                //     }
-                // };
-                // if target {
-                //     classes.push("target".to_string());
-                // }
-                self.view_value(&node.reference, &node.value, &path)
-            }
-            // <div class=classes.join(" ") onclick=callback path={sp}>
+            Some(node) => self.view_value(&node.reference, &node.value, &path),
             None => {
                 html! {
-                        <span>{ "error" }</span>
+                    <span>{ "error" }</span>
                 }
             }
         };
@@ -329,28 +256,6 @@ impl Model {
         }
     }
 
-    fn callback_child<IN>(&self, path: &Path, child: Selector) -> Callback<IN> {
-        let mut path = path.clone();
-        path.push_back(child);
-        self.link.callback(move |_: IN| Msg::Select(path.clone()))
-    }
-
-    // fn view_child(
-    //     &self,
-    //     value: &Value,
-    //     path: &Path,
-    //     cursor: &Option<Path>,
-    //     selector: Selector,
-    // ) -> Html {
-    //     let path = append(&path, selector.clone());
-    //     let cursor = sub_cursor(&cursor, selector.clone());
-    //     match child(value, selector) {
-    //         Some(Child::Single(reference)) => self.view_node(&reference, path, cursor),
-    //         Some(Child::Multiple(references)) => self.view_node_list(&references, path, cursor),
-    //         None => html! { <span>{ "???" }</span> },
-    //     }
-    // }
-
     fn view_child(&self, value: &Inner, field_name: &str, path: &Path) -> Html {
         let path = append(
             &path,
@@ -359,7 +264,6 @@ impl Model {
                 index: Some(0),
             },
         );
-        // let cursor = sub_cursor(&cursor, field(field_name));
         match value.children.get(field_name).and_then(|v| v.get(0)) {
             Some(n) => self.view_node(n, &path),
             // Empty list vs hole vs special value?
@@ -441,23 +345,14 @@ impl Model {
                     let name = self.view_child(&v, "name", &path);
                     let value = self.view_child(&v, "value", &path);
                     html! {
-                        <span>
-                        { "let" }
-                        { name }
-                        { "=" }
-                        { value }
-                        </span>
+                        <span>{ "let" }{ name }{ "=" }{ value }</span>
                     }
                 }
                 "qualify" => {
                     let parent = self.view_child(&v, "parent", &path);
                     let child = self.view_child(&v, "child", &path);
                     html! {
-                        <span>
-                        { parent }
-                        { "::" }
-                        { child }
-                        </span>
+                        <span>{ parent }{ "::" }{ child }</span>
                     }
                 }
                 "if" => {
@@ -466,11 +361,21 @@ impl Model {
                     let false_body = self.view_child(&v, "false_body", &path);
                     html! {
                         <span>
-                        { "if" }{ condition }{ "{" }
-                        { true_body }
-                        { "}" }{ "else" }{ "{" }
-                        { false_body }
-                        { "}" }
+                            <div>
+                                { "if" }{ condition }{ "{" }
+                            </div>
+                            <div class="indent">
+                                { true_body }
+                            </div>
+                            <div>
+                                { "}" }{ "else" }{ "{" }
+                            </div>
+                            <div class="indent">
+                                { false_body }
+                            </div>
+                            <div>
+                                { "}" }
+                            </div>
                         </span>
                     }
                 }
@@ -484,12 +389,10 @@ impl Model {
 
                     html! {
                         <span>
-                        <div>{ "#" }</div>
-                        // { pub_ }
-                        { "fn" }{ label }
-                        { "(" }{ args }{ ")" }
-                        { "->" }{ return_type }
-                        { "{" }<div class="block">{ body }</div>{ "}" }
+                            <div>{ "#" }</div>
+                            // { pub_ }
+                            <div>{ "fn" }{ label }{ "(" }{ args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
+                            <div class="indent">{ body }</div>{ "}" }
                         </span>
                     }
                 }

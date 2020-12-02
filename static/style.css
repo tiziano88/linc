@@ -4,6 +4,10 @@
   display: inline-block;
 }
 
+.row {
+  display: block;
+}
+
 .selected {
   color: red;
 }
@@ -26,6 +30,6 @@
   flex: 1;
 }
 
-.block {
+.indent {
   margin-left: 40px;
 }

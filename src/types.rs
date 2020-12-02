@@ -69,40 +69,7 @@ impl Model {
             }
             None => Some(reference.clone()),
         }
-
-        /*
-        let i = match head {
-            Some(Selector::Index(i)) => i,
-            _ => return None,
-        };
-        let mut reference = self.file.bindings[i].clone();
-        let mut node = self.lookup(&reference)?;
-        while let Some(selector) = path.pop_front() {
-            node = self.lookup(&reference)?;
-            match self.lookup(&reference) {
-                Some(node) => match node.child(selector) {
-                    Some(Child::Single(r)) => reference = r.clone(),
-                    Some(Child::Multiple(rs)) => match path.pop_front() {
-                        Some(Selector::Index(i)) => reference = rs[i].clone(),
-                        _ => return None,
-                    },
-                    None => return None,
-                },
-                None => return None,
-            }
-        }
-        node = self.lookup(&reference)?;
-        Some(&node)
-        */
     }
-    // pub fn selected_node(&self) -> Option<&Node> {
-    //     self.path
-    //         .back()
-    //         .and_then(|reference| self.lookup(reference))
-    // }
-    // pub fn current(&self) -> Option<Ref> {
-    //     self.path.back().cloned()
-    // }
 
     pub fn parent_ref(&self) -> Option<Ref> {
         let mut parent_cursor = self.cursor.clone();
@@ -256,7 +223,6 @@ pub enum Msg {
     Next,
     Parent,
 
-    SetValue(Value),
     AddItem,
 
     SetCommand(String),
@@ -317,131 +283,6 @@ pub enum Value {
 pub struct Inner {
     pub kind: String,
     pub children: HashMap<String, Vec<Ref>>,
-}
-
-pub enum Child {
-    Single(Ref),
-    Multiple(Vec<Ref>),
-}
-
-pub enum FieldType {
-    Single,
-    Repeated,
-}
-
-impl Node {
-    // pub fn label(&self) -> Option<&Label> {
-    //     match &self.value {
-    //         Value::Binding(ref v) => Some(&v.label),
-    //         Value::Pattern(ref v) => Some(&v.label),
-    //         Value::FunctionDefinition(ref v) => Some(&v.label),
-    //         _ => None,
-    //     }
-    // }
-
-    // pub fn rename(&mut self, name: String) {
-    //     match &mut self.value {
-    //         Value::Binding(ref mut v) => v.label.name = name,
-    //         Value::Pattern(ref mut v) => v.label.name = name,
-    //         Value::FunctionDefinition(ref mut v) => v.label.name = name,
-    //         _ => {}
-    //     }
-    // }
-
-    pub fn map_ref<F>(&mut self, mut f: F)
-    where
-        F: FnMut(&Ref) -> Ref,
-    {
-        match &mut self.value {
-            /*
-            Value::Block(ref mut v) => {
-                v.expressions = v.expressions.iter().map(f).collect();
-            }
-            Value::BinaryOperator(ref mut v) => {
-                v.left = f(&v.left);
-                v.right = f(&v.right);
-            }
-            Value::FunctionCall(ref mut v) => {
-                v.function = f(&v.function);
-                v.arguments = v.arguments.iter().map(f).collect();
-            }
-            Value::FunctionDefinition(ref mut v) => {
-                v.body = f(&v.body);
-                v.arguments = v.arguments.iter().map(f).collect();
-            }
-            */
-            _ => {}
-        }
-    }
-
-    pub fn to_json(&self) -> String {
-        serde_json::to_string_pretty(self).expect("could not serialize to JSON")
-    }
-
-    pub fn child(&self, selector: Selector) -> Option<Child> {
-        child(&self.value, selector)
-    }
-
-    pub fn first(&self) -> Option<Selector> {
-        match &self.value {
-            /*
-            Value::FunctionDefinition(v) => Some(Selector::Field("args".to_string())),
-            Value::FunctionCall(v) => Some(Selector::Field("args".to_string())),
-            Value::BinaryOperator(v) => Some(Selector::Field("left".to_string())),
-            */
-            _ => None,
-        }
-    }
-
-    pub fn next(&self, selector: Selector) -> Option<Selector> {
-        match &self.value {
-            /*
-            Value::FunctionDefinition(v) => match &selector {
-                Selector::Field(f) if f == "args" => {
-                    Some(Selector::Field("return_type".to_string()))
-                }
-                Selector::Field(f) if f == "return_type" => {
-                    Some(Selector::Field("body".to_string()))
-                }
-                Selector::Field(f) if f == "body" => None,
-                _ => None,
-            },
-            Value::FunctionCall(v) => match &selector {
-                Selector::Field(f) if f == "args" => None,
-                _ => None,
-            },
-            Value::BinaryOperator(v) => match &selector {
-                Selector::Field(f) if f == "left" => Some(Selector::Field("right".to_string())),
-                Selector::Field(f) if f == "right" => None,
-                _ => None,
-            },
-            */
-            _ => None,
-        }
-    }
-}
-
-pub fn child(value: &Value, selector: Selector) -> Option<Child> {
-    match &value {
-        /*
-        Value::FunctionDefinition(v) => match &selector {
-            Selector::Field(f) if f == "args" => Some(Child::Multiple(v.arguments.clone())),
-            Selector::Field(f) if f == "body" => Some(Child::Single(v.body.clone())),
-            Selector::Field(f) if f == "return_type" => Some(Child::Single(v.return_type.clone())),
-            _ => None,
-        },
-        Value::FunctionCall(v) => match &selector {
-            Selector::Field(f) if f == "args" => Some(Child::Multiple(v.arguments.clone())),
-            _ => None,
-        },
-        Value::BinaryOperator(v) => match &selector {
-            Selector::Field(f) if f == "left" => Some(Child::Single(v.left.clone())),
-            Selector::Field(f) if f == "right" => Some(Child::Single(v.right.clone())),
-            _ => None,
-        },
-        */
-        _ => None,
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -625,9 +466,6 @@ impl Component for Model {
                     }
                     _ => {}
                 }
-            }
-            Msg::SetValue(v) => {
-                self.set_value(v);
             }
         };
         true
