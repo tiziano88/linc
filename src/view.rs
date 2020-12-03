@@ -211,6 +211,11 @@ impl Model {
     }
 
     fn view_node_list(&self, references: &[Ref], path: &Path) -> Html {
+        let selected = path == &self.cursor;
+        let mut classes = vec!["node".to_string()];
+        if selected {
+            classes.push("selected".to_string());
+        }
         let nodes = references.iter().enumerate().map(|(i, n)| {
             let mut path = path.clone();
             let l = path.len();
@@ -223,9 +228,8 @@ impl Model {
             .callback(move |_: MouseEvent| Msg::Select(path.clone()));
         html! {
             <span onclick=callback>
-                <span>{ "[" }</span>
+                <div class=classes.join(" ")>{ "::" }</div>
                 { for nodes }
-                <span>{ "]" }</span>
             </span>
         }
     }

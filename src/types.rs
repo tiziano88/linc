@@ -431,7 +431,7 @@ impl Component for Model {
                                 self.cursor.back_mut().unwrap().index = Some(i + 1);
                             }
                             // Cursor is pointing to a field but not a specific child, create the first child.
-                            None => children.push(new_ref),
+                            None => children.insert(0, new_ref),
                         }
                     }
                     _ => {}
