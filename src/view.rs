@@ -156,50 +156,39 @@ impl Model {
                 Value::Inner(v) => {
                     let mut paths = vec![];
                     for field in Model::traverse_fields(v.kind.as_ref()) {
-                        match v.children.get(field.name) {
-                            Some(children) => {
-                                for (n, child) in children.iter().enumerate() {
-                                    let new_base = append(
-                                        &base,
-                                        Selector {
-                                            field: field.name.to_string(),
-                                            index: Some(n),
-                                        },
-                                    );
-                                    paths.push(new_base.clone());
-                                    log::info!(
-                                        "child: {:?}[{:?}]->{:?}",
-                                        reference,
-                                        field.name,
-                                        child
-                                    );
-                                    paths.extend(self.flatten_paths(child, new_base));
-                                }
+                        match field.multiplicity {
+                            // If repeated field, stay on the parent.
+                            Multiplicity::Repeated => {
+                                let new_base = append(
+                                    &base,
+                                    Selector {
+                                        field: field.name.to_string(),
+                                        index: None,
+                                    },
+                                );
+                                paths.push(new_base.clone());
                             }
-                            None => match field.multiplicity {
-                                // If single field, skip directly to the first (and only) child.
-                                Multiplicity::Single => {
-                                    let new_base = append(
-                                        &base,
-                                        Selector {
-                                            field: field.name.to_string(),
-                                            index: Some(0),
-                                        },
-                                    );
-                                    paths.push(new_base.clone());
-                                }
-                                // If repeated field, stay on the parent.
-                                Multiplicity::Repeated => {
-                                    let new_base = append(
-                                        &base,
-                                        Selector {
-                                            field: field.name.to_string(),
-                                            index: None,
-                                        },
-                                    );
-                                    paths.push(new_base.clone());
-                                }
-                            },
+                            // If single field, skip directly to the first (and only) child.
+                            _ => {}
+                        }
+                        for (n, child) in v
+                            .children
+                            .get(field.name)
+                            .cloned()
+                            .unwrap_or_default()
+                            .iter()
+                            .enumerate()
+                        {
+                            let new_base = append(
+                                &base,
+                                Selector {
+                                    field: field.name.to_string(),
+                                    index: Some(n),
+                                },
+                            );
+                            paths.push(new_base.clone());
+                            log::info!("child: {:?}[{:?}]->{:?}", reference, field.name, child);
+                            paths.extend(self.flatten_paths(child, new_base));
                         }
                     }
                     paths
