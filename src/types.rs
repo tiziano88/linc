@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -350,6 +351,33 @@ pub struct Label {
     pub colour: String,
 }
 
+fn display_selector(selector: &Selector) -> Vec<Html> {
+    let mut segments = Vec::new();
+    segments.push(html! {
+        <span>
+          { selector.field.clone() }
+        </span>
+    });
+    if let Some(index) = selector.index {
+        segments.push(html! {
+            <span>
+              { format!("[{}]", index) }
+            </span>
+        });
+    }
+    segments
+}
+
+fn display_cursor(cursor: &Path) -> Html {
+    let segments = cursor
+        .iter()
+        .flat_map(|s| display_selector(s))
+        .intersperse(html! { <span>{ ">"}</span>});
+    html! {
+        <div>{ for segments }</div>
+    }
+}
+
 impl Component for Model {
     type Message = Msg;
     type Properties = ();
@@ -368,7 +396,7 @@ impl Component for Model {
                 <div class="wrapper">
                     <div class="column">{ self.view_file(&self.file) }</div>
                     <div class="column">
-                        <div>{ format!("Cursor: {:?}", self.cursor) }</div>
+                        <div>{ display_cursor(&self.cursor) }</div>
                         <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
                     </div>
                     <div class="column">{ self.view_file_json(&self.file) }</div>

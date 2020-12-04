@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 console_error_panic_hook = "*"
+itertools = "*"
 log = "0.4"
 maplit = "*"
 serde = { version = "1.0", features = ["derive"] }
