@@ -424,15 +424,10 @@ impl Component for Model {
                         log::info!("inner");
                         // If the field does not exist, create a default one.
                         let children = inner.children.entry(selector.field).or_default();
-                        match selector.index {
-                            Some(i) => {
-                                children.insert(i + 1, new_ref);
-                                // Select newly created element.
-                                self.cursor.back_mut().unwrap().index = Some(i + 1);
-                            }
-                            // Cursor is pointing to a field but not a specific child, create the first child.
-                            None => children.insert(0, new_ref),
-                        }
+                        let new_index = selector.index.map(|i| i + 1).unwrap_or(0);
+                        children.insert(new_index, new_ref);
+                        // Select newly created element.
+                        self.cursor.back_mut().unwrap().index = Some(new_index);
                     }
                     _ => {}
                 }

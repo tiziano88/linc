@@ -169,16 +169,19 @@ impl Model {
                                 paths.push(new_base.clone());
                             }
                             // If single field, skip directly to the first (and only) child.
-                            _ => {}
+                            Multiplicity::Single => {}
                         }
-                        for (n, child) in v
-                            .children
-                            .get(field.name)
-                            .cloned()
-                            .unwrap_or_default()
-                            .iter()
-                            .enumerate()
-                        {
+                        let children = match field.multiplicity {
+                            Multiplicity::Single => v
+                                .children
+                                .get(field.name)
+                                .cloned()
+                                .unwrap_or(vec!["dummy".to_string()]),
+                            Multiplicity::Repeated => {
+                                v.children.get(field.name).cloned().unwrap_or_default()
+                            }
+                        };
+                        for (n, child) in children.iter().enumerate() {
                             let new_base = append(
                                 &base,
                                 Selector {
@@ -216,8 +219,8 @@ impl Model {
             .link
             .callback(move |_: MouseEvent| Msg::Select(path.clone()));
         html! {
-            <span onclick=callback>
-                <div class=classes.join(" ")>{ "::" }</div>
+            <span>
+                <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
                 { for nodes }
             </span>
         }
