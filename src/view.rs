@@ -240,11 +240,17 @@ impl Model {
         let callback = self
             .link
             .callback(move |_: MouseEvent| Msg::Select(path_clone.clone()));
-        let value = match self.lookup(reference) {
-            Some(node) => self.view_value(&node.reference, &node.value, &path),
-            None => {
-                html! {
-                    <span>{ "error" }</span>
+        let value = if reference == INVALID_REF {
+            html! {
+                <span>{ "◆" }</span>
+            }
+        } else {
+            match self.lookup(reference) {
+                Some(node) => self.view_value(&node.reference, &node.value, &path),
+                None => {
+                    html! {
+                        <span>{ format!("invalid: {}", reference) }</span>
+                    }
                 }
             }
         };
@@ -409,7 +415,7 @@ impl Model {
                         .into_iter()
                         .map(|v| {
                             html! {
-                                <div class="indent">{ v }</div>
+                                <div class="indent">{ v }{ "," }</div>
                             }
                         });
 
@@ -427,7 +433,7 @@ impl Model {
                         .into_iter()
                         .map(|v| {
                             html! {
-                                <div class="indent">{ v }</div>
+                                <div class="indent">{ v }{ "," }</div>
                             }
                         });
 
@@ -469,113 +475,6 @@ impl Model {
                     html! { <span>{ kind }</span> }
                 }
             },
-            // Value::Ref(reference) => {
-            //     let node = self.lookup(reference);
-            //     let text = node
-            //         .and_then(|n| n.label())
-            //         .map(|l| l.name.clone())
-            //         .unwrap_or("<UNKNOWN>".to_string());
-            //     html! { <span>{ text }</span> }
-            // }
-            // Value::Binding(v) => {
-            //     let label = self.view_label(reference, &v.label);
-            //     let value = self.view_node(&v.value, path.clone(), cursor);
-            //     let label_callback = self.callback_child(&path, field("label"));
-            //     let value_callback = self.callback_child(&path, field("value"));
-            //     html! {
-            //         <span>
-            //             <span onclick=label_callback>{ label }</span>
-            //             { "=" }
-            //             <span onclick=value_callback>{ value }</span>
-            //         </span>
-            //     }
-            // }
-            // Value::Pattern(v) => {
-            //     html! {
-            //         <span>
-            //         { self.view_label(reference, &v.label) }
-            //         </span>
-            //     }
-            // }
-            // Value::Block(v) => {
-            //     let expressions = v
-            //         .expressions
-            //         .iter()
-            //         .map(|n| self.view_node(n, path.clone(), cursor.clone()));
-            //     html! {
-            //         <span>
-            //         { "{" }
-            //         { for expressions }
-            //         { "}" }
-            //         </span>
-            //     }
-            // }
-            // Value::List(v) => {
-            //     let items = v
-            //         .items
-            //         .iter()
-            //         .map(|n| self.view_node(n, path.clone(), cursor.clone()));
-            //     html! {
-            //         <span>
-            //         { "[" }{ for items }{ "]" }
-            //         </span>
-            //     }
-            // }
-            // Value::If(v) => {
-            //     let conditional = self.view_child(value, &path, &cursor, field("condition"));
-            //     let true_body = self.view_child(value, &path, &cursor, field("true_body"));
-            //     let false_body = self.view_child(value, &path, &cursor, field("false_body"));
-            //     html! {
-            //         <span>
-            //         { "if" }{ conditional }
-            //         { "{" }<div class="block">{ true_body }</div>{ "}" }
-            //         { "else" }
-            //         { "{" }<div class="block">{ false_body }</div>{ "}" }
-            //         </span>
-            //     }
-            // }
-            // Value::FunctionDefinition(v) => {
-            //     let label = self.view_label(reference, &v.label);
-
-            //     let args = self.view_child(value, &path, &cursor, field("args"));
-            //     let body = self.view_child(value, &path, &cursor, field("body"));
-            //     let return_type = self.view_child(value, &path, &cursor, field("return_type"));
-
-            //     html! {
-            //         <span>
-            //         <div>{ "#" }</div>
-            //         { "fn" }{ label }
-            //         { "(" }{ args }{ ")" }
-            //         { "->" }{ return_type }
-            //         { "{" }<div class="block">{ body }</div>{ "}" }
-            //         </span>
-            //     }
-            // }
-            // Value::FunctionCall(v) => {
-            //     let node = self.file.lookup(&v.function);
-            //     let function_name = node
-            //         .and_then(|n| n.label())
-            //         .map(|l| l.name.clone())
-            //         .unwrap_or("<UNKNOWN>".to_string());
-            //     let args = self.view_child(value, &path, &cursor, field("args"));
-            //     html! {
-            //         <span>
-            //         { function_name }
-            //         { "(" }{ args }{ ")" }
-            //         </span>
-            //     }
-            // }
-            // Value::BinaryOperator(v) => {
-            //     let left = self.view_child(value, &path, &cursor, field("left"));
-            //     let right = self.view_child(value, &path, &cursor, field("right"));
-            //     html! {
-            //         <span>
-            //         { left }
-            //         { &v.operator }
-            //         { right }
-            //         </span>
-            //     }
-            // }
         }
     }
 }

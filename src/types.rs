@@ -8,9 +8,7 @@ use yew::services::StorageService;
 
 pub type Ref = String;
 
-pub fn invalid_ref() -> Ref {
-    "".to_string()
-}
+pub const INVALID_REF: &str = "-";
 
 pub fn new_ref() -> Ref {
     uuid::Uuid::new_v4().to_hyphenated().to_string()
@@ -60,9 +58,14 @@ impl Model {
                 let base = self.lookup(reference).unwrap();
                 match &base.value {
                     Value::Inner(v) => {
-                        let children = &v.children[&head.field];
-                        let r = children[head.index.unwrap()].clone();
-                        self.lookup_path(&r, path)
+                        let children = &v.children.get(&head.field).cloned().unwrap_or_default();
+                        match head.index {
+                            Some(index) => {
+                                let r = children.get(index).cloned().unwrap_or_default();
+                                self.lookup_path(&r, path)
+                            }
+                            None => None,
+                        }
                     }
                     _ => None,
                 }
@@ -364,10 +367,11 @@ impl Component for Model {
                 <div>{ self.view_actions() }</div>
                 <div class="wrapper">
                     <div class="column">{ self.view_file(&self.file) }</div>
-                    <div class="column">{ self.view_file_json(&self.file) }</div>
                     <div class="column">
                         <div>{ format!("Cursor: {:?}", self.cursor) }</div>
+                        <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
                     </div>
+                    <div class="column">{ self.view_file_json(&self.file) }</div>
                </div>
             </div>
         }
@@ -418,7 +422,7 @@ impl Component for Model {
                 let selector = self.cursor.back().unwrap().clone();
                 let parent_ref = self.parent_ref().unwrap();
                 let parent = self.lookup_mut(&parent_ref).unwrap();
-                let new_ref = "-1".to_string();
+                let new_ref = INVALID_REF.to_string();
                 match &mut parent.value {
                     Value::Inner(ref mut inner) => {
                         log::info!("inner");
@@ -613,6 +617,7 @@ pub const RUST_SCHEMA: Schema = Schema {
             ],
             inner: Some("left"),
         },
+        // https://doc.rust-lang.org/nightly/reference/items/functions.html
         Kind {
             name: "function_definition",
             fields: &[
