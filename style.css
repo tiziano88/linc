@@ -1,7 +1,8 @@
 .node {
-  border: 1px solid;
   padding: 5px;
   display: inline-block;
+  border: 1px dotted;
+  border-color: gray;
 }
 
 .row {
@@ -9,7 +10,8 @@
 }
 
 .selected {
-  color: red;
+  outline: 2px solid;
+  outline-color: blue;
 }
 
 .target {
