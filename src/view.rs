@@ -202,28 +202,31 @@ impl Model {
         }
     }
 
-    fn view_node_list(&self, references: &[Ref], path: &Path) -> Html {
+    fn view_node_list(&self, references: &[Ref], path: &Path) -> Vec<Html> {
         let selected = path == &self.cursor;
         let mut classes = vec!["node".to_string()];
         if selected {
             classes.push("selected".to_string());
         }
-        let nodes = references.iter().enumerate().map(|(i, n)| {
-            let mut path = path.clone();
-            let l = path.len();
-            path[l - 1].index = Some(i);
-            self.view_node(n, &path)
-        });
+        let mut nodes = references
+            .iter()
+            .enumerate()
+            .map(|(i, n)| {
+                let mut path = path.clone();
+                let l = path.len();
+                path[l - 1].index = Some(i);
+                self.view_node(n, &path)
+            })
+            .collect::<Vec<_>>();
         let path = path.clone();
         let callback = self
             .link
             .callback(move |_: MouseEvent| Msg::Select(path.clone()));
-        html! {
-            <span>
-                <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
-                { for nodes }
-            </span>
-        }
+        let head = html! {
+            <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
+        };
+        nodes.insert(0, head);
+        nodes
     }
 
     // fn view_node(&self, reference: &Ref, path: Path, cursor: Option<Path>) -> Html {
@@ -269,7 +272,7 @@ impl Model {
         }
     }
 
-    fn view_children(&self, value: &Inner, field_name: &str, path: &Path) -> Html {
+    fn view_children(&self, value: &Inner, field_name: &str, path: &Path) -> Vec<Html> {
         let path = append(&path, field(field_name));
         // let cursor = sub_cursor(&cursor, field(field_name));
         let empty = vec![];
@@ -299,10 +302,17 @@ impl Model {
             }
             Value::Inner(v) => match v.kind.as_ref() {
                 "document" => {
-                    let bindings = self.view_children(&v, "bindings", &path);
+                    let bindings = self
+                        .view_children(&v, "bindings", &path)
+                        .into_iter()
+                        .map(|b| {
+                            html! {
+                                <div>{ b }</div>
+                            }
+                        });
                     html! {
                         <div>
-                        { bindings }
+                        { for bindings }
                         </div>
                     }
                 }
@@ -387,30 +397,44 @@ impl Model {
                         <span>
                             <div>{ "#" }</div>
                             // { pub_ }
-                            <div>{ "fn" }{ label }{ "(" }{ args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
+                            <div>{ "fn" }{ label }{ "(" }{ for args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
                             <div class="indent">{ body }</div>{ "}" }
                         </span>
                     }
                 }
                 "struct" => {
                     let label = self.view_child(&v, "name", &path);
-                    let fields = self.view_children(&v, "fields", &path);
+                    let fields = self
+                        .view_children(&v, "fields", &path)
+                        .into_iter()
+                        .map(|v| {
+                            html! {
+                                <div class="indent">{ v }</div>
+                            }
+                        });
 
                     html! {
                         <span>
                         { "struct" }{ label }
-                        { "{" }{ fields }{ "}" }
+                        { "{" }{ for fields }{ "}" }
                         </span>
                     }
                 }
                 "enum" => {
                     let label = self.view_child(&v, "name", &path);
-                    let variants = self.view_children(&v, "variants", &path);
+                    let variants = self
+                        .view_children(&v, "variants", &path)
+                        .into_iter()
+                        .map(|v| {
+                            html! {
+                                <div class="indent">{ v }</div>
+                            }
+                        });
 
                     html! {
                         <span>
                         { "enum" }{ label }
-                        { "{" }{ variants }{ "}" }
+                        { "{" }{ for variants }{ "}" }
                         </span>
                     }
                 }
@@ -437,7 +461,7 @@ impl Model {
                     html! {
                         <span>
                         { function }
-                        { "(" }{ args }{ ")" }
+                        { "(" }{ for args }{ ")" }
                         </span>
                     }
                 }
