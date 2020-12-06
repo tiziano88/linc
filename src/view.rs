@@ -392,7 +392,19 @@ impl Model {
                 }
                 "function_definition" => {
                     let label = self.view_child(&v, "name", &path);
-                    let args = self.view_children(&v, "arguments", &path);
+                    let args = self
+                        .view_children(&v, "arguments", &path)
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, v)| {
+                            if i == 0 || i == 1 {
+                                v
+                            } else {
+                                html! {
+                                    <span>{ "," }{ v }</span>
+                                }
+                            }
+                        });
                     let body = self.view_child(&v, "body", &path);
                     let return_type = self.view_child(&v, "return_type", &path);
                     // let async_ = self.view_child(&v, "async", &path);
@@ -471,7 +483,19 @@ impl Model {
                     // .and_then(|n| n.label())
                     // .map(|l| l.name.clone())
                     // .unwrap_or("<UNKNOWN>".to_string());
-                    let args = self.view_children(&v, "arguments", path);
+                    let args = self
+                        .view_children(&v, "arguments", path)
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, v)| {
+                            if i == 0 || i == 1 {
+                                v
+                            } else {
+                                html! {
+                                    <span>{ "," }{ v }</span>
+                                }
+                            }
+                        });
                     html! {
                         <span>
                         { function }
