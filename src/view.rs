@@ -171,15 +171,14 @@ impl Model {
                             // If single field, skip directly to the first (and only) child.
                             Multiplicity::Single => {}
                         }
-                        let children = match field.multiplicity {
-                            Multiplicity::Single => v
-                                .children
-                                .get(field.name)
-                                .cloned()
-                                .unwrap_or(vec!["dummy".to_string()]),
-                            Multiplicity::Repeated => {
-                                v.children.get(field.name).cloned().unwrap_or_default()
+                        let mut children = v.children.get(field.name).cloned().unwrap_or_default();
+                        match field.multiplicity {
+                            Multiplicity::Single => {
+                                if children.is_empty() {
+                                    children.push("dummy".to_string());
+                                }
                             }
+                            Multiplicity::Repeated => {}
                         };
                         for (n, child) in children.iter().enumerate() {
                             let new_base = append(
@@ -423,6 +422,15 @@ impl Model {
                         <span>
                         { "struct" }{ label }
                         { "{" }{ for fields }{ "}" }
+                        </span>
+                    }
+                }
+                "string" => {
+                    let value = self.view_child(&v, "value", &path);
+
+                    html! {
+                        <span>
+                        { "\"" }{ value }{ "\"" }
                         </span>
                     }
                 }

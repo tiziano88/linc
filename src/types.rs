@@ -99,6 +99,10 @@ impl Model {
                 kind: "struct".to_string(),
                 children: HashMap::new(),
             })),
+            "string" => Some(Value::Inner(Inner {
+                kind: "string".to_string(),
+                children: HashMap::new(),
+            })),
             "fn" => Some(Value::Inner(Inner {
                 kind: "function_definition".to_string(),
                 children: HashMap::new(),
@@ -584,6 +588,16 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("true_body"),
+        },
+        Kind {
+            name: "string",
+            fields: &[Field {
+                name: "value",
+                type_: Type::Ref,
+                multiplicity: Multiplicity::Single,
+                validator: whatever,
+            }],
+            inner: Some("value"),
         },
         Kind {
             name: "accessor",
