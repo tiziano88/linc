@@ -135,7 +135,10 @@ impl Model {
                 kind: "function_call".to_string(),
                 children: HashMap::new(),
             })),
-            "{" => None,
+            "{" => Some(Value::Inner(Inner {
+                kind: "block".to_string(),
+                children: HashMap::new(),
+            })),
             "[" => None,
             "," => None,
             "false" => Some(Value::Bool(false)),

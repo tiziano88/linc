@@ -419,6 +419,27 @@ impl Model {
                         </span>
                     }
                 }
+                "block" => {
+                    let statements = self
+                        .view_children(&v, "statements", &path)
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, v)| {
+                            if i == 0 {
+                                v
+                            } else {
+                                html! {
+                                    <div class="indent">{ v }{ ";" }</div>
+                                }
+                            }
+                        });
+
+                    html! {
+                        <span>
+                        { "{" }{ for statements }{ "}" }
+                        </span>
+                    }
+                }
                 "struct" => {
                     let label = self.view_child(&v, "name", &path);
                     let fields = self
@@ -439,7 +460,6 @@ impl Model {
                 }
                 "string" => {
                     let value = self.view_child(&v, "value", &path);
-
                     html! {
                         <span>
                         { "\"" }{ value }{ "\"" }
