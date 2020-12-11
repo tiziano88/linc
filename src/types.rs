@@ -95,8 +95,16 @@ impl Model {
                 kind: "enum".to_string(),
                 children: HashMap::new(),
             })),
+            "variant" => Some(Value::Inner(Inner {
+                kind: "enum_variant".to_string(),
+                children: HashMap::new(),
+            })),
             "struct" => Some(Value::Inner(Inner {
                 kind: "struct".to_string(),
+                children: HashMap::new(),
+            })),
+            "field" => Some(Value::Inner(Inner {
+                kind: "struct_field".to_string(),
                 children: HashMap::new(),
             })),
             "string" => Some(Value::Inner(Inner {
@@ -532,7 +540,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
             name: "document",
             fields: &[Field {
                 name: "paragraphs",
-                type_: Type::Ref,
+                type_: Type::Any,
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
@@ -552,7 +560,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
             name: "list",
             fields: &[Field {
                 name: "items",
-                type_: Type::Ref,
+                type_: Type::Any,
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
@@ -561,23 +569,104 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
     ],
 };
 
+// https://doc.rust-lang.org/stable/reference/expressions.html
+const RUST_EXPRESSION: Type = Type::Alt(&[
+    Type::Inner("if"),
+    Type::Inner("string"),
+    Type::Inner("accessor"),
+    Type::Inner("operator"),
+]);
+
+// https://doc.rust-lang.org/stable/reference/items.html
+const RUST_ITEM: Type = Type::Alt(&[
+    Type::Inner("function_definition"),
+    Type::Inner("struct"),
+    Type::Inner("enum"),
+]);
+
+// https://doc.rust-lang.org/stable/reference/types.html#type-expressions
+const RUST_TYPE: Type = Type::Alt(&[
+    Type::Inner("tuple_type"),
+    Type::Inner("reference_type"),
+    Type::Inner("array_type"),
+    Type::Inner("slice_type"),
+]);
+
 pub const RUST_SCHEMA: Schema = Schema {
     kinds: &[
         Kind {
             name: "document",
             fields: &[Field {
                 name: "bindings",
-                type_: Type::Ref,
+                type_: RUST_ITEM,
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
             inner: None,
         },
         Kind {
+            name: "tuple_type",
+            fields: &[Field {
+                name: "components",
+                type_: RUST_TYPE,
+                multiplicity: Multiplicity::Repeated,
+                validator: whatever,
+            }],
+            inner: Some("components"),
+        },
+        Kind {
+            name: "reference_type",
+            fields: &[
+                Field {
+                    name: "type",
+                    type_: RUST_TYPE,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "mutable",
+                    type_: Type::Bool,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "lifetime",
+                    type_: Type::Any,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+            inner: None,
+        },
+        Kind {
+            name: "constant",
+            fields: &[
+                Field {
+                    name: "name",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "type",
+                    type_: Type::Any,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "value",
+                    type_: Type::Any,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+            inner: Some("statements"),
+        },
+        Kind {
             name: "block",
             fields: &[Field {
                 name: "statements",
-                type_: Type::Ref,
+                type_: Type::Any,
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
@@ -588,19 +677,19 @@ pub const RUST_SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "condition", // Expression
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "true_body", // Expression
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "false_body", // Expression
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -611,7 +700,7 @@ pub const RUST_SCHEMA: Schema = Schema {
             name: "string",
             fields: &[Field {
                 name: "value",
-                type_: Type::Ref,
+                type_: Type::String,
                 multiplicity: Multiplicity::Single,
                 validator: whatever,
             }],
@@ -622,13 +711,13 @@ pub const RUST_SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "object",
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "field",
-                    type_: Type::Ref,
+                    type_: Type::String,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -640,13 +729,13 @@ pub const RUST_SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "parent",
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "child",
-                    type_: Type::Ref,
+                    type_: Type::String,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -658,19 +747,19 @@ pub const RUST_SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "operator",
-                    type_: Type::Ref,
+                    type_: Type::String,
                     multiplicity: Multiplicity::Single,
                     validator: operator,
                 },
                 Field {
                     name: "left",
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "right",
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -703,19 +792,19 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "arguments", // Pattern
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Repeated,
                     validator: whatever,
                 },
                 Field {
                     name: "return_type", // Type
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "body", // Expression
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -733,7 +822,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "type", // Type
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -751,13 +840,13 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "type", // Type
-                    type_: Type::Ref,
+                    type_: Type::Inner("type"),
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "value", // Expression
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -776,7 +865,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 // Generic type parameters.
                 Field {
                     name: "arguments",
-                    type_: Type::Ref,
+                    type_: Type::Any,
                     multiplicity: Multiplicity::Repeated,
                     validator: whatever,
                 },
@@ -788,13 +877,13 @@ pub const RUST_SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "function",
-                    type_: Type::Ref,
+                    type_: Type::String,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "arguments", // Expression
-                    type_: Type::Ref,
+                    type_: Type::String,
                     multiplicity: Multiplicity::Repeated,
                     validator: whatever,
                 },
@@ -811,9 +900,27 @@ pub const RUST_SCHEMA: Schema = Schema {
                     validator: identifier,
                 },
                 Field {
-                    name: "fields", // Pattern
-                    type_: Type::Ref,
+                    name: "fields",
+                    type_: Type::Inner("struct_field"),
                     multiplicity: Multiplicity::Repeated,
+                    validator: whatever,
+                },
+            ],
+            inner: None,
+        },
+        Kind {
+            name: "struct_field",
+            fields: &[
+                Field {
+                    name: "name",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: identifier,
+                },
+                Field {
+                    name: "type", // Type
+                    type_: Type::Inner("type"),
+                    multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
             ],
@@ -830,7 +937,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "variants",
-                    type_: Type::Ref,
+                    type_: Type::Inner("enum_variant"),
                     multiplicity: Multiplicity::Repeated,
                     validator: whatever,
                 },
@@ -878,9 +985,11 @@ pub struct Field {
 }
 
 pub enum Type {
+    Any,
     Bool,
     String,
-    Ref,
+    Inner(&'static str),
+    Alt(&'static [Type]), // Choice between other types.
 }
 
 pub enum Multiplicity {

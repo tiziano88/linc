@@ -110,7 +110,9 @@ impl Model {
                                     false
                                 }
                             }
-                            Type::Ref => true,
+                            Type::Any => true,
+                            Type::Alt(_) => true,
+                            Type::Inner(_) => true,
                         }
                     }
                     _ => true,
@@ -459,6 +461,15 @@ impl Model {
                         <span>
                         <span class="keyword">{ "struct" }</span>{ label }
                         { "{" }{ for fields }{ "}" }
+                        </span>
+                    }
+                }
+                "struct_field" => {
+                    let name = self.view_child(&v, "name", &path);
+                    let type_ = self.view_child(&v, "type", &path);
+                    html! {
+                        <span>
+                        { name }{ ":" }{ type_ }
                         </span>
                     }
                 }
