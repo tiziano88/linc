@@ -476,7 +476,6 @@ impl Component for Model {
                 let selector = self.cursor.back().unwrap().clone();
                 let parent_ref = self.parent_ref().unwrap();
                 let parent = self.lookup_mut(&parent_ref).unwrap();
-                let new_ref = INVALID_REF.to_string();
                 match &mut parent.value {
                     Value::Inner(ref mut inner) => {
                         log::info!("inner");
