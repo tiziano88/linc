@@ -136,7 +136,7 @@ impl Model {
                 children: HashMap::new(),
             })),
             "." => Some(Value::Inner(Inner {
-                kind: "accessor".to_string(),
+                kind: "field_access".to_string(),
                 children: HashMap::new(),
             })),
             "(" => Some(Value::Inner(Inner {
@@ -573,7 +573,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
 const RUST_EXPRESSION: Type = Type::Alt(&[
     Type::Inner("if"),
     Type::Inner("string"),
-    Type::Inner("accessor"),
+    Type::Inner("field_access"),
     Type::Inner("operator"),
 ]);
 
@@ -649,13 +649,13 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "type",
-                    type_: Type::Any,
+                    type_: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "value",
-                    type_: Type::Any,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -677,19 +677,19 @@ pub const RUST_SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "condition", // Expression
-                    type_: Type::Any,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "true_body", // Expression
-                    type_: Type::Any,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "false_body", // Expression
-                    type_: Type::Any,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -707,11 +707,11 @@ pub const RUST_SCHEMA: Schema = Schema {
             inner: Some("value"),
         },
         Kind {
-            name: "accessor",
+            name: "field_access",
             fields: &[
                 Field {
                     name: "object",
-                    type_: Type::Any,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -753,13 +753,13 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "left",
-                    type_: Type::Any,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "right",
-                    type_: Type::Any,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -798,13 +798,13 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "return_type", // Type
-                    type_: Type::Any,
+                    type_: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "body", // Expression
-                    type_: Type::Any,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -840,13 +840,13 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "type", // Type
-                    type_: Type::Inner("type"),
+                    type_: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
                     name: "value", // Expression
-                    type_: Type::Any,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -883,7 +883,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "arguments", // Expression
-                    type_: Type::String,
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Repeated,
                     validator: whatever,
                 },
@@ -993,6 +993,8 @@ pub enum Type {
 }
 
 pub enum Multiplicity {
+    // Required -- show hole if not present
+    // Optional -- hide if not present
     Single,
     Repeated,
 }

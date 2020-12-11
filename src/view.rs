@@ -347,7 +347,7 @@ impl Model {
                         </span>
                     }
                 }
-                "accessor" => {
+                "field_access" => {
                     let object = self.view_child(&v, "object", &path);
                     let field = self.view_child(&v, "field", &path);
                     html! {
