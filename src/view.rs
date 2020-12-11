@@ -29,6 +29,10 @@ impl Model {
                 text: "+item".to_string(),
                 msg: Msg::AddItem,
             },
+            Action {
+                text: "x".to_string(),
+                msg: Msg::DeleteItem,
+            },
         ];
         let actions = actions
             .iter()
@@ -373,13 +377,13 @@ impl Model {
                     html! {
                         <span>
                             <div>
-                                { "if" }{ condition }{ "{" }
+                                <span class="keyword">{ "if" }</span>{ condition }{ "{" }
                             </div>
                             <div class="indent">
                                 { true_body }
                             </div>
                             <div>
-                                { "}" }{ "else" }{ "{" }
+                                { "}" }<span class="keyword">{ "else" }</span>{ "{" }
                             </div>
                             <div class="indent">
                                 { false_body }
@@ -414,7 +418,7 @@ impl Model {
                         <span>
                             <div>{ "#" }</div>
                             // { pub_ }
-                            <div>{ "fn" }{ label }{ "(" }{ for args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
+                            <div><span class="keyword">{ "fn" }</span>{ label }{ "(" }{ for args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
                             <div class="indent">{ body }</div>{ "}" }
                         </span>
                     }
@@ -453,7 +457,7 @@ impl Model {
 
                     html! {
                         <span>
-                        { "struct" }{ label }
+                        <span class="keyword">{ "struct" }</span>{ label }
                         { "{" }{ for fields }{ "}" }
                         </span>
                     }
@@ -479,7 +483,7 @@ impl Model {
 
                     html! {
                         <span>
-                        { "enum" }{ label }
+                        <span class="keyword">{ "enum" }</span>{ label }
                         { "{" }{ for variants }{ "}" }
                         </span>
                     }
