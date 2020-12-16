@@ -561,6 +561,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
                 validator: whatever,
             }],
             inner: Some("paragraphs"),
+            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
         },
         Kind {
             name: "paragraph",
@@ -571,6 +572,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
                 validator: whatever,
             }],
             inner: Some("text"),
+            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
         },
         Kind {
             name: "list",
@@ -581,6 +583,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
                 validator: whatever,
             }],
             inner: Some("items"),
+            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
         },
     ],
 };
@@ -621,6 +624,21 @@ pub const RUST_SCHEMA: Schema = Schema {
                 validator: whatever,
             }],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let bindings = model
+                    .view_children(&value, "bindings", &path)
+                    .into_iter()
+                    .map(|b| {
+                        html! {
+                            <div>{ b }</div>
+                        }
+                    });
+                html! {
+                    <div>
+                    { for bindings }
+                    </div>
+                }
+            },
         },
         Kind {
             name: "tuple_type",
@@ -631,6 +649,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 validator: whatever,
             }],
             inner: Some("components"),
+            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
         },
         Kind {
             name: "reference_type",
@@ -655,6 +674,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
         },
         Kind {
             name: "constant",
@@ -679,6 +699,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("statements"),
+            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
         },
         Kind {
             name: "block",
@@ -689,6 +710,27 @@ pub const RUST_SCHEMA: Schema = Schema {
                 validator: whatever,
             }],
             inner: Some("statements"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let statements = model
+                    .view_children(value, "statements", &path)
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        if i == 0 {
+                            v
+                        } else {
+                            html! {
+                                <div class="indent">{ v }{ ";" }</div>
+                            }
+                        }
+                    });
+
+                html! {
+                    <span>
+                    { "{" }{ for statements }{ "}" }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "if",
@@ -713,6 +755,30 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("true_body"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let condition = model.view_child(value, "condition", &path);
+                let true_body = model.view_child(value, "true_body", &path);
+                let false_body = model.view_child(value, "false_body", &path);
+                html! {
+                    <span>
+                        <div>
+                            <span class="keyword">{ "if" }</span>{ condition }{ "{" }
+                        </div>
+                        <div class="indent">
+                            { true_body }
+                        </div>
+                        <div>
+                            { "}" }<span class="keyword">{ "else" }</span>{ "{" }
+                        </div>
+                        <div class="indent">
+                            { false_body }
+                        </div>
+                        <div>
+                            { "}" }
+                        </div>
+                    </span>
+                }
+            },
         },
         Kind {
             name: "string",
@@ -723,6 +789,14 @@ pub const RUST_SCHEMA: Schema = Schema {
                 validator: whatever,
             }],
             inner: Some("value"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let value = model.view_child(value, "value", &path);
+                html! {
+                    <span>
+                    { "\"" }{ value }{ "\"" }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "field_access",
@@ -741,6 +815,17 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("object"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let object = model.view_child(value, "object", &path);
+                let field = model.view_child(value, "field", &path);
+                html! {
+                    <span>
+                    { object }
+                    { "." }
+                    { field }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "simple_path",
@@ -751,11 +836,34 @@ pub const RUST_SCHEMA: Schema = Schema {
                 validator: whatever,
             }],
             inner: Some("segments"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let segments = model
+                    .view_children(value, "segments", &path)
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        if i == 0 || i == 1 {
+                            v
+                        } else {
+                            html! {
+                                <span>{ "::" }{ v }</span>
+                            }
+                        }
+                    });
+                html! {
+                    <span>{ for segments }</span>
+                }
+            },
         },
         Kind {
             name: "crate",
             fields: &[],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                html! {
+                    <span class="keyword">{ "crate" }</span>
+                }
+            },
         },
         Kind {
             name: "binary_operator",
@@ -780,6 +888,18 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("left"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let operator = model.view_child(value, "operator", &path);
+                let left = model.view_child(value, "left", &path);
+                let right = model.view_child(value, "right", &path);
+                html! {
+                    <span>
+                    { left }
+                    { operator }
+                    { right }
+                    </span>
+                }
+            },
         },
         // https://doc.rust-lang.org/nightly/reference/items/functions.html
         Kind {
@@ -825,6 +945,35 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let label = model.view_child(&value, "name", &path);
+                let args = model
+                    .view_children(&value, "arguments", &path)
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        if i == 0 || i == 1 {
+                            v
+                        } else {
+                            html! {
+                                <span>{ "," }{ v }</span>
+                            }
+                        }
+                    });
+                let body = model.view_child(&value, "body", &path);
+                let return_type = model.view_child(&value, "return_type", &path);
+                // let async_ = self.view_child(&v, "async", &path);
+                // let pub_ = self.view_child(&v, "pub", &path);
+
+                html! {
+                    <span>
+                        <div>{ "#" }</div>
+                        // { pub_ }
+                        <div><span class="keyword">{ "fn" }</span>{ label }{ "(" }{ for args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
+                        <div class="indent">{ body }</div>{ "}" }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "pattern",
@@ -843,6 +992,18 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let name = model.lookup(&value.children["name"][0]).unwrap();
+                let name = match &name.value {
+                    Value::String(v) => v.clone(),
+                    _ => "error".to_string(),
+                };
+                html! {
+                    <span>
+                    { name }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "binding",
@@ -867,6 +1028,13 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("value"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let name = model.view_child(value, "name", &path);
+                let value = model.view_child(value, "value", &path);
+                html! {
+                    <span>{ "let" }{ name }{ "=" }{ value }</span>
+                }
+            },
         },
         Kind {
             name: "type",
@@ -886,6 +1054,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
         },
         Kind {
             name: "function_call",
@@ -904,6 +1073,33 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let function = model.view_child(value, "function", path);
+                // let function_name = self.view_children(&v, "function");
+                // let function_name = "xxx";
+                // .and_then(|n| n.label())
+                // .map(|l| l.name.clone())
+                // .unwrap_or("<UNKNOWN>".to_string());
+                let args = model
+                    .view_children(value, "arguments", path)
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        if i == 0 || i == 1 {
+                            v
+                        } else {
+                            html! {
+                                <span>{ "," }{ v }</span>
+                            }
+                        }
+                    });
+                html! {
+                    <span>
+                    { function }
+                    { "(" }{ for args }{ ")" }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "struct",
@@ -922,6 +1118,24 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let label = model.view_child(value, "name", &path);
+                let fields = model
+                    .view_children(value, "fields", &path)
+                    .into_iter()
+                    .map(|v| {
+                        html! {
+                            <div class="indent">{ v }{ "," }</div>
+                        }
+                    });
+
+                html! {
+                    <span>
+                    <span class="keyword">{ "struct" }</span>{ label }
+                    { "{" }{ for fields }{ "}" }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "struct_field",
@@ -940,6 +1154,15 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let name = model.view_child(value, "name", &path);
+                let type_ = model.view_child(value, "type", &path);
+                html! {
+                    <span>
+                    { name }{ ":" }{ type_ }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "enum",
@@ -958,11 +1181,30 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let label = model.view_child(value, "name", &path);
+                let variants = model
+                    .view_children(value, "variants", &path)
+                    .into_iter()
+                    .map(|v| {
+                        html! {
+                            <div class="indent">{ v }{ "," }</div>
+                        }
+                    });
+
+                html! {
+                    <span>
+                    <span class="keyword">{ "enum" }</span>{ label }
+                    { "{" }{ for variants }{ "}" }
+                    </span>
+                }
+            },
         },
     ],
 };
 
 type Validator = fn(&Value) -> bool;
+type Renderer = fn(&Model, &Inner, &Path) -> Html;
 
 fn whatever(_: &Value) -> bool {
     true
@@ -990,6 +1232,7 @@ pub struct Kind {
     pub name: &'static str,
     pub fields: &'static [Field],
     pub inner: Option<&'static str>,
+    pub renderer: Renderer,
 }
 
 pub struct Field {
