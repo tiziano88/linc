@@ -107,6 +107,14 @@ impl Model {
                 kind: "struct_field".to_string(),
                 children: HashMap::new(),
             })),
+            "crate" => Some(Value::Inner(Inner {
+                kind: "crate".to_string(),
+                children: HashMap::new(),
+            })),
+            "simple_path" => Some(Value::Inner(Inner {
+                kind: "simple_path".to_string(),
+                children: HashMap::new(),
+            })),
             "string" => Some(Value::Inner(Inner {
                 kind: "string".to_string(),
                 children: HashMap::new(),
@@ -177,23 +185,9 @@ impl Model {
                 }
             }
         }
-        let selector = self.cursor.back().unwrap().clone();
-        let parent_ref = self.parent_ref().unwrap();
-        log::info!("parent ref: {:?}", parent_ref);
-        let parent = self.lookup_mut(&parent_ref).unwrap();
-        log::info!("parent: {:?}", parent);
-        if let Value::Inner(v) = &parent.value {
-            let parent_kind = RUST_SCHEMA.kinds.iter().find(|k| k.name == v.kind).unwrap();
-            let field = parent_kind
-                .fields
-                .iter()
-                .find(|f| f.name == selector.field)
-                .unwrap();
-            let type_ = &field.type_;
-            if let Some(v) = &value {
-                let valid = type_.valid(v);
-                log::info!("valid: {:?}", valid);
-            }
+        if let Some(v) = &value {
+            let valid = self.is_valid_value(v);
+            log::info!("valid: {:?}", valid);
         }
         value
     }
@@ -522,10 +516,14 @@ impl Component for Model {
                 match v.code().as_ref() {
                     "Enter" => match self.parsed_command.clone() {
                         Some(value) => {
-                            self.set_value(value);
-                            self.parsed_command = None;
-                            self.command = "".to_string();
-                            self.next();
+                            if self.is_valid_value(&value) {
+                                self.set_value(value);
+                                self.parsed_command = None;
+                                self.command = "".to_string();
+                                self.next();
+                            } else {
+                                log::error!("invalid value: {:?}", value);
+                            }
                         }
                         None => log::info!("invalid command: {}", self.command),
                     },
@@ -604,10 +602,12 @@ const RUST_ITEM: Type = Type::Any(&[
 
 // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
 const RUST_TYPE: Type = Type::Any(&[
+    Type::String,
     Type::Inner("tuple_type"),
     Type::Inner("reference_type"),
     Type::Inner("array_type"),
     Type::Inner("slice_type"),
+    Type::Inner("simple_path"),
 ]);
 
 pub const RUST_SCHEMA: Schema = Schema {
@@ -743,22 +743,19 @@ pub const RUST_SCHEMA: Schema = Schema {
             inner: Some("object"),
         },
         Kind {
-            name: "qualify",
-            fields: &[
-                Field {
-                    name: "parent",
-                    type_: Type::Star,
-                    multiplicity: Multiplicity::Single,
-                    validator: whatever,
-                },
-                Field {
-                    name: "child",
-                    type_: Type::String,
-                    multiplicity: Multiplicity::Single,
-                    validator: whatever,
-                },
-            ],
-            inner: Some("parent"),
+            name: "simple_path",
+            fields: &[Field {
+                name: "segments",
+                type_: Type::Star,
+                multiplicity: Multiplicity::Repeated,
+                validator: whatever,
+            }],
+            inner: Some("segments"),
+        },
+        Kind {
+            name: "crate",
+            fields: &[],
+            inner: None,
         },
         Kind {
             name: "binary_operator",
@@ -840,7 +837,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "type", // Type
-                    type_: Type::Star,
+                    type_: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -937,7 +934,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "type", // Type
-                    type_: Type::Inner("type"),
+                    type_: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -1011,7 +1008,7 @@ pub enum Type {
 }
 
 impl Type {
-    fn valid(&self, value: &Value) -> bool {
+    pub fn valid(&self, value: &Value) -> bool {
         match (self, value) {
             (Type::Star, _) => true,
             (Type::Bool, Value::Bool(_)) => true,

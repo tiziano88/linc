@@ -80,7 +80,7 @@ impl Model {
         }
     }
 
-    fn is_valid_value(&self, new_value: &Value) -> bool {
+    pub fn is_valid_value(&self, new_value: &Value) -> bool {
         match self.cursor.back() {
             Some(selector) => {
                 let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
@@ -95,25 +95,7 @@ impl Model {
                             .iter()
                             .find(|f| f.name == selector.field)
                             .unwrap();
-                        match field.type_ {
-                            Type::String => {
-                                if let Value::String(_) = new_value {
-                                    (field.validator)(new_value)
-                                } else {
-                                    false
-                                }
-                            }
-                            Type::Bool => {
-                                if let Value::Bool(_) = new_value {
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-                            Type::Star => true,
-                            Type::Any(_) => true,
-                            Type::Inner(_) => true,
-                        }
+                        field.type_.valid(new_value) && (field.validator)(new_value)
                     }
                     _ => true,
                 }
@@ -365,11 +347,27 @@ impl Model {
                         <span>{ "let" }{ name }{ "=" }{ value }</span>
                     }
                 }
-                "qualify" => {
-                    let parent = self.view_child(&v, "parent", &path);
-                    let child = self.view_child(&v, "child", &path);
+                "simple_path" => {
+                    let segments = self
+                        .view_children(&v, "segments", &path)
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, v)| {
+                            if i == 0 || i == 1 {
+                                v
+                            } else {
+                                html! {
+                                    <span>{ "::" }{ v }</span>
+                                }
+                            }
+                        });
                     html! {
-                        <span>{ parent }{ "::" }{ child }</span>
+                        <span>{ for segments }</span>
+                    }
+                }
+                "crate" => {
+                    html! {
+                        <span class="keyword">{ "crate" }</span>
                     }
                 }
                 "if" => {
