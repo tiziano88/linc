@@ -111,7 +111,7 @@ impl Model {
                                 }
                             }
                             Type::Star => true,
-                            Type::Alt(_) => true,
+                            Type::Any(_) => true,
                             Type::Inner(_) => true,
                         }
                     }

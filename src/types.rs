@@ -588,7 +588,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
 };
 
 // https://doc.rust-lang.org/stable/reference/expressions.html
-const RUST_EXPRESSION: Type = Type::Alt(&[
+const RUST_EXPRESSION: Type = Type::Any(&[
     Type::Inner("if"),
     Type::Inner("string"),
     Type::Inner("field_access"),
@@ -596,14 +596,14 @@ const RUST_EXPRESSION: Type = Type::Alt(&[
 ]);
 
 // https://doc.rust-lang.org/stable/reference/items.html
-const RUST_ITEM: Type = Type::Alt(&[
+const RUST_ITEM: Type = Type::Any(&[
     Type::Inner("function_definition"),
     Type::Inner("struct"),
     Type::Inner("enum"),
 ]);
 
 // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
-const RUST_TYPE: Type = Type::Alt(&[
+const RUST_TYPE: Type = Type::Any(&[
     Type::Inner("tuple_type"),
     Type::Inner("reference_type"),
     Type::Inner("array_type"),
@@ -1003,12 +1003,11 @@ pub struct Field {
 }
 
 pub enum Type {
-    // TODO: remove Any or rename Alt to Any.
     Star,
     Bool,
     String,
     Inner(&'static str),
-    Alt(&'static [Type]), // Choice between other types.
+    Any(&'static [Type]), // Choice between other types.
 }
 
 impl Type {
@@ -1018,7 +1017,7 @@ impl Type {
             (Type::Bool, Value::Bool(_)) => true,
             (Type::String, Value::String(_)) => true,
             (Type::Inner(k), Value::Inner(v)) => k == &v.kind,
-            (Type::Alt(k), _) => k.iter().any(|t| t.valid(value)),
+            (Type::Any(k), _) => k.iter().any(|t| t.valid(value)),
             _ => false,
         }
     }
