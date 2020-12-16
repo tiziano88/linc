@@ -613,6 +613,9 @@ const RUST_TYPE: Type = Type::Any(&[
     Type::Inner("simple_path"),
 ]);
 
+// Alternative implementation: distinct structs implementing a parse_from method that only looks at
+//the kind field of Inner, and we then try to parse each element with all of them until one matches.
+
 pub const RUST_SCHEMA: Schema = Schema {
     kinds: &[
         Kind {
