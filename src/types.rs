@@ -85,7 +85,7 @@ impl Model {
         self.lookup_path(&self.file.root, self.cursor.clone())
     }
 
-    fn parse_command(&self, command: &str) -> Option<Value> {
+    fn parse_command(&mut self, command: &str) -> Option<Value> {
         let mut value = match command {
             "if" => Some(Value::Inner(Inner {
                 kind: "if".to_string(),
@@ -175,6 +175,24 @@ impl Model {
                         .or_default()
                         .push(reference);
                 }
+            }
+        }
+        let selector = self.cursor.back().unwrap().clone();
+        let parent_ref = self.parent_ref().unwrap();
+        log::info!("parent ref: {:?}", parent_ref);
+        let parent = self.lookup_mut(&parent_ref).unwrap();
+        log::info!("parent: {:?}", parent);
+        if let Value::Inner(v) = &parent.value {
+            let parent_kind = RUST_SCHEMA.kinds.iter().find(|k| k.name == v.kind).unwrap();
+            let field = parent_kind
+                .fields
+                .iter()
+                .find(|f| f.name == selector.field)
+                .unwrap();
+            let type_ = &field.type_;
+            if let Some(v) = &value {
+                let valid = type_.valid(v);
+                log::info!("valid: {:?}", valid);
             }
         }
         value
@@ -540,7 +558,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
             name: "document",
             fields: &[Field {
                 name: "paragraphs",
-                type_: Type::Any,
+                type_: Type::Star,
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
@@ -560,7 +578,7 @@ pub const MARKDOWN_SCHEMA: Schema = Schema {
             name: "list",
             fields: &[Field {
                 name: "items",
-                type_: Type::Any,
+                type_: Type::Star,
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
@@ -631,7 +649,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "lifetime",
-                    type_: Type::Any,
+                    type_: Type::Star,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -666,7 +684,7 @@ pub const RUST_SCHEMA: Schema = Schema {
             name: "block",
             fields: &[Field {
                 name: "statements",
-                type_: Type::Any,
+                type_: Type::Star,
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
@@ -729,7 +747,7 @@ pub const RUST_SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "parent",
-                    type_: Type::Any,
+                    type_: Type::Star,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -792,7 +810,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "arguments", // Pattern
-                    type_: Type::Any,
+                    type_: Type::Star,
                     multiplicity: Multiplicity::Repeated,
                     validator: whatever,
                 },
@@ -822,7 +840,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "type", // Type
-                    type_: Type::Any,
+                    type_: Type::Star,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
@@ -865,7 +883,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 // Generic type parameters.
                 Field {
                     name: "arguments",
-                    type_: Type::Any,
+                    type_: Type::Star,
                     multiplicity: Multiplicity::Repeated,
                     validator: whatever,
                 },
@@ -985,11 +1003,25 @@ pub struct Field {
 }
 
 pub enum Type {
-    Any,
+    // TODO: remove Any or rename Alt to Any.
+    Star,
     Bool,
     String,
     Inner(&'static str),
     Alt(&'static [Type]), // Choice between other types.
+}
+
+impl Type {
+    fn valid(&self, value: &Value) -> bool {
+        match (self, value) {
+            (Type::Star, _) => true,
+            (Type::Bool, Value::Bool(_)) => true,
+            (Type::String, Value::String(_)) => true,
+            (Type::Inner(k), Value::Inner(v)) => k == &v.kind,
+            (Type::Alt(k), _) => k.iter().any(|t| t.valid(value)),
+            _ => false,
+        }
+    }
 }
 
 pub enum Multiplicity {
