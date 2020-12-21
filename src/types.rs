@@ -1,10 +1,10 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use yew::prelude::*;
-use yew::services::storage::Area;
-use yew::services::StorageService;
+use std::collections::{HashMap, VecDeque};
+use yew::{
+    prelude::*,
+    services::{storage::Area, StorageService},
+};
 
 pub type Ref = String;
 
@@ -168,7 +168,8 @@ impl Model {
                         Some(c) => *c = new_ref,
                         None => children.push(new_ref),
                     },
-                    // Cursor is pointing to a field but not a specific child, create the first child.
+                    // Cursor is pointing to a field but not a specific child, create the first
+                    // child.
                     None => children.push(new_ref),
                 }
             }
@@ -451,7 +452,8 @@ const RUST_TYPE: Type = Type::Any(&[
 ]);
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
-//the kind field of Inner, and we then try to parse each element with all of them until one matches.
+//the kind field of Inner, and we then try to parse each element with all of them until one
+// matches.
 
 pub const RUST_SCHEMA: Schema = Schema {
     kinds: &[
