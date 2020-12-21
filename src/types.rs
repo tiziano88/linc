@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -1049,7 +1048,10 @@ pub const RUST_SCHEMA: Schema = Schema {
             name: "markdown_document",
             fields: &[Field {
                 name: "items",
-                type_: Type::Inner("markdown_paragraph"),
+                type_: Type::Any(&[
+                    Type::Inner("markdown_paragraph"),
+                    Type::Inner("markdown_list"),
+                ]),
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
@@ -1103,12 +1105,14 @@ pub const RUST_SCHEMA: Schema = Schema {
                     .into_iter()
                     .map(|v| {
                         html! {
-                            <div>{ "-" }{ v }</div>
+                            <li>{ v }</li>
                         }
                     });
                 html! {
                     <span>
-                    { for items }
+                        <ul>
+                            { for items }
+                        </ul>
                     </span>
                 }
             },
@@ -1156,6 +1160,7 @@ pub struct Field {
     pub validator: Validator,
 }
 
+#[derive(Debug)]
 pub enum Type {
     Star,
     Bool,

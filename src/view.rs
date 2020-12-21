@@ -80,28 +80,30 @@ impl Model {
         }
     }
 
-    pub fn is_valid_value(&self, new_value: &Value) -> bool {
+    pub fn current_field(&self) -> Option<&Field> {
         match self.cursor.back() {
             Some(selector) => {
                 let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
                 match &parent.value {
-                    Value::Inner(v) => {
-                        let field = &RUST_SCHEMA
-                            .kinds
-                            .iter()
-                            .find(|k| k.name == v.kind)
-                            .unwrap()
-                            .fields
-                            .iter()
-                            .find(|f| f.name == selector.field)
-                            .unwrap();
-                        field.type_.valid(new_value) && (field.validator)(new_value)
-                    }
-                    _ => true,
+                    Value::Inner(v) => RUST_SCHEMA
+                        .kinds
+                        .iter()
+                        .find(|k| k.name == v.kind)
+                        .unwrap()
+                        .fields
+                        .iter()
+                        .find(|f| f.name == selector.field),
+                    _ => None,
                 }
             }
-            None => true,
+            None => None,
         }
+    }
+
+    pub fn is_valid_value(&self, new_value: &Value) -> bool {
+        self.current_field()
+            .map(|field| field.type_.valid(new_value) && (field.validator)(new_value))
+            .unwrap_or(false)
     }
 
     fn view_action(&self, action: &Action) -> Html {
