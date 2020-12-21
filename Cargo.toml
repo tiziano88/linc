@@ -17,5 +17,4 @@ serde_json = "1.0"
 uuid = { version = "*", features = ["wasm-bindgen", "v4"] }
 wasm-bindgen = "*"
 wasm-logger = "*"
-web_logger = "*"
 yew = "*"
