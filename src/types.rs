@@ -87,6 +87,18 @@ impl Model {
 
     fn parse_command(&mut self, command: &str) -> Option<Value> {
         let mut value = match command {
+            "markdown_paragraph" => Some(Value::Inner(Inner {
+                kind: "markdown_paragraph".to_string(),
+                children: HashMap::new(),
+            })),
+            "markdown_list" => Some(Value::Inner(Inner {
+                kind: "markdown_list".to_string(),
+                children: HashMap::new(),
+            })),
+            "markdown_document" => Some(Value::Inner(Inner {
+                kind: "markdown_document".to_string(),
+                children: HashMap::new(),
+            })),
             "if" => Some(Value::Inner(Inner {
                 kind: "if".to_string(),
                 children: HashMap::new(),
@@ -317,68 +329,6 @@ pub struct Inner {
     pub children: HashMap<String, Vec<Ref>>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct BindingValue {
-    pub label: Label,
-    pub value: Ref,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct PatternValue {
-    pub label: Label,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct BlockValue {
-    pub expressions: Vec<Ref>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct ListValue {
-    pub items: Vec<Ref>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct IfValue {
-    pub conditional: Ref,
-    pub true_body: Ref,
-    pub false_body: Ref,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct FunctionDefinitionValue {
-    pub label: Label,
-    pub arguments: Vec<Ref>,
-    pub return_type: Ref,
-    pub outer_attributes: Vec<Ref>,
-    pub inner_attributes: Vec<Ref>,
-    pub body: Ref,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct FunctionCallValue {
-    pub function: Ref,
-    pub arguments: Vec<Ref>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct BinaryOperatorValue {
-    pub operator: String,
-    pub left: Ref,
-    pub right: Ref,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Pattern {
-    pub label: Label,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Label {
-    pub name: String,
-    pub colour: String,
-}
-
 fn display_selector(selector: &Selector) -> Vec<Html> {
     let mut segments = Vec::new();
     segments.push(html! {
@@ -549,44 +499,6 @@ pub struct Action {
     pub text: String,
     pub msg: Msg,
 }
-
-pub const MARKDOWN_SCHEMA: Schema = Schema {
-    kinds: &[
-        Kind {
-            name: "document",
-            fields: &[Field {
-                name: "paragraphs",
-                type_: Type::Star,
-                multiplicity: Multiplicity::Repeated,
-                validator: whatever,
-            }],
-            inner: Some("paragraphs"),
-            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
-        },
-        Kind {
-            name: "paragraph",
-            fields: &[Field {
-                name: "text",
-                type_: Type::String,
-                multiplicity: Multiplicity::Single,
-                validator: whatever,
-            }],
-            inner: Some("text"),
-            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
-        },
-        Kind {
-            name: "list",
-            fields: &[Field {
-                name: "items",
-                type_: Type::Star,
-                multiplicity: Multiplicity::Repeated,
-                validator: whatever,
-            }],
-            inner: Some("items"),
-            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
-        },
-    ],
-};
 
 // https://doc.rust-lang.org/stable/reference/expressions.html
 const RUST_EXPRESSION: Type = Type::Any(&[
@@ -923,6 +835,12 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
                 */
                 Field {
+                    name: "comment",
+                    type_: Type::Inner("markdown_document"),
+                    multiplicity: Multiplicity::Single,
+                    validator: identifier,
+                },
+                Field {
                     name: "name",
                     type_: Type::String,
                     multiplicity: Multiplicity::Single,
@@ -949,6 +867,7 @@ pub const RUST_SCHEMA: Schema = Schema {
             ],
             inner: None,
             renderer: |model: &Model, value: &Inner, path: &Path| {
+                let comment = model.view_child(&value, "comment", &path);
                 let label = model.view_child(&value, "name", &path);
                 let args = model
                     .view_children(&value, "arguments", &path)
@@ -970,7 +889,7 @@ pub const RUST_SCHEMA: Schema = Schema {
 
                 html! {
                     <span>
-                        <div>{ "#" }</div>
+                        <div>{ "//" }{ comment }</div>
                         // { pub_ }
                         <div><span class="keyword">{ "fn" }</span>{ label }{ "(" }{ for args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
                         <div class="indent">{ body }</div>{ "}" }
@@ -1203,6 +1122,74 @@ pub const RUST_SCHEMA: Schema = Schema {
                 }
             },
         },
+        Kind {
+            name: "markdown_document",
+            fields: &[Field {
+                name: "paragraphs",
+                type_: Type::Inner("markdown_paragraph"),
+                multiplicity: Multiplicity::Repeated,
+                validator: whatever,
+            }],
+            inner: Some("paragraphs"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let items = model
+                    .view_children(value, "items", &path)
+                    .into_iter()
+                    .map(|v| {
+                        html! {
+                            <div>{ v }</div>
+                        }
+                    });
+                html! {
+                    <span>
+                    { for items }
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "markdown_paragraph",
+            fields: &[Field {
+                name: "text",
+                type_: Type::String,
+                multiplicity: Multiplicity::Single,
+                validator: whatever,
+            }],
+            inner: Some("text"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let text = model.view_child(value, "text", &path);
+                html! {
+                    <span>
+                    { text }
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "markdown_list",
+            fields: &[Field {
+                name: "items",
+                type_: Type::Inner("markdown_paragraph"),
+                multiplicity: Multiplicity::Repeated,
+                validator: whatever,
+            }],
+            inner: Some("items"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let items = model
+                    .view_children(value, "items", &path)
+                    .into_iter()
+                    .map(|v| {
+                        html! {
+                            <div>{ "-" }{ v }</div>
+                        }
+                    });
+                html! {
+                    <span>
+                    { for items }
+                    </span>
+                }
+            },
+        },
     ],
 };
 
@@ -1236,6 +1223,7 @@ pub struct Kind {
     pub fields: &'static [Field],
     pub inner: Option<&'static str>,
     pub renderer: Renderer,
+    // pub aliases: &'static [&'static str],
 }
 
 pub struct Field {
