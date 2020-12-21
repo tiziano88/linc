@@ -74,7 +74,7 @@ impl Model {
               oninput=oninput
               onkeydown=onkeypress
               value=self.command
-            ></input>
+            />
             { for actions }
             </div>
         }
