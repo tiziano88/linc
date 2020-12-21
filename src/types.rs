@@ -87,88 +87,6 @@ impl Model {
 
     fn parse_command(&mut self, command: &str) -> Option<Value> {
         let mut value = match command {
-            "markdown_paragraph" => Some(Value::Inner(Inner {
-                kind: "markdown_paragraph".to_string(),
-                children: HashMap::new(),
-            })),
-            "markdown_list" => Some(Value::Inner(Inner {
-                kind: "markdown_list".to_string(),
-                children: HashMap::new(),
-            })),
-            "markdown_document" => Some(Value::Inner(Inner {
-                kind: "markdown_document".to_string(),
-                children: HashMap::new(),
-            })),
-            "if" => Some(Value::Inner(Inner {
-                kind: "if".to_string(),
-                children: HashMap::new(),
-            })),
-            "enum" => Some(Value::Inner(Inner {
-                kind: "enum".to_string(),
-                children: HashMap::new(),
-            })),
-            "variant" => Some(Value::Inner(Inner {
-                kind: "enum_variant".to_string(),
-                children: HashMap::new(),
-            })),
-            "struct" => Some(Value::Inner(Inner {
-                kind: "struct".to_string(),
-                children: HashMap::new(),
-            })),
-            "field" => Some(Value::Inner(Inner {
-                kind: "struct_field".to_string(),
-                children: HashMap::new(),
-            })),
-            "crate" => Some(Value::Inner(Inner {
-                kind: "crate".to_string(),
-                children: HashMap::new(),
-            })),
-            "simple_path" => Some(Value::Inner(Inner {
-                kind: "simple_path".to_string(),
-                children: HashMap::new(),
-            })),
-            "string" => Some(Value::Inner(Inner {
-                kind: "string".to_string(),
-                children: HashMap::new(),
-            })),
-            "fn" => Some(Value::Inner(Inner {
-                kind: "function_definition".to_string(),
-                children: HashMap::new(),
-            })),
-            "==" => Some(Value::Inner(Inner {
-                kind: "binary_operator".to_string(),
-                children: HashMap::new(),
-            })),
-            "+" => Some(Value::Inner(Inner {
-                kind: "binary_operator".to_string(),
-                children: HashMap::new(),
-            })),
-            "-" => Some(Value::Inner(Inner {
-                kind: "binary_operator".to_string(),
-                children: HashMap::new(),
-            })),
-            "let" => Some(Value::Inner(Inner {
-                kind: "binding".to_string(),
-                children: HashMap::new(),
-            })),
-            "::" => Some(Value::Inner(Inner {
-                kind: "qualify".to_string(),
-                children: HashMap::new(),
-            })),
-            "." => Some(Value::Inner(Inner {
-                kind: "field_access".to_string(),
-                children: HashMap::new(),
-            })),
-            "(" => Some(Value::Inner(Inner {
-                kind: "function_call".to_string(),
-                children: HashMap::new(),
-            })),
-            "{" => Some(Value::Inner(Inner {
-                kind: "block".to_string(),
-                children: HashMap::new(),
-            })),
-            "[" => None,
-            "," => None,
             "false" => Some(Value::Bool(false)),
             "true" => Some(Value::Bool(true)),
             _ => {
@@ -176,6 +94,11 @@ impl Model {
                     Some(Value::String(v.to_string()))
                 } else if let Ok(v) = command.parse::<i32>() {
                     Some(Value::Int(v))
+                } else if let Some(_) = RUST_SCHEMA.kinds.iter().find(|k| k.name == command) {
+                    Some(Value::Inner(Inner {
+                        kind: command.to_string(),
+                        children: HashMap::new(),
+                    }))
                 } else {
                     None
                 }
@@ -838,7 +761,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     name: "comment",
                     type_: Type::Inner("markdown_document"),
                     multiplicity: Multiplicity::Single,
-                    validator: identifier,
+                    validator: whatever,
                 },
                 Field {
                     name: "name",
@@ -1125,7 +1048,7 @@ pub const RUST_SCHEMA: Schema = Schema {
         Kind {
             name: "markdown_document",
             fields: &[Field {
-                name: "paragraphs",
+                name: "items",
                 type_: Type::Inner("markdown_paragraph"),
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
