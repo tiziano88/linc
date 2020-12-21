@@ -245,6 +245,8 @@ pub enum Value {
     Inner(Inner),
 }
 
+// TODO: Navigate to children directly, but use :var to navigate to variables, otherwise skip them
+// when navigating.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Inner {
     pub kind: String,
@@ -1050,7 +1052,10 @@ pub const RUST_SCHEMA: Schema = Schema {
             fields: &[Field {
                 name: "items",
                 type_: Type::Any(&[
-                    Type::Inner("markdown_paragraph"),
+                    Type::String,
+                    Type::Inner("markdown_heading"),
+                    Type::Inner("markdown_code"),
+                    Type::Inner("markdown_quote"),
                     Type::Inner("markdown_list"),
                 ]),
                 multiplicity: Multiplicity::Repeated,
@@ -1074,19 +1079,28 @@ pub const RUST_SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "markdown_paragraph",
-            fields: &[Field {
-                name: "text",
-                type_: Type::String,
-                multiplicity: Multiplicity::Single,
-                validator: whatever,
-            }],
+            name: "markdown_heading",
+            fields: &[
+                Field {
+                    name: "level",
+                    type_: Type::Int,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "text",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
             inner: Some("text"),
             renderer: |model: &Model, value: &Inner, path: &Path| {
+                let level = model.view_child(value, "level", &path);
                 let text = model.view_child(value, "text", &path);
                 html! {
                     <span>
-                    { text }
+                    { "#" }{ level}{ text }
                     </span>
                 }
             },
@@ -1166,6 +1180,7 @@ pub enum Type {
     Star,
     Bool,
     String,
+    Int,
     Inner(&'static str),
     Any(&'static [Type]), // Choice between other types.
 }
@@ -1175,6 +1190,7 @@ impl Type {
         match (self, value) {
             (Type::Star, _) => true,
             (Type::Bool, Value::Bool(_)) => true,
+            (Type::Int, Value::Int(_)) => true,
             (Type::String, Value::String(_)) => true,
             (Type::Inner(k), Value::Inner(v)) => k == &v.kind,
             (Type::Any(k), _) => k.iter().any(|t| t.valid(value)),
