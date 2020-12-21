@@ -298,6 +298,7 @@ impl Component for Model {
                     <div class="column">
                         <div>{ display_cursor(&self.cursor) }</div>
                         <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
+                        <div>{ format!("Current allowed kinds: {:?}", self.current_field().map(|field| &field.type_)) }</div>
                     </div>
                     <div class="column">{ self.view_file_json(&self.file) }</div>
                </div>
