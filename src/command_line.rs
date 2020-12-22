@@ -5,11 +5,19 @@ pub struct CommandLine {
     link: ComponentLink<Self>,
 }
 
+#[derive(PartialEq, Clone, Debug)]
+pub enum State {
+    Empty,
+    Invalid,
+    Valid,
+}
+
 #[derive(PartialEq, Clone, Properties, Debug)]
 pub struct Props {
     pub options: Vec<String>,
     pub on_change: Callback<String>,
     pub value: String,
+    pub state: State,
 }
 
 #[derive(Debug)]
@@ -44,7 +52,7 @@ impl yew::Component for CommandLine {
     }
 
     fn view(&self) -> yew::Html {
-        let command_class = vec![
+        let mut command_class = vec![
             "focus:border-blue-500",
             "focus:ring-1",
             "focus:ring-blue-500",
@@ -58,6 +66,11 @@ impl yew::Component for CommandLine {
             "py-2",
             "pl-10",
         ];
+        match self.props.state {
+            State::Empty => {}
+            State::Invalid => command_class.push("bg-red-500"),
+            State::Valid => command_class.push("bg-green-500"),
+        }
         let options = self
             .props
             .options

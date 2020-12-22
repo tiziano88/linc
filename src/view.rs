@@ -72,13 +72,13 @@ impl Model {
 
         html! {
             <div>
-            <input
-              class=command_class
-              oninput=oninput
-              onkeydown=onkeypress
-              value=self.command
-            />
-            { for actions }
+                <input
+                class=command_class
+                oninput=oninput
+                onkeydown=onkeypress
+                value=self.command
+                />
+                { for actions }
             </div>
         }
     }

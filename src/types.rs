@@ -1,4 +1,7 @@
-use crate::{command_line::CommandLine, schema::RUST_SCHEMA};
+use crate::{
+    command_line::{self, CommandLine},
+    schema::RUST_SCHEMA,
+};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
@@ -303,13 +306,20 @@ impl Component for Model {
             .current_field()
             .map(|f| f.type_.prefixes())
             .unwrap_or_default();
+        let state = if self.command.is_empty() {
+            command_line::State::Empty
+        } else if self.parsed_command.is_some() {
+            command_line::State::Valid
+        } else {
+            command_line::State::Invalid
+        };
         log::info!("allowed kinds: {:?}", allowed_kinds);
         html! {
             <div>
                 <div>{ "LINC" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="grid grid-rows-2">
-                    <CommandLine options=allowed_kinds on_change=callback value="x" />
+                    <CommandLine options=allowed_kinds on_change=callback value="" state=state />
                     <div class="wrapper h-40">
                         <div class="column">{ self.view_file(&self.file) }</div>
                         <div class="column">
@@ -334,7 +344,7 @@ impl Component for Model {
         }
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
+    fn change(&mut self, _props: ()) -> ShouldRender {
         false
     }
 
