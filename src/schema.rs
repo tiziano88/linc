@@ -3,10 +3,13 @@ use yew::{html, Html};
 
 // https://doc.rust-lang.org/stable/reference/expressions.html
 const RUST_EXPRESSION: Type = Type::Any(&[
+    Type::Bool,
+    Type::Int,
     Type::Inner("if"),
     Type::Inner("string"),
     Type::Inner("field_access"),
     Type::Inner("operator"),
+    Type::Inner("match"),
 ]);
 
 // https://doc.rust-lang.org/stable/reference/items.html
@@ -145,6 +148,51 @@ pub const RUST_SCHEMA: Schema = Schema {
                 html! {
                     <span>
                     { "{" }{ for statements }{ "}" }
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "match",
+            fields: &[
+                Field {
+                    name: "expression",
+                    type_: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+                Field {
+                    name: "match_arms",
+                    type_: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+            inner: Some("expression"),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let expression = model.view_child(value, "expression", &path);
+                let match_arms = model
+                    .view_children(value, "match_arms", &path)
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        if i == 0 {
+                            v
+                        } else {
+                            html! {
+                                <div class="indent">{ v }{ "," }</div>
+                            }
+                        }
+                    });
+                html! {
+                    <span>
+                        <div>
+                            <span class="keyword">{ "match" }</span>{ expression }{ "{" }
+                        </div>
+                        { for match_arms }
+                        <div>
+                            { "}" }
+                        </div>
                     </span>
                 }
             },

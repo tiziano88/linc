@@ -316,7 +316,7 @@ impl Component for Model {
                 <div>{ "LINC" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="grid grid-rows-2">
-                    <CommandLine options=allowed_kinds on_change=callback value=self.command.clone() state=state />
+                    <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
                     <div class="wrapper h-40">
                         <div class="column">{ self.view_file(&self.file) }</div>
                         <div class="column">
