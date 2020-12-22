@@ -204,7 +204,7 @@ impl Model {
             }
         } else {
             match self.lookup(reference) {
-                Some(node) => self.view_value(&node.reference, &node.value, &path),
+                Some(node) => self.view_value(&node.value, &path),
                 None => {
                     html! {
                         <span>{ format!("invalid: {}", reference) }</span>
@@ -244,7 +244,7 @@ impl Model {
         self.view_node_list(&children, &path)
     }
 
-    fn view_value(&self, reference: &Ref, value: &Value, path: &Path) -> Html {
+    fn view_value(&self, value: &Value, path: &Path) -> Html {
         match value {
             Value::Hole => {
                 html! { <span>{ "◆" }</span> }
