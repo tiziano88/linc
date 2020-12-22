@@ -69,7 +69,7 @@ impl yew::Component for CommandLine {
             .map(|v| {
                 let s = v.clone();
                 let callback = self.link.callback(move |_| Msg::Input(s.clone()));
-                html! {<div onclick=callback>{v}</div>}
+                html! {<div onclick=callback>{ v }</div>}
             });
         let oninput = self.link.callback(move |e: InputData| Msg::Input(e.value));
         html! {

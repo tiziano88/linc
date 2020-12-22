@@ -1,6 +1,9 @@
 use yew::prelude::*;
 
-use crate::types::*;
+use crate::{
+    schema::{Field, Multiplicity, RUST_SCHEMA},
+    types::*,
+};
 
 impl Model {
     pub fn view_actions(&self) -> Html {
