@@ -1,6 +1,6 @@
 use crate::{
     command_line::{self, CommandLine},
-    schema::RUST_SCHEMA,
+    schema::SCHEMA,
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -98,7 +98,7 @@ impl Model {
                     Some(Value::String(v.to_string()))
                 } else if let Ok(v) = command.parse::<i32>() {
                     Some(Value::Int(v))
-                } else if let Some(_) = RUST_SCHEMA.kinds.iter().find(|k| k.name == command) {
+                } else if let Some(_) = SCHEMA.kinds.iter().find(|k| k.name == command) {
                     Some(Value::Inner(Inner {
                         kind: command.to_string(),
                         children: HashMap::new(),
@@ -109,11 +109,7 @@ impl Model {
             }
         };
         if let Some(Value::Inner(ref mut inner)) = value {
-            let kind = RUST_SCHEMA
-                .kinds
-                .iter()
-                .find(|k| k.name == inner.kind)
-                .unwrap();
+            let kind = SCHEMA.kinds.iter().find(|k| k.name == inner.kind).unwrap();
             if let Some(inner_field) = kind.inner {
                 if let Some(reference) = self.current_ref() {
                     inner

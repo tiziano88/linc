@@ -1,7 +1,7 @@
 use yew::prelude::*;
 
 use crate::{
-    schema::{Field, Multiplicity, RUST_SCHEMA},
+    schema::{Field, Multiplicity, SCHEMA},
     types::*,
 };
 
@@ -54,7 +54,7 @@ impl Model {
             Some(selector) => {
                 let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
                 match &parent.value {
-                    Value::Inner(v) => RUST_SCHEMA
+                    Value::Inner(v) => SCHEMA
                         .kinds
                         .iter()
                         .find(|k| k.name == v.kind)
@@ -102,7 +102,7 @@ impl Model {
     }
 
     pub fn traverse_fields(kind: &str) -> &[Field] {
-        match RUST_SCHEMA.kinds.iter().find(|k| k.name == kind) {
+        match SCHEMA.kinds.iter().find(|k| k.name == kind) {
             Some(kind) => kind.fields,
             None => &[],
         }
@@ -264,7 +264,7 @@ impl Model {
             Value::String(v) => {
                 html! { <span>{ v }</span> }
             }
-            Value::Inner(v) => match RUST_SCHEMA.kinds.iter().find(|k| k.name == v.kind) {
+            Value::Inner(v) => match SCHEMA.kinds.iter().find(|k| k.name == v.kind) {
                 Some(kind) => (kind.renderer)(self, v, path),
                 None => html! { <span>{ v.kind.clone() }</span> },
             },

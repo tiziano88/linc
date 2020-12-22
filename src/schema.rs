@@ -1,4 +1,5 @@
 use crate::types::{Inner, Model, Path, Value};
+use itertools::Itertools;
 use yew::{html, Html};
 
 // https://doc.rust-lang.org/stable/reference/expressions.html
@@ -8,6 +9,7 @@ const RUST_EXPRESSION: Type = Type::Any(&[
     Type::Inner("if"),
     Type::Inner("string"),
     Type::Inner("field_access"),
+    Type::Inner("function_call"),
     Type::Inner("operator"),
     Type::Inner("match"),
 ]);
@@ -33,7 +35,7 @@ const RUST_TYPE: Type = Type::Any(&[
 //the kind field of Inner, and we then try to parse each element with all of them until one
 // matches.
 
-pub const RUST_SCHEMA: Schema = Schema {
+pub const SCHEMA: Schema = Schema {
     kinds: &[
         Kind {
             name: "document",
@@ -93,7 +95,14 @@ pub const RUST_SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
-            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let type_ = model.view_child(value, "type", &path);
+                html! {
+                    <span>
+                    { "&" }{ type_ }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "constant",
@@ -289,15 +298,7 @@ pub const RUST_SCHEMA: Schema = Schema {
             inner: Some("segments"),
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let (segments_head, segments) = model.view_children(value, "segments", &path);
-                let segments = segments.into_iter().enumerate().map(|(i, v)| {
-                    if i == 0 {
-                        v
-                    } else {
-                        html! {
-                            <span>{ "::" }{ v }</span>
-                        }
-                    }
-                });
+                let segments = segments.into_iter().intersperse(html! {{ "::" }});
                 html! {
                     <span>{ segments_head }{ for segments }</span>
                 }
@@ -403,15 +404,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                 let comment = model.view_child(&value, "comment", &path);
                 let label = model.view_child(&value, "name", &path);
                 let (args_head, args) = model.view_children(&value, "arguments", &path);
-                let args = args.into_iter().enumerate().map(|(i, v)| {
-                    if i == 0 {
-                        v
-                    } else {
-                        html! {
-                            <span>{ "," }{ v }</span>
-                        }
-                    }
-                });
+                let args = args.into_iter().intersperse(html! {{ "," }});
                 let body = model.view_child(&value, "body", &path);
                 let return_type = model.view_child(&value, "return_type", &path);
                 // let async_ = self.view_child(&v, "async", &path);
@@ -512,39 +505,26 @@ pub const RUST_SCHEMA: Schema = Schema {
             name: "function_call",
             fields: &[
                 Field {
-                    name: "function",
-                    type_: Type::String,
+                    name: "expression",
+                    type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
                 Field {
-                    name: "arguments", // Expression
+                    name: "arguments",
                     type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Repeated,
                     validator: whatever,
                 },
             ],
-            inner: None,
+            inner: Some("expression"),
             renderer: |model: &Model, value: &Inner, path: &Path| {
-                let function = model.view_child(value, "function", path);
-                // let function_name = self.view_children(&v, "function");
-                // let function_name = "xxx";
-                // .and_then(|n| n.label())
-                // .map(|l| l.name.clone())
-                // .unwrap_or("<UNKNOWN>".to_string());
+                let expression = model.view_child(value, "expression", path);
                 let (args_head, args) = model.view_children(value, "arguments", path);
-                let args = args.into_iter().enumerate().map(|(i, v)| {
-                    if i == 0 {
-                        v
-                    } else {
-                        html! {
-                            <span>{ "," }{ v }</span>
-                        }
-                    }
-                });
+                let args = args.into_iter().intersperse(html! {{ "," }});
                 html! {
                     <span>
-                    { function }
+                    { expression }
                     { "(" }{ args_head }{ for args }{ ")" }
                     </span>
                 }

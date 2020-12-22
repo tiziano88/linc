@@ -66,7 +66,7 @@ impl yew::Component for CommandLine {
                     self.update_displayed_value();
                 }
                 "Enter" => {
-                    self.props.on_change.emit(self.displayed_value.clone());
+                    self.emit_selected();
                     self.original_value = "".to_string();
                     self.selected = None;
                     self.update_displayed_value();
@@ -82,7 +82,6 @@ impl yew::Component for CommandLine {
                         None
                     };
                     self.update_displayed_value();
-                    self.emit_selected();
                 }
                 "ArrowDown" => {
                     self.selected = if let Some(v) = self.selected {
@@ -95,7 +94,6 @@ impl yew::Component for CommandLine {
                         Some(0)
                     };
                     self.update_displayed_value();
-                    self.emit_selected();
                 }
                 _ => {
                     log::info!("k: {:?}", v);
