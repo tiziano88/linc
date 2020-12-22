@@ -1,7 +1,9 @@
+use crate::command_line::CommandLine;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use yew::{
+    html,
     prelude::*,
     services::{storage::Area, StorageService},
 };
@@ -292,9 +294,11 @@ impl Component for Model {
         //     .and_then(|reference| self.lookup(reference))
         //     .map(|n| n.to_json())
         //     .unwrap_or("JSON ERROR".to_string());
+        let callback = self.link.callback(|_: String| Msg::Next);
         html! {
             <div>
                 <div>{ "LINC" }</div>
+                <CommandLine options=vec!["first".to_string(), "second".to_string()] on_change=callback />
                 <div>{ self.view_actions() }</div>
                 <div class="wrapper">
                     <div class="column">{ self.view_file(&self.file) }</div>
