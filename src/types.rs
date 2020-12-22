@@ -295,10 +295,14 @@ impl Component for Model {
         //     .map(|n| n.to_json())
         //     .unwrap_or("JSON ERROR".to_string());
         let callback = self.link.callback(|_: String| Msg::Next);
+        let allowed_kinds = self
+            .current_field()
+            .map(|f| f.type_.prefixes())
+            .unwrap_or_default();
         html! {
             <div>
                 <div>{ "LINC" }</div>
-                <CommandLine options=vec!["first".to_string(), "second".to_string()] on_change=callback />
+                <CommandLine options=allowed_kinds on_change=callback />
                 <div>{ self.view_actions() }</div>
                 <div class="wrapper">
                     <div class="column">{ self.view_file(&self.file) }</div>
@@ -1201,6 +1205,17 @@ impl Type {
             (Type::Inner(k), Value::Inner(v)) => k == &v.kind,
             (Type::Any(k), _) => k.iter().any(|t| t.valid(value)),
             _ => false,
+        }
+    }
+
+    pub fn prefixes(&self) -> Vec<String> {
+        match self {
+            Type::Star => vec![],
+            Type::Bool => vec!["true".to_string(), "false".to_string()],
+            Type::String => vec!["\"".to_string()],
+            Type::Int => vec![],
+            Type::Inner(v) => vec![v.to_string()],
+            Type::Any(vv) => vv.iter().flat_map(|v| v.prefixes()).collect(),
         }
     }
 }

@@ -15,7 +15,7 @@ pub struct Props {
 #[derive(Debug)]
 pub enum Msg {
     /// Sent when the user selects a new option.
-    Selected(Option<String>),
+    Selected(String),
     /// When typing.
     Input(String),
 }
