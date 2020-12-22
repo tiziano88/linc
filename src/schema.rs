@@ -6,57 +6,60 @@ use yew::{html, Html};
 const RUST_EXPRESSION: Type = Type::Any(&[
     Type::Bool,
     Type::Int,
-    Type::Inner("if"),
-    Type::Inner("string"),
     Type::Inner("field_access"),
     Type::Inner("function_call"),
-    Type::Inner("operator"),
+    Type::Inner("if"),
     Type::Inner("match"),
+    Type::Inner("operator"),
+    Type::Inner("string"),
 ]);
 
 // https://doc.rust-lang.org/stable/reference/items.html
 const RUST_ITEM: Type = Type::Any(&[
+    Type::Inner("constant"),
+    Type::Inner("enum"),
     Type::Inner("function_definition"),
     Type::Inner("struct"),
-    Type::Inner("enum"),
 ]);
 
 // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
 const RUST_TYPE: Type = Type::Any(&[
     Type::String,
-    Type::Inner("tuple_type"),
-    Type::Inner("reference_type"),
     Type::Inner("array_type"),
-    Type::Inner("slice_type"),
+    Type::Inner("reference_type"),
     Type::Inner("simple_path"),
+    Type::Inner("slice_type"),
+    Type::Inner("tuple_type"),
 ]);
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
 //the kind field of Inner, and we then try to parse each element with all of them until one
 // matches.
 
+// example: "true" may be an identifier, string literal, bool literal, type name.
+
 pub const SCHEMA: Schema = Schema {
     kinds: &[
         Kind {
             name: "document",
             fields: &[Field {
-                name: "bindings",
+                name: "items",
                 type_: RUST_ITEM,
                 multiplicity: Multiplicity::Repeated,
                 validator: whatever,
             }],
             inner: None,
             renderer: |model: &Model, value: &Inner, path: &Path| {
-                let (bindings_head, bindings) = model.view_children(&value, "bindings", &path);
-                let bindings = bindings.into_iter().map(|b| {
+                let (items_head, items) = model.view_children(&value, "items", &path);
+                let items = items.into_iter().map(|b| {
                     html! {
                         <div>{ b }</div>
                     }
                 });
                 html! {
                     <div>
-                    { bindings_head }
-                    { for bindings }
+                    { items_head }
+                    { for items }
                     </div>
                 }
             },
@@ -108,10 +111,10 @@ pub const SCHEMA: Schema = Schema {
             name: "constant",
             fields: &[
                 Field {
-                    name: "name",
+                    name: "identifier",
                     type_: Type::String,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
+                    validator: identifier,
                 },
                 Field {
                     name: "type",
@@ -120,14 +123,23 @@ pub const SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
                 Field {
-                    name: "value",
+                    name: "expression",
                     type_: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
                     validator: whatever,
                 },
             ],
             inner: Some("statements"),
-            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let identifier = model.view_child(value, "identifier", &path);
+                let type_ = model.view_child(value, "type", &path);
+                let expression = model.view_child(value, "expression", &path);
+                html! {
+                    <span>
+                    { "const" }{ identifier }{ ":" }{ type_ }{ "=" }{ expression }{ ";" }
+                    </span>
+                }
+            },
         },
         Kind {
             name: "block",
@@ -375,14 +387,14 @@ pub const SCHEMA: Schema = Schema {
                     validator: whatever,
                 },
                 Field {
-                    name: "name",
+                    name: "identifier",
                     type_: Type::String,
                     multiplicity: Multiplicity::Single,
                     validator: identifier,
                 },
                 Field {
-                    name: "arguments", // Pattern
-                    type_: Type::Star,
+                    name: "parameters",
+                    type_: Type::Inner("function_parameter"),
                     multiplicity: Multiplicity::Repeated,
                     validator: whatever,
                 },
@@ -402,9 +414,10 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let comment = model.view_child(&value, "comment", &path);
-                let label = model.view_child(&value, "name", &path);
-                let (args_head, args) = model.view_children(&value, "arguments", &path);
-                let args = args.into_iter().intersperse(html! {{ "," }});
+                let identifier = model.view_child(&value, "identifier", &path);
+                let (parameters_head, parameters) =
+                    model.view_children(&value, "parameters", &path);
+                let parameters = parameters.into_iter().intersperse(html! {{ "," }});
                 let body = model.view_child(&value, "body", &path);
                 let return_type = model.view_child(&value, "return_type", &path);
                 // let async_ = self.view_child(&v, "async", &path);
@@ -414,8 +427,40 @@ pub const SCHEMA: Schema = Schema {
                     <span>
                         <div>{ "//" }{ comment }</div>
                         // { pub_ }
-                        <div><span class="keyword">{ "fn" }</span>{ label }{ "(" }{ args_head }{ for args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
-                        <div class="indent">{ body }</div>{ "}" }
+                        <div>
+                          <span class="keyword">{ "fn" }</span>{ identifier }
+                          { "(" }{ parameters_head }{ for parameters }{ ")" }
+                          { "->" }{ return_type }{ "{" }
+                        </div>
+                        <div class="indent">{ body }</div>
+                        { "}" }
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "function_parameter",
+            fields: &[
+                Field {
+                    name: "pattern",
+                    type_: Type::String,
+                    multiplicity: Multiplicity::Single,
+                    validator: identifier,
+                },
+                Field {
+                    name: "type",
+                    type_: RUST_TYPE,
+                    multiplicity: Multiplicity::Single,
+                    validator: whatever,
+                },
+            ],
+            inner: None,
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                let pattern = model.view_child(&value, "pattern", &path);
+                let type_ = model.view_child(&value, "type", &path);
+                html! {
+                    <span>
+                    { pattern }{ ":" }{ type_ }
                     </span>
                 }
             },
@@ -450,6 +495,7 @@ pub const SCHEMA: Schema = Schema {
                 }
             },
         },
+        // https://doc.rust-lang.org/nightly/reference/statements.html#let-statements
         Kind {
             name: "binding",
             fields: &[
