@@ -295,13 +295,7 @@ impl Component for Model {
     type Properties = ();
 
     fn view(&self) -> Html {
-        // let selected_node_json = self
-        //     .path
-        //     .back()
-        //     .and_then(|reference| self.lookup(reference))
-        //     .map(|n| n.to_json())
-        //     .unwrap_or("JSON ERROR".to_string());
-        let callback = self.link.callback(|_: String| Msg::Next);
+        let callback = self.link.callback(|v: String| Msg::SetCommand(v));
         let allowed_kinds = self
             .current_field()
             .map(|f| f.type_.prefixes())
@@ -313,13 +307,16 @@ impl Component for Model {
         } else {
             command_line::State::Invalid
         };
+        let onkeypress = self
+            .link
+            .callback(move |e: KeyboardEvent| Msg::CommandKey(e));
         log::info!("allowed kinds: {:?}", allowed_kinds);
         html! {
-            <div>
+            <div onkeydown=onkeypress>
                 <div>{ "LINC" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="grid grid-rows-2">
-                    <CommandLine options=allowed_kinds on_change=callback value="" state=state />
+                    <CommandLine options=allowed_kinds on_change=callback value=self.command.clone() state=state />
                     <div class="wrapper h-40">
                         <div class="column">{ self.view_file(&self.file) }</div>
                         <div class="column">
@@ -411,9 +408,9 @@ impl Component for Model {
                 self.command = v;
             }
             Msg::CommandKey(v) => {
-                log::info!("key: {}", v.code());
+                log::info!("key: {}", v.key());
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
-                match v.code().as_ref() {
+                match v.key().as_ref() {
                     "Enter" => match self.parsed_command.clone() {
                         Some(value) => {
                             if self.is_valid_value(&value) {

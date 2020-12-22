@@ -42,42 +42,8 @@ impl Model {
             // .filter(|a| self.is_valid_action(a))
             .map(|a| self.view_action(a));
 
-        let oninput = self
-            .link
-            .callback(move |e: InputData| Msg::SetCommand(e.value));
-        let onkeypress = self
-            .link
-            .callback(move |e: KeyboardEvent| Msg::CommandKey(e));
-
-        let mut command_class = vec![
-            "focus:border-blue-500",
-            "focus:ring-1",
-            "focus:ring-blue-500",
-            "focus:outline-none",
-            "text-sm",
-            "text-black",
-            "placeholder-gray-500",
-            "border",
-            "border-gray-200",
-            "rounded-md",
-            "py-2",
-            "pl-10",
-        ];
-
-        if self.parsed_command.is_some() {
-            command_class.push("bg-green-500")
-        } else {
-            command_class.push("bg-red-500")
-        }
-
         html! {
             <div>
-                <input
-                class=command_class
-                oninput=oninput
-                onkeydown=onkeypress
-                value=self.command
-                />
                 { for actions }
             </div>
         }
