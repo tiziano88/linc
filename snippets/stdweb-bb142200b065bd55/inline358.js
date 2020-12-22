@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_7cb965bbc8a5c61f8c8098f3b7e9a1b43d9ada2e(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof PointerEvent && o.type === "pointerdown"); }
+export function __cargo_web_snippet_d4e7bbbc593dd4ffbe97c262683c5a8447657985(Module, $0, $1, $2) { $1 = Module.STDWEB_PRIVATE.to_js($1);$2 = Module.STDWEB_PRIVATE.to_js($2);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1)[($2)];})()); }

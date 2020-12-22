@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_dcbfa3eb1cc89d9842b0ad8d9030a57a7cae7124(Module, $0) { return (Module.STDWEB_PRIVATE.acquire_js_reference( $0 ) instanceof Uint8Array) | 0; }
+export function __cargo_web_snippet_a95a260984a0024c756d4da053f167f4259e5997(Module, $0) { return Module.STDWEB_PRIVATE.acquire_rust_reference( new Int32Array( Module.STDWEB_PRIVATE.acquire_js_reference( $0 ) ) ); }

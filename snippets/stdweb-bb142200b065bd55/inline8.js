@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_984f446e838952a43ffa649438b44dd50fde4230(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof ProgressEvent && o.type === "error"); }
+export function __cargo_web_snippet_4236861572d31efbe7251b06fcf945c56c65440d(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).setLineDash(($1)); }

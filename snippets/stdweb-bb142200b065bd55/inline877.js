@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_9933a4d1efd55a34277f16b105b50b6f57078b9b(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof Touch); }
+export function __cargo_web_snippet_652a44a9a9c25aa377162e42c1c0ca2b47b621e6(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).buttons;})()); }

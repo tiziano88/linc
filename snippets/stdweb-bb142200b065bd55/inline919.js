@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_cbd9ab50e213a9a554b2ca9ed651f4cec9549baa(Module, $0) { var r = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (r instanceof DOMException) && (r.name === "NoModificationAllowedError"); }
+export function __cargo_web_snippet_e90ee3bf41e53058c4b72618c94a7b9786eeb4aa(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof EventTarget); }

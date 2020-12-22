@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_7e69871d2f0243bddcb8cffc809fd6fb5fb78697(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).fillStyle=($1); }
+export function __cargo_web_snippet_8c05b3a4f3df91096e8341827ea7a37a15688bbf(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof ArrayBuffer); }

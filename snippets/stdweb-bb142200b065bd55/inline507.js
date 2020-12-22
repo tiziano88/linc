@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_b538449e9abbe26fd385452ed1acf6b55ecb0503(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).deltaZ;})()); }
+export function __cargo_web_snippet_15a04fd372113770bd6cf47cac2d27f2983064d7(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).alt=($1); }

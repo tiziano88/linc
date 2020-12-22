@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_0a02c7764aacc2ed939a149ae98000223d3eebe8(Module, $0) { var r = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (r instanceof DOMException) && (r.name === "InvalidStateError"); }
+export function __cargo_web_snippet_7b0825ae89bed906bbdd29f8ee2ceb22c4fef516(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).width=($1); }

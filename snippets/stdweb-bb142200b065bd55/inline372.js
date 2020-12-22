@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_eb4e0ee799f7a2bd84efd98835189f4474ead247(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof TypeError); }
+export function __cargo_web_snippet_09a1006668a7b267661ed1b3bfe979f57186bad3(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof Event && o.type === "selectionchange"); }

@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_9bff761493c933df4c2d45761b23dd43a2b1d746(Module, $0) { Module.STDWEB_PRIVATE.from_js($0, (function(){return new Image();})()); }
+export function __cargo_web_snippet_14a74d73b9a7245d602e132379ac3f4c7d6e8f17(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).lineDashOffset;})()); }

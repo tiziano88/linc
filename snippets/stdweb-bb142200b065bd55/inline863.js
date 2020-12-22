@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_12b1e0850f065b2aed1a0acbee1fa42be48051e0(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).azimuthAngle;})()); }
+export function __cargo_web_snippet_aa107bbaa79bc4339d28f228d0860c54c276b1b0(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof File); }

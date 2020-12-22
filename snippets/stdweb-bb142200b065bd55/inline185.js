@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_fd40b6c83a03d090c647e47a13c60a8fd7d4034f(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).lineCap=($1); }
+export function __cargo_web_snippet_a0a18da333faeefd8f24d721eecff792e15fe45f(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return Array.from(($1).targetTouches);})()); }

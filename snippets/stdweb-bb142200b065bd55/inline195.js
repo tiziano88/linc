@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_7e69871d2f0243bddcb8cffc809fd6fb5fb78697(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).fillStyle=($1); }
+export function __cargo_web_snippet_e146c8c81e90dc04b98b8fe8ea561e8242d0015e(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof Blob); }

@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_db12d53e9596e9bc7860a8231ec85044629926e7(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof HTMLTextAreaElement); }
+export function __cargo_web_snippet_60e0a6758ca35150f5b32e2508e2ccbb713f85ab(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).crossOrigin;})()); }

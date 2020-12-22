@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_d2799c0b8fe00873f8c1d4832af466b8200b9d14(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof Event && o.type === "popstate"); }
+export function __cargo_web_snippet_7b0825ae89bed906bbdd29f8ee2ceb22c4fef516(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).width=($1); }

@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_5ea46f5fe1497699b50c32ad7888b513c2a97e37(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof PointerEvent && o.type === "pointerleave"); }
+export function __cargo_web_snippet_3709cb4f35051d155438790e2442b511cbe1f8ef(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof Error); }

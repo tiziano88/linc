@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_95eb59797b6305d3fd34e88763387ce35ae70f6c(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).readAsText(($1)); }
+export function __cargo_web_snippet_7acc5a611b1dfdb40f09c005d173515f6f286581(Module, $0) { var r = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (r instanceof DOMException) && (r.name === "NotSupportedError"); }

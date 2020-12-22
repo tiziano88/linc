@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_3c6a01294891795b149ab0de0b0654d90e5844fe(Module, $0) { var r = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (r instanceof DOMException) && (r.name === "AbortError"); }
+export function __cargo_web_snippet_ac51dd761a6eb634458364061fb1a09311312f4c(Module, $0) { Module.STDWEB_PRIVATE.from_js($0, (function(){return new FileReader();})()); }

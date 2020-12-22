@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_d859d3861f7f6f71d24fdd50817b1062b8e4b75f(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).lineWidth=($1); }
+export function __cargo_web_snippet_340bc392953cd602bcea4df98ce51c06cf20791f(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof TouchEvent && o.type === "touchend"); }
