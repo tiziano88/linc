@@ -303,19 +303,22 @@ impl Component for Model {
             .current_field()
             .map(|f| f.type_.prefixes())
             .unwrap_or_default();
+        log::info!("allowed kinds: {:?}", allowed_kinds);
         html! {
             <div>
                 <div>{ "LINC" }</div>
-                <CommandLine options=allowed_kinds on_change=callback />
                 <div>{ self.view_actions() }</div>
-                <div class="wrapper">
-                    <div class="column">{ self.view_file(&self.file) }</div>
-                    <div class="column">
-                        <div>{ display_cursor(&self.cursor) }</div>
-                        <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
+                <div class="grid grid-rows-2">
+                    <CommandLine options=allowed_kinds on_change=callback value="x" />
+                    <div class="wrapper h-40">
+                        <div class="column">{ self.view_file(&self.file) }</div>
+                        <div class="column">
+                            <div>{ display_cursor(&self.cursor) }</div>
+                            <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
+                        </div>
+                        <div class="column">{ self.view_file_json(&self.file) }</div>
                     </div>
-                    <div class="column">{ self.view_file_json(&self.file) }</div>
-               </div>
+                </div>
             </div>
         }
     }
