@@ -160,13 +160,13 @@ impl Model {
         }
     }
 
-    fn view_node_list(&self, references: &[Ref], path: &Path) -> Vec<Html> {
+    fn view_node_list(&self, references: &[Ref], path: &Path) -> (Html, Vec<Html>) {
         let selected = path == &self.cursor;
         let mut classes = vec!["node".to_string()];
         if selected {
             classes.push("selected".to_string());
         }
-        let mut nodes = references
+        let nodes = references
             .iter()
             .enumerate()
             .map(|(i, n)| {
@@ -183,8 +183,7 @@ impl Model {
         let head = html! {
             <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
         };
-        nodes.insert(0, head);
-        nodes
+        (head, nodes)
     }
 
     // fn view_node(&self, reference: &Ref, path: Path, cursor: Option<Path>) -> Html {
@@ -236,7 +235,8 @@ impl Model {
         }
     }
 
-    pub fn view_children(&self, value: &Inner, field_name: &str, path: &Path) -> Vec<Html> {
+    /// Returns the head and children, separately.
+    pub fn view_children(&self, value: &Inner, field_name: &str, path: &Path) -> (Html, Vec<Html>) {
         let path = append(&path, field(field_name));
         // let cursor = sub_cursor(&cursor, field(field_name));
         let empty = vec![];

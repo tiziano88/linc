@@ -45,16 +45,15 @@ pub const RUST_SCHEMA: Schema = Schema {
             }],
             inner: None,
             renderer: |model: &Model, value: &Inner, path: &Path| {
-                let bindings = model
-                    .view_children(&value, "bindings", &path)
-                    .into_iter()
-                    .map(|b| {
-                        html! {
-                            <div>{ b }</div>
-                        }
-                    });
+                let (bindings_head, bindings) = model.view_children(&value, "bindings", &path);
+                let bindings = bindings.into_iter().map(|b| {
+                    html! {
+                        <div>{ b }</div>
+                    }
+                });
                 html! {
                     <div>
+                    { bindings_head }
                     { for bindings }
                     </div>
                 }
@@ -131,23 +130,16 @@ pub const RUST_SCHEMA: Schema = Schema {
             }],
             inner: Some("statements"),
             renderer: |model: &Model, value: &Inner, path: &Path| {
-                let statements = model
-                    .view_children(value, "statements", &path)
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, v)| {
-                        if i == 0 {
-                            v
-                        } else {
-                            html! {
-                                <div class="indent">{ v }{ ";" }</div>
-                            }
-                        }
-                    });
+                let (statements_head, statements) = model.view_children(value, "statements", &path);
+                let statements = statements.into_iter().map(|v| {
+                    html! {
+                        <div class="indent">{ v }{ ";" }</div>
+                    }
+                });
 
                 html! {
                     <span>
-                    { "{" }{ for statements }{ "}" }
+                    { "{" }{ statements_head }{ for statements }{ "}" }
                     </span>
                 }
             },
@@ -171,24 +163,18 @@ pub const RUST_SCHEMA: Schema = Schema {
             inner: Some("expression"),
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let expression = model.view_child(value, "expression", &path);
-                let match_arms = model
-                    .view_children(value, "match_arms", &path)
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, v)| {
-                        if i == 0 {
-                            v
-                        } else {
-                            html! {
-                                <div class="indent">{ v }{ "," }</div>
-                            }
-                        }
-                    });
+                let (match_arms_head, match_arms) = model.view_children(value, "match_arms", &path);
+                let match_arms = match_arms.into_iter().map(|v| {
+                    html! {
+                        <div class="indent">{ v }{ "," }</div>
+                    }
+                });
                 html! {
                     <span>
                         <div>
                             <span class="keyword">{ "match" }</span>{ expression }{ "{" }
                         </div>
+                        { match_arms_head }
                         { for match_arms }
                         <div>
                             { "}" }
@@ -302,21 +288,18 @@ pub const RUST_SCHEMA: Schema = Schema {
             }],
             inner: Some("segments"),
             renderer: |model: &Model, value: &Inner, path: &Path| {
-                let segments = model
-                    .view_children(value, "segments", &path)
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, v)| {
-                        if i == 0 || i == 1 {
-                            v
-                        } else {
-                            html! {
-                                <span>{ "::" }{ v }</span>
-                            }
+                let (segments_head, segments) = model.view_children(value, "segments", &path);
+                let segments = segments.into_iter().enumerate().map(|(i, v)| {
+                    if i == 0 {
+                        v
+                    } else {
+                        html! {
+                            <span>{ "::" }{ v }</span>
                         }
-                    });
+                    }
+                });
                 html! {
-                    <span>{ for segments }</span>
+                    <span>{ segments_head }{ for segments }</span>
                 }
             },
         },
@@ -419,19 +402,16 @@ pub const RUST_SCHEMA: Schema = Schema {
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let comment = model.view_child(&value, "comment", &path);
                 let label = model.view_child(&value, "name", &path);
-                let args = model
-                    .view_children(&value, "arguments", &path)
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, v)| {
-                        if i == 0 || i == 1 {
-                            v
-                        } else {
-                            html! {
-                                <span>{ "," }{ v }</span>
-                            }
+                let (args_head, args) = model.view_children(&value, "arguments", &path);
+                let args = args.into_iter().enumerate().map(|(i, v)| {
+                    if i == 0 {
+                        v
+                    } else {
+                        html! {
+                            <span>{ "," }{ v }</span>
                         }
-                    });
+                    }
+                });
                 let body = model.view_child(&value, "body", &path);
                 let return_type = model.view_child(&value, "return_type", &path);
                 // let async_ = self.view_child(&v, "async", &path);
@@ -441,7 +421,7 @@ pub const RUST_SCHEMA: Schema = Schema {
                     <span>
                         <div>{ "//" }{ comment }</div>
                         // { pub_ }
-                        <div><span class="keyword">{ "fn" }</span>{ label }{ "(" }{ for args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
+                        <div><span class="keyword">{ "fn" }</span>{ label }{ "(" }{ args_head }{ for args }{ ")" }{ "->" }{ return_type }{ "{" }</div>
                         <div class="indent">{ body }</div>{ "}" }
                     </span>
                 }
@@ -552,23 +532,20 @@ pub const RUST_SCHEMA: Schema = Schema {
                 // .and_then(|n| n.label())
                 // .map(|l| l.name.clone())
                 // .unwrap_or("<UNKNOWN>".to_string());
-                let args = model
-                    .view_children(value, "arguments", path)
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, v)| {
-                        if i == 0 || i == 1 {
-                            v
-                        } else {
-                            html! {
-                                <span>{ "," }{ v }</span>
-                            }
+                let (args_head, args) = model.view_children(value, "arguments", path);
+                let args = args.into_iter().enumerate().map(|(i, v)| {
+                    if i == 0 {
+                        v
+                    } else {
+                        html! {
+                            <span>{ "," }{ v }</span>
                         }
-                    });
+                    }
+                });
                 html! {
                     <span>
                     { function }
-                    { "(" }{ for args }{ ")" }
+                    { "(" }{ args_head }{ for args }{ ")" }
                     </span>
                 }
             },
@@ -592,19 +569,17 @@ pub const RUST_SCHEMA: Schema = Schema {
             inner: None,
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let label = model.view_child(value, "name", &path);
-                let fields = model
-                    .view_children(value, "fields", &path)
-                    .into_iter()
-                    .map(|v| {
-                        html! {
-                            <div class="indent">{ v }{ "," }</div>
-                        }
-                    });
+                let (fields_head, fields) = model.view_children(value, "fields", &path);
+                let fields = fields.into_iter().map(|v| {
+                    html! {
+                        <div class="indent">{ v }{ "," }</div>
+                    }
+                });
 
                 html! {
                     <span>
                     <span class="keyword">{ "struct" }</span>{ label }
-                    { "{" }{ for fields }{ "}" }
+                    { "{" }{ fields_head }{ for fields }{ "}" }
                     </span>
                 }
             },
@@ -655,19 +630,17 @@ pub const RUST_SCHEMA: Schema = Schema {
             inner: None,
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let label = model.view_child(value, "name", &path);
-                let variants = model
-                    .view_children(value, "variants", &path)
-                    .into_iter()
-                    .map(|v| {
-                        html! {
-                            <div class="indent">{ v }{ "," }</div>
-                        }
-                    });
+                let (variants_head, variants) = model.view_children(value, "variants", &path);
+                let variants = variants.into_iter().map(|v| {
+                    html! {
+                        <div class="indent">{ v }{ "," }</div>
+                    }
+                });
 
                 html! {
                     <span>
                     <span class="keyword">{ "enum" }</span>{ label }
-                    { "{" }{ for variants }{ "}" }
+                    { "{" }{ variants_head }{ for variants }{ "}" }
                     </span>
                 }
             },
@@ -688,16 +661,15 @@ pub const RUST_SCHEMA: Schema = Schema {
             }],
             inner: Some("paragraphs"),
             renderer: |model: &Model, value: &Inner, path: &Path| {
-                let items = model
-                    .view_children(value, "items", &path)
-                    .into_iter()
-                    .map(|v| {
-                        html! {
-                            <div>{ v }</div>
-                        }
-                    });
+                let (items_head, items) = model.view_children(value, "items", &path);
+                let items = items.into_iter().map(|v| {
+                    html! {
+                        <div>{ v }</div>
+                    }
+                });
                 html! {
                     <span>
+                    { items_head }
                     { for items }
                     </span>
                 }
@@ -740,16 +712,15 @@ pub const RUST_SCHEMA: Schema = Schema {
             }],
             inner: Some("items"),
             renderer: |model: &Model, value: &Inner, path: &Path| {
-                let items = model
-                    .view_children(value, "items", &path)
-                    .into_iter()
-                    .map(|v| {
-                        html! {
-                            <li>{ v }</li>
-                        }
-                    });
+                let (items_head, items) = model.view_children(value, "items", &path);
+                let items = items.into_iter().map(|v| {
+                    html! {
+                        <li>{ v }</li>
+                    }
+                });
                 html! {
                     <span>
+                        { items_head }
                         <ul>
                             { for items }
                         </ul>
