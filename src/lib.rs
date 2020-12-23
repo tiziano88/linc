@@ -2,9 +2,7 @@
 
 use types::Model;
 use wasm_bindgen::prelude::*;
-use yew::prelude::*;
 
-mod command_line;
 mod initial;
 mod schema;
 mod types;

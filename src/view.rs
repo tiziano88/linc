@@ -57,7 +57,7 @@ impl Model {
                     Value::Inner(v) => SCHEMA
                         .kinds
                         .iter()
-                        .find(|k| k.name == v.kind)
+                        .find(|k| k.name == parent.kind)
                         .unwrap()
                         .fields
                         .iter()
@@ -67,12 +67,6 @@ impl Model {
             }
             None => None,
         }
-    }
-
-    pub fn is_valid_value(&self, new_value: &Value) -> bool {
-        self.current_field()
-            .map(|field| field.type_.valid(new_value) && (field.validator)(new_value))
-            .unwrap_or(false)
     }
 
     fn view_action(&self, action: &Action) -> Html {
@@ -114,7 +108,7 @@ impl Model {
             Some(node) => match &node.value {
                 Value::Inner(v) => {
                     let mut paths = vec![];
-                    for field in Model::traverse_fields(v.kind.as_ref()) {
+                    for field in Model::traverse_fields(node.kind.as_ref()) {
                         match field.multiplicity {
                             // If repeated field, stay on the parent.
                             Multiplicity::Repeated => {
@@ -203,7 +197,7 @@ impl Model {
             }
         } else {
             match self.lookup(reference) {
-                Some(node) => self.view_value(&node.value, &path),
+                Some(node) => self.view_value(&node, &path),
                 None => {
                     html! {
                         <span>{ format!("invalid: {}", reference) }</span>
@@ -244,30 +238,15 @@ impl Model {
         self.view_node_list(&children, &path)
     }
 
-    fn view_value(&self, value: &Value, path: &Path) -> Html {
-        match value {
-            Value::Hole => {
-                html! { <span>{ "◆" }</span> }
-            }
-            Value::Bool(v) => {
-                let v = if *v { "true" } else { "false" };
-                html! { <span>{ v }</span> }
-            }
-            Value::Int(v) => {
-                let v = format!("{}", v);
-                html! { <span>{ v }</span> }
-            }
-            Value::Float(v) => {
-                let v = format!("{}", v);
-                html! { <span>{ v }</span> }
-            }
-            Value::String(v) => {
-                html! { <span>{ v }</span> }
-            }
-            Value::Inner(v) => match SCHEMA.kinds.iter().find(|k| k.name == v.kind) {
-                Some(kind) => (kind.renderer)(self, v, path),
-                None => html! { <span>{ v.kind.clone() }</span> },
+    fn view_value(&self, node: &Node, path: &Path) -> Html {
+        match &node.value {
+            Value::Inner(v) => match SCHEMA.kinds.iter().find(|k| k.name == node.kind) {
+                Some(kind) => (kind.renderer)(self, &v, path),
+                None => html! { <span>{ node.kind.clone() }</span> },
             },
+            Value::Leaf(v) => {
+                html! { <span>{ v }</span> }
+            }
         }
     }
 }

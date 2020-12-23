@@ -1,7 +1,4 @@
-use crate::{
-    command_line::{self, CommandLine},
-    schema::SCHEMA,
-};
+use crate::schema::SCHEMA;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
@@ -44,9 +41,12 @@ pub struct Model {
     pub file: File,
     pub store: StorageService,
     pub cursor: Path,
+
     pub link: ComponentLink<Self>,
-    pub command: String,
-    pub parsed_command: Option<Value>,
+
+    pub raw_command: String,
+    pub parsed_commands: Vec<Node>,
+    pub selected_command_index: usize,
 }
 
 impl Model {
@@ -89,42 +89,57 @@ impl Model {
         self.lookup_path(&self.file.root, self.cursor.clone())
     }
 
-    fn parse_command(&mut self, command: &str) -> Option<Value> {
-        let mut value = match command {
-            "false" => Some(Value::Bool(false)),
-            "true" => Some(Value::Bool(true)),
-            _ => {
-                if let Some(v) = command.strip_prefix('"') {
-                    Some(Value::String(v.to_string()))
-                } else if let Ok(v) = command.parse::<i32>() {
-                    Some(Value::Int(v))
-                } else if let Some(_) = SCHEMA.kinds.iter().find(|k| k.name == command) {
-                    Some(Value::Inner(Inner {
-                        kind: command.to_string(),
-                        children: HashMap::new(),
-                    }))
-                } else {
-                    None
-                }
-            }
-        };
-        if let Some(Value::Inner(ref mut inner)) = value {
-            let kind = SCHEMA.kinds.iter().find(|k| k.name == inner.kind).unwrap();
-            if let Some(inner_field) = kind.inner {
-                if let Some(reference) = self.current_ref() {
-                    inner
-                        .children
-                        .entry(inner_field.to_string())
-                        .or_default()
-                        .push(reference);
-                }
-            }
-        }
-        if let Some(v) = &value {
-            let valid = self.is_valid_value(v);
-            log::info!("valid: {:?}", valid);
-        }
-        value
+    fn parse_commands(&mut self) -> Vec<Node> {
+        self.current_field()
+            .map(|field| {
+                field
+                    .kind
+                    .iter()
+                    .filter_map(|kind| SCHEMA.kinds.iter().find(|k| &k.name == kind))
+                    .filter_map(|kind| {
+                        (kind.parser)(&self.raw_command).map(|value| Node {
+                            kind: kind.name.to_string(),
+                            value,
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+        // let mut value = match command {
+        //     "false" => Some(Value::Bool(false)),
+        //     "true" => Some(Value::Bool(true)),
+        //     _ => {
+        //         if let Some(v) = command.strip_prefix('"') {
+        //             Some(Value::String(v.to_string()))
+        //         } else if let Ok(v) = command.parse::<i32>() {
+        //             Some(Value::Int(v))
+        //         } else if let Some(_) = SCHEMA.kinds.iter().find(|k| k.name == command) {
+        //             Some(Value::Inner(Inner {
+        //                 kind: command.to_string(),
+        //                 children: HashMap::new(),
+        //             }))
+        //         } else {
+        //             None
+        //         }
+        //     }
+        // };
+        // if let Some(Value::Inner(ref mut inner)) = value {
+        //     let kind = SCHEMA.kinds.iter().find(|k| k.name == inner.kind).unwrap();
+        //     if let Some(inner_field) = kind.inner {
+        //         if let Some(reference) = self.current_ref() {
+        //             inner
+        //                 .children
+        //                 .entry(inner_field.to_string())
+        //                 .or_default()
+        //                 .push(reference);
+        //         }
+        //     }
+        // }
+        // if let Some(v) = &value {
+        //     let valid = self.is_valid_value(v);
+        //     log::info!("valid: {:?}", valid);
+        // }
+        // value
     }
 
     fn prev(&mut self) {
@@ -133,8 +148,10 @@ impl Model {
         let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
         log::info!("current: {:?}", current_path_index);
         if let Some(current_path_index) = current_path_index {
-            if let Some(path) = flattened_paths.get(current_path_index - 1) {
-                self.cursor = path.clone();
+            if current_path_index > 0 {
+                if let Some(path) = flattened_paths.get(current_path_index - 1) {
+                    self.cursor = path.clone();
+                }
             }
         }
     }
@@ -155,8 +172,8 @@ impl Model {
         }
     }
 
-    fn set_value(&mut self, v: Value) {
-        let new_ref = self.file.add_node(v);
+    fn set_value(&mut self, node: Node) {
+        let new_ref = self.file.add_node(node);
 
         let selector = self.cursor.back().unwrap().clone();
         let parent_ref = self.parent_ref().unwrap();
@@ -198,64 +215,49 @@ pub enum Msg {
     DeleteItem,
 
     SetCommand(String),
+    ReplaceCurrentNode(Node),
     CommandKey(KeyboardEvent),
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct File {
-    pub nodes: Vec<Node>,
+    pub nodes: HashMap<Ref, Node>,
     pub root: Ref,
 }
 
 impl File {
     pub fn lookup(&self, reference: &Ref) -> Option<&Node> {
-        self.nodes
-            .iter()
-            .filter(|v| v.reference == *reference)
-            .next()
+        self.nodes.get(reference)
     }
 
     fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
-        self.nodes
-            .iter_mut()
-            .filter(|v| v.reference == *reference)
-            .next()
+        self.nodes.get_mut(reference)
     }
 
-    fn add_node(&mut self, value: Value) -> Ref {
+    fn add_node(&mut self, node: Node) -> Ref {
         let reference = new_ref();
-        let node = Node {
-            reference: reference.clone(),
-            value: value,
-        };
-        self.nodes.push(node);
+        self.nodes.insert(reference.clone(), node);
         reference
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Node {
-    pub reference: Ref,
+    // pub reference: Ref,
+    pub kind: String,
     pub value: Value,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub enum Value {
-    Hole,
-
-    Bool(bool),
-    Int(i32),
-    Float(f32),
-    String(String),
-
-    Inner(Inner),
 }
 
 // TODO: Navigate to children directly, but use :var to navigate to variables, otherwise skip them
 // when navigating.
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum Value {
+    Leaf(String),
+    Inner(Inner),
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct Inner {
-    pub kind: String,
     pub children: HashMap<String, Vec<Ref>>,
 }
 
@@ -280,7 +282,7 @@ fn display_cursor(cursor: &Path) -> Html {
     let segments = cursor
         .iter()
         .flat_map(|s| display_selector(s))
-        .intersperse(html! { <span>{ ">"}</span>});
+        .intersperse(html! { <span>{ ">" }</span>});
     html! {
         <div>{ for segments }</div>
     }
@@ -292,27 +294,37 @@ impl Component for Model {
 
     fn view(&self) -> Html {
         let callback = self.link.callback(|v: String| Msg::SetCommand(v));
-        let allowed_kinds = self
-            .current_field()
-            .map(|f| f.type_.prefixes())
-            .unwrap_or_default();
-        let state = if self.command.is_empty() {
-            command_line::State::Empty
-        } else if self.parsed_command.is_some() {
-            command_line::State::Valid
-        } else {
-            command_line::State::Invalid
-        };
         let onkeypress = self
             .link
             .callback(move |e: KeyboardEvent| Msg::CommandKey(e));
-        log::info!("allowed kinds: {:?}", allowed_kinds);
+        let oninput = self
+            .link
+            .callback(move |e: InputData| Msg::SetCommand(e.value));
+        let values = self.parsed_commands.iter().enumerate().map(|(i, v)| {
+            let s = v.clone();
+            // let callback = self.link.callback(move |_| Msg::ReplaceCurrentNode(v));
+            let mut classes = vec!["border", "border-solid", "border-blue-500"];
+            if self.selected_command_index == i {
+                classes.push("bg-yellow-500");
+            }
+            html! {
+                <div
+                //   onclick=callback
+                // XXX
+                  class=classes.join(" ")>{ v.kind.clone() }
+                </div>
+            }
+        });
         html! {
             <div onkeydown=onkeypress>
                 <div>{ "LINC" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="grid grid-rows-2">
-                    <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
+                    // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
+                    <div class="wrapper h-40">
+                        <input oninput=oninput value=self.raw_command />
+                        { for values }
+                    </div>
                     <div class="wrapper h-40">
                         <div class="column">{ self.view_file(&self.file) }</div>
                         <div class="column">
@@ -329,8 +341,9 @@ impl Component for Model {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         Model {
             store: StorageService::new(Area::Local).expect("could not create storage service"),
-            command: "".to_string(),
-            parsed_command: None,
+            raw_command: "".to_string(),
+            parsed_commands: vec![],
+            selected_command_index: 0,
             file: super::initial::initial(),
             cursor: VecDeque::new(),
             link,
@@ -346,18 +359,22 @@ impl Component for Model {
         match msg {
             Msg::Select(path) => {
                 self.cursor = path;
+                self.parsed_commands = self.parse_commands();
             }
 
             // TODO: sibling vs inner
             Msg::Prev => {
                 self.prev();
+                self.parsed_commands = self.parse_commands();
             }
             // Preorder tree traversal.
             Msg::Next => {
                 self.next();
+                self.parsed_commands = self.parse_commands();
             }
             Msg::Parent => {
                 self.cursor.pop_back();
+                self.parsed_commands = self.parse_commands();
             }
             Msg::Store => {
                 self.store.store(KEY, yew::format::Json(&self.file));
@@ -367,11 +384,18 @@ impl Component for Model {
                     self.file = file;
                 }
             }
+            Msg::ReplaceCurrentNode(n) => {
+                self.file.nodes.insert(self.current_ref().unwrap(), n);
+                self.parsed_commands = self.parse_commands();
+            }
             Msg::AddItem => {
                 let selector = self.cursor.back().unwrap().clone();
                 let parent_ref = self.parent_ref().unwrap();
+                let new_ref = self.file.add_node(Node {
+                    kind: "invalid".to_string(),
+                    value: Value::Leaf("invalid".to_string()),
+                });
                 let parent = self.lookup_mut(&parent_ref).unwrap();
-                let new_ref = INVALID_REF.to_string();
                 match &mut parent.value {
                     Value::Inner(ref mut inner) => {
                         log::info!("inner");
@@ -400,38 +424,52 @@ impl Component for Model {
                 }
             }
             Msg::SetCommand(v) => {
-                self.parsed_command = self.parse_command(&v);
-                self.command = v;
+                self.raw_command = v;
+                self.parsed_commands = self.parse_commands();
             }
             Msg::CommandKey(v) => {
                 log::info!("key: {}", v.key());
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match v.key().as_ref() {
-                    "Enter" => match self.parsed_command.clone() {
-                        Some(value) => {
-                            if self.is_valid_value(&value) {
-                                self.set_value(value);
-                                self.parsed_command = None;
-                                self.command = "".to_string();
-                                self.next();
-                            } else {
-                                log::error!("invalid value: {:?}", value);
-                            }
+                    "Enter" => match self
+                        .parsed_commands
+                        .get(self.selected_command_index)
+                        .clone()
+                    {
+                        Some(node) => {
+                            // Replace current node.
+                            self.file
+                                .nodes
+                                .insert(self.current_ref().unwrap(), node.clone());
+                            self.next();
+                            self.raw_command = "".to_string();
+                            self.parsed_commands = self.parse_commands();
                         }
-                        None => log::info!("invalid command: {}", self.command),
+                        None => log::info!("invalid command"),
                     },
                     "Escape" => {
-                        self.parsed_command = None;
-                        self.command = "".to_string();
+                        self.raw_command = "".to_string();
+                        self.parsed_commands = self.parse_commands();
                     }
-                    "ArrowRight" if self.command.is_empty() => {
+                    "ArrowUp" => {
+                        if self.selected_command_index > 0 {
+                            self.selected_command_index -= 1;
+                        }
+                    }
+                    "ArrowDown" => {
+                        if self.selected_command_index < (self.parsed_commands.len() - 1) {
+                            self.selected_command_index += 1;
+                        }
+                    }
+                    "ArrowRight" if self.raw_command.is_empty() => {
                         self.next();
                     }
-                    "ArrowLeft" if self.command.is_empty() => {
+                    "ArrowLeft" if self.raw_command.is_empty() => {
                         self.prev();
                     }
                     _ => {}
                 }
+                self.parsed_commands = self.parse_commands();
             }
         };
         true

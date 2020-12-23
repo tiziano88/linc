@@ -3,34 +3,26 @@ use itertools::Itertools;
 use yew::{html, Html};
 
 // https://doc.rust-lang.org/stable/reference/expressions.html
-const RUST_EXPRESSION: Type = Type::Any(&[
-    Type::Bool,
-    Type::Int,
-    Type::Inner("field_access"),
-    Type::Inner("function_call"),
-    Type::Inner("if"),
-    Type::Inner("match"),
-    Type::Inner("operator"),
-    Type::Inner("string"),
-]);
+const RUST_EXPRESSION: &[&str] = &[
+    "field_access",
+    "function_call",
+    "if",
+    "match",
+    "operator",
+    "string_literal",
+];
 
 // https://doc.rust-lang.org/stable/reference/items.html
-const RUST_ITEM: Type = Type::Any(&[
-    Type::Inner("constant"),
-    Type::Inner("enum"),
-    Type::Inner("function_definition"),
-    Type::Inner("struct"),
-]);
+const RUST_ITEM: &[&str] = &["constant", "enum", "function_definition", "struct"];
 
 // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
-const RUST_TYPE: Type = Type::Any(&[
-    Type::String,
-    Type::Inner("array_type"),
-    Type::Inner("reference_type"),
-    Type::Inner("simple_path"),
-    Type::Inner("slice_type"),
-    Type::Inner("tuple_type"),
-]);
+const RUST_TYPE: &[&str] = &[
+    "array_type",
+    "reference_type",
+    "simple_path",
+    "slice_type",
+    "tuple_type",
+];
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
 //the kind field of Inner, and we then try to parse each element with all of them until one
@@ -44,11 +36,17 @@ pub const SCHEMA: Schema = Schema {
             name: "document",
             fields: &[Field {
                 name: "items",
-                type_: RUST_ITEM,
+                kind: RUST_ITEM,
                 multiplicity: Multiplicity::Repeated,
-                validator: whatever,
             }],
             inner: None,
+            parser: |v: &str| {
+                if "document".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let (items_head, items) = model.view_children(&value, "items", &path);
                 let items = items.into_iter().map(|b| {
@@ -68,11 +66,17 @@ pub const SCHEMA: Schema = Schema {
             name: "tuple_type",
             fields: &[Field {
                 name: "components",
-                type_: RUST_TYPE,
+                kind: RUST_TYPE,
                 multiplicity: Multiplicity::Repeated,
-                validator: whatever,
             }],
             inner: Some("components"),
+            parser: |v: &str| {
+                if "tuple_type".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
         },
         Kind {
@@ -80,24 +84,29 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "type",
-                    type_: RUST_TYPE,
+                    kind: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "mutable",
-                    type_: Type::Bool,
+                    kind: &["bool"],
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "lifetime",
-                    type_: Type::Star,
+                    // XXX
+                    kind: &["bool"],
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: None,
+            parser: |v: &str| {
+                if "reference_type".starts_with(v) || "&".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let type_ = model.view_child(value, "type", &path);
                 html! {
@@ -112,24 +121,28 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "identifier",
-                    type_: Type::String,
+                    kind: &["identifier"],
                     multiplicity: Multiplicity::Single,
-                    validator: identifier,
                 },
                 Field {
                     name: "type",
-                    type_: RUST_TYPE,
+                    kind: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "expression",
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: Some("statements"),
+            parser: |v: &str| {
+                if "const".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let identifier = model.view_child(value, "identifier", &path);
                 let type_ = model.view_child(value, "type", &path);
@@ -145,11 +158,17 @@ pub const SCHEMA: Schema = Schema {
             name: "block",
             fields: &[Field {
                 name: "statements",
-                type_: Type::Star,
+                kind: RUST_EXPRESSION,
                 multiplicity: Multiplicity::Repeated,
-                validator: whatever,
             }],
             inner: Some("statements"),
+            parser: |v: &str| {
+                if "block".starts_with(v) || "{".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let (statements_head, statements) = model.view_children(value, "statements", &path);
                 let statements = statements.into_iter().map(|v| {
@@ -170,18 +189,24 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "expression",
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "match_arms",
-                    type_: RUST_EXPRESSION,
+                    // XXX
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: Some("expression"),
+            parser: |v: &str| {
+                if "match".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let expression = model.view_child(value, "expression", &path);
                 let (match_arms_head, match_arms) = model.view_children(value, "match_arms", &path);
@@ -209,24 +234,28 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "condition", // Expression
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "true_body", // Expression
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "false_body", // Expression
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: Some("true_body"),
+            parser: |v: &str| {
+                if "if".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let condition = model.view_child(value, "condition", &path);
                 let true_body = model.view_child(value, "true_body", &path);
@@ -253,14 +282,10 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "string",
-            fields: &[Field {
-                name: "value",
-                type_: Type::String,
-                multiplicity: Multiplicity::Single,
-                validator: whatever,
-            }],
-            inner: Some("value"),
+            name: "string_literal",
+            fields: &[],
+            inner: None,
+            parser: |v: &str| Some(Value::Leaf(v.to_string())),
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let value = model.view_child(value, "value", &path);
                 html! {
@@ -275,18 +300,23 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "object",
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "field",
-                    type_: Type::String,
+                    kind: &["identifier"],
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: Some("object"),
+            parser: |v: &str| {
+                if "field_access".starts_with(v) || ".".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let object = model.view_child(value, "object", &path);
                 let field = model.view_child(value, "field", &path);
@@ -303,11 +333,17 @@ pub const SCHEMA: Schema = Schema {
             name: "simple_path",
             fields: &[Field {
                 name: "segments",
-                type_: Type::Star,
+                kind: &["identifier"],
                 multiplicity: Multiplicity::Repeated,
-                validator: whatever,
             }],
             inner: Some("segments"),
+            parser: |v: &str| {
+                if "simple_path".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let (segments_head, segments) = model.view_children(value, "segments", &path);
                 let segments = segments.into_iter().intersperse(html! {{ "::" }});
@@ -317,9 +353,33 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
+            name: "identifier",
+            fields: &[],
+            inner: None,
+            parser: |v: &str| {
+                if v.contains(' ') {
+                    None
+                } else {
+                    Some(Value::Leaf(v.to_string()))
+                }
+            },
+            renderer: |model: &Model, value: &Inner, path: &Path| {
+                html! {
+                    <span class="keyword">{ "crate" }</span>
+                }
+            },
+        },
+        Kind {
             name: "crate",
             fields: &[],
             inner: None,
+            parser: |v: &str| {
+                if "crate".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 html! {
                     <span class="keyword">{ "crate" }</span>
@@ -331,24 +391,29 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "operator",
-                    type_: Type::String,
+                    // XXX
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: operator,
                 },
                 Field {
                     name: "left",
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "right",
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: Some("left"),
+            parser: |v: &str| {
+                if "binary_operator".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let operator = model.view_child(value, "operator", &path);
                 let left = model.view_child(value, "left", &path);
@@ -382,36 +447,38 @@ pub const SCHEMA: Schema = Schema {
                 */
                 Field {
                     name: "comment",
-                    type_: Type::Inner("markdown_document"),
+                    kind: &["markdown_document"],
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "identifier",
-                    type_: Type::String,
+                    kind: &["identifier"],
                     multiplicity: Multiplicity::Single,
-                    validator: identifier,
                 },
                 Field {
                     name: "parameters",
-                    type_: Type::Inner("function_parameter"),
+                    kind: &["function_parameter"],
                     multiplicity: Multiplicity::Repeated,
-                    validator: whatever,
                 },
                 Field {
-                    name: "return_type", // Type
-                    type_: RUST_TYPE,
+                    name: "return_type",
+                    kind: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
-                    name: "body", // Expression
-                    type_: RUST_EXPRESSION,
+                    name: "body",
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: None,
+            parser: |v: &str| {
+                if "function_definition".starts_with(v) || "fn".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let comment = model.view_child(&value, "comment", &path);
                 let identifier = model.view_child(&value, "identifier", &path);
@@ -443,18 +510,23 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "pattern",
-                    type_: Type::String,
+                    kind: &["identifier"],
                     multiplicity: Multiplicity::Single,
-                    validator: identifier,
                 },
                 Field {
                     name: "type",
-                    type_: RUST_TYPE,
+                    kind: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: None,
+            parser: |v: &str| {
+                if "function_parameter".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let pattern = model.view_child(&value, "pattern", &path);
                 let type_ = model.view_child(&value, "type", &path);
@@ -465,60 +537,35 @@ pub const SCHEMA: Schema = Schema {
                 }
             },
         },
-        Kind {
-            name: "pattern",
-            fields: &[
-                Field {
-                    name: "name",
-                    type_: Type::String,
-                    multiplicity: Multiplicity::Single,
-                    validator: identifier,
-                },
-                Field {
-                    name: "type", // Type
-                    type_: RUST_TYPE,
-                    multiplicity: Multiplicity::Single,
-                    validator: whatever,
-                },
-            ],
-            inner: None,
-            renderer: |model: &Model, value: &Inner, path: &Path| {
-                let name = model.lookup(&value.children["name"][0]).unwrap();
-                let name = match &name.value {
-                    Value::String(v) => v.clone(),
-                    _ => "error".to_string(),
-                };
-                html! {
-                    <span>
-                    { name }
-                    </span>
-                }
-            },
-        },
         // https://doc.rust-lang.org/nightly/reference/statements.html#let-statements
         Kind {
-            name: "binding",
+            name: "let",
             fields: &[
                 Field {
-                    name: "name",
-                    type_: Type::String,
+                    name: "pattern",
+                    // XXX
+                    kind: &["pattern"],
                     multiplicity: Multiplicity::Single,
-                    validator: identifier,
                 },
                 Field {
-                    name: "type", // Type
-                    type_: RUST_TYPE,
+                    name: "type",
+                    kind: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "value", // Expression
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: Some("value"),
+            parser: |v: &str| {
+                if "let".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let name = model.view_child(value, "name", &path);
                 let value = model.view_child(value, "value", &path);
@@ -528,42 +575,27 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "type",
-            fields: &[
-                Field {
-                    name: "name",
-                    type_: Type::String,
-                    multiplicity: Multiplicity::Single,
-                    validator: whatever,
-                },
-                // Generic type parameters.
-                Field {
-                    name: "arguments",
-                    type_: Type::Star,
-                    multiplicity: Multiplicity::Repeated,
-                    validator: whatever,
-                },
-            ],
-            inner: None,
-            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
-        },
-        Kind {
             name: "function_call",
             fields: &[
                 Field {
                     name: "expression",
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "arguments",
-                    type_: RUST_EXPRESSION,
+                    kind: RUST_EXPRESSION,
                     multiplicity: Multiplicity::Repeated,
-                    validator: whatever,
                 },
             ],
             inner: Some("expression"),
+            parser: |v: &str| {
+                if "function_call".starts_with(v) || "(".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let expression = model.view_child(value, "expression", path);
                 let (args_head, args) = model.view_children(value, "arguments", path);
@@ -581,18 +613,23 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "name",
-                    type_: Type::String,
+                    kind: &["identifier"],
                     multiplicity: Multiplicity::Single,
-                    validator: identifier,
                 },
                 Field {
                     name: "fields",
-                    type_: Type::Inner("struct_field"),
+                    kind: &["struct_field"],
                     multiplicity: Multiplicity::Repeated,
-                    validator: whatever,
                 },
             ],
             inner: None,
+            parser: |v: &str| {
+                if "struct".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let label = model.view_child(value, "name", &path);
                 let (fields_head, fields) = model.view_children(value, "fields", &path);
@@ -615,18 +652,23 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "name",
-                    type_: Type::String,
+                    kind: &["identifier"],
                     multiplicity: Multiplicity::Single,
-                    validator: identifier,
                 },
                 Field {
                     name: "type", // Type
-                    type_: RUST_TYPE,
+                    kind: RUST_TYPE,
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: None,
+            parser: |v: &str| {
+                if "struct_field".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let name = model.view_child(value, "name", &path);
                 let type_ = model.view_child(value, "type", &path);
@@ -642,18 +684,23 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "name",
-                    type_: Type::String,
+                    kind: &["identifier"],
                     multiplicity: Multiplicity::Single,
-                    validator: identifier,
                 },
                 Field {
                     name: "variants",
-                    type_: Type::Inner("enum_variant"),
+                    kind: &["enum_variant"],
                     multiplicity: Multiplicity::Repeated,
-                    validator: whatever,
                 },
             ],
             inner: None,
+            parser: |v: &str| {
+                if "enum_variant".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let label = model.view_child(value, "name", &path);
                 let (variants_head, variants) = model.view_children(value, "variants", &path);
@@ -675,17 +722,23 @@ pub const SCHEMA: Schema = Schema {
             name: "markdown_document",
             fields: &[Field {
                 name: "items",
-                type_: Type::Any(&[
-                    Type::String,
-                    Type::Inner("markdown_heading"),
-                    Type::Inner("markdown_code"),
-                    Type::Inner("markdown_quote"),
-                    Type::Inner("markdown_list"),
-                ]),
+                kind: &[
+                    "markdown_paragraph",
+                    "markdown_heading",
+                    "markdown_code",
+                    "markdown_quote",
+                    "markdown_list",
+                ],
                 multiplicity: Multiplicity::Repeated,
-                validator: whatever,
             }],
-            inner: Some("paragraphs"),
+            inner: Some("items"),
+            parser: |v: &str| {
+                if "markdown_document".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let (items_head, items) = model.view_children(value, "items", &path);
                 let items = items.into_iter().map(|v| {
@@ -706,18 +759,25 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "level",
-                    type_: Type::Int,
+                    // XXX
+                    kind: &[],
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
                 Field {
                     name: "text",
-                    type_: Type::String,
+                    // XXX
+                    kind: &["identifier"],
                     multiplicity: Multiplicity::Single,
-                    validator: whatever,
                 },
             ],
             inner: Some("text"),
+            parser: |v: &str| {
+                if "markdown_heading".starts_with(v) || "#".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let level = model.view_child(value, "level", &path);
                 let text = model.view_child(value, "text", &path);
@@ -732,11 +792,17 @@ pub const SCHEMA: Schema = Schema {
             name: "markdown_list",
             fields: &[Field {
                 name: "items",
-                type_: Type::Inner("markdown_paragraph"),
+                kind: &["markdown_paragraph"],
                 multiplicity: Multiplicity::Repeated,
-                validator: whatever,
             }],
             inner: Some("items"),
+            parser: |v: &str| {
+                if "markdown_list".starts_with(v) || "-".starts_with(v) {
+                    Some(Value::Inner(Inner::default()))
+                } else {
+                    None
+                }
+            },
             renderer: |model: &Model, value: &Inner, path: &Path| {
                 let (items_head, items) = model.view_children(value, "items", &path);
                 let items = items.into_iter().map(|v| {
@@ -757,26 +823,8 @@ pub const SCHEMA: Schema = Schema {
     ],
 };
 
-type Validator = fn(&Value) -> bool;
+type Parser = fn(&str) -> Option<Value>;
 type Renderer = fn(&Model, &Inner, &Path) -> Html;
-
-fn whatever(_: &Value) -> bool {
-    true
-}
-
-fn identifier(v: &Value) -> bool {
-    match v {
-        Value::String(v) => !v.contains(' '),
-        _ => false,
-    }
-}
-
-fn operator(v: &Value) -> bool {
-    match v {
-        Value::String(v) => v == "==",
-        _ => false,
-    }
-}
 
 pub struct Schema {
     pub kinds: &'static [Kind],
@@ -787,49 +835,14 @@ pub struct Kind {
     pub fields: &'static [Field],
     pub inner: Option<&'static str>,
     pub renderer: Renderer,
+    pub parser: Parser,
     // pub aliases: &'static [&'static str],
 }
 
 pub struct Field {
     pub name: &'static str,
-    pub type_: Type,
+    pub kind: &'static [&'static str],
     pub multiplicity: Multiplicity,
-    pub validator: Validator,
-}
-
-#[derive(Debug)]
-pub enum Type {
-    Star,
-    Bool,
-    String,
-    Int,
-    Inner(&'static str),
-    Any(&'static [Type]), // Choice between other types.
-}
-
-impl Type {
-    pub fn valid(&self, value: &Value) -> bool {
-        match (self, value) {
-            (Type::Star, _) => true,
-            (Type::Bool, Value::Bool(_)) => true,
-            (Type::Int, Value::Int(_)) => true,
-            (Type::String, Value::String(_)) => true,
-            (Type::Inner(k), Value::Inner(v)) => k == &v.kind,
-            (Type::Any(k), _) => k.iter().any(|t| t.valid(value)),
-            _ => false,
-        }
-    }
-
-    pub fn prefixes(&self) -> Vec<String> {
-        match self {
-            Type::Star => vec![],
-            Type::Bool => vec!["true".to_string(), "false".to_string()],
-            Type::String => vec!["\"".to_string()],
-            Type::Int => vec![],
-            Type::Inner(v) => vec![v.to_string()],
-            Type::Any(vv) => vv.iter().flat_map(|v| v.prefixes()).collect(),
-        }
-    }
 }
 
 pub enum Multiplicity {

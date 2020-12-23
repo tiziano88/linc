@@ -1,27 +1,16 @@
 use yew::prelude::*;
 
-pub struct CommandLine {
-    props: Props,
+pub struct CommandLine<T: Clone + 'static> {
+    props: Props<T>,
     link: ComponentLink<Self>,
-    selected: Option<usize>,
-    filtered_values: Vec<String>,
-    original_value: String,
-    displayed_value: String,
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum State {
-    Empty,
-    Invalid,
-    Valid,
+    selected_index: usize,
 }
 
 #[derive(PartialEq, Clone, Properties, Debug)]
-pub struct Props {
+pub struct Props<T: Clone> {
     pub values: Vec<String>,
-    pub on_change: Callback<String>,
-    pub base_value: String,
-    pub state: State,
+    pub on_select: Callback<T>,
+    pub on_input: Callback<String>,
 }
 
 #[derive(Debug)]
@@ -33,9 +22,9 @@ pub enum Msg {
     CommandKey(KeyboardEvent),
 }
 
-impl yew::Component for CommandLine {
+impl<T: Clone + 'static> yew::Component for CommandLine<T> {
     type Message = Msg;
-    type Properties = Props;
+    type Properties = Props<T>;
 
     fn create(props: Self::Properties, link: yew::ComponentLink<Self>) -> Self {
         let original_value = props.base_value.clone();
@@ -43,10 +32,7 @@ impl yew::Component for CommandLine {
         Self {
             props,
             link,
-            selected: None,
-            original_value,
-            displayed_value,
-            filtered_values: Vec::new(),
+            selected_index: 0,
         }
     }
 
@@ -105,12 +91,11 @@ impl yew::Component for CommandLine {
 
     fn change(&mut self, props: Self::Properties) -> yew::ShouldRender {
         self.props = props;
-        self.update_filtered_values();
-        self.update_displayed_value();
+        self.selected_index = 0;
         true
     }
     fn view(&self) -> yew::Html {
-        let mut command_class = vec![
+        let command_class = vec![
             "focus:border-blue-500",
             "focus:ring-1",
             "focus:ring-blue-500",
@@ -124,15 +109,10 @@ impl yew::Component for CommandLine {
             "py-2",
             "pl-10",
         ];
-        match self.props.state {
-            State::Empty => {}
-            State::Invalid => command_class.push("bg-red-500"),
-            State::Valid => command_class.push("bg-green-500"),
-        }
         let onkeypress = self
             .link
             .callback(move |e: KeyboardEvent| Msg::CommandKey(e));
-        let options = self.filtered_values.iter().enumerate().map(|(i, v)| {
+        let values = self.props.values.iter().enumerate().map(|(i, v)| {
             let s = v.clone();
             let callback = self.link.callback(move |_| Msg::Input(s.clone()));
             let mut classes = vec!["border", "border-solid", "border-blue-500"];
@@ -152,33 +132,13 @@ impl yew::Component for CommandLine {
         html! {
             <div class="h-40" onkeydown=onkeypress>
               <input class=command_class oninput=oninput value=self.displayed_value />
-              { for options }
+              { for values }
             </div>
         }
     }
 }
 
-impl CommandLine {
-    fn update_filtered_values(&mut self) {
-        self.filtered_values = self
-            .props
-            .values
-            .iter()
-            .filter(|v| v.starts_with(&self.props.base_value))
-            .cloned()
-            .collect()
-    }
-    fn update_displayed_value(&mut self) {
-        if let Some(i) = self.selected {
-            if let Some(v) = self.filtered_values.get(i) {
-                self.displayed_value = v.clone();
-            } else {
-                self.displayed_value = "".to_string();
-            }
-        } else {
-            self.displayed_value = self.original_value.clone();
-        }
-    }
+impl<T: Clone> CommandLine<T> {
     fn emit_selected(&self) {
         self.props.on_change.emit(self.displayed_value.clone());
     }
