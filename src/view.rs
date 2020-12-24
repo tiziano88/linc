@@ -101,21 +101,6 @@ impl Model {
             Some(node) => {
                 let mut paths = vec![];
                 for field in Model::traverse_fields(node.kind.as_ref()) {
-                    match field.multiplicity {
-                        // If repeated field, stay on the parent.
-                        Multiplicity::Repeated => {
-                            let new_base = append(
-                                &base,
-                                Selector {
-                                    field: field.name.to_string(),
-                                    index: None,
-                                },
-                            );
-                            paths.push(new_base.clone());
-                        }
-                        // If single field, skip directly to the first (and only) child.
-                        Multiplicity::Single => {}
-                    }
                     let mut children = node.children.get(field.name).cloned().unwrap_or_default();
                     match field.multiplicity {
                         Multiplicity::Single => {
@@ -137,6 +122,21 @@ impl Model {
                         log::info!("child: {:?}[{:?}]->{:?}", reference, field.name, child);
                         paths.extend(self.flatten_paths(child, new_base));
                     }
+                    match field.multiplicity {
+                        // If repeated field, stay on the parent.
+                        Multiplicity::Repeated => {
+                            let new_base = append(
+                                &base,
+                                Selector {
+                                    field: field.name.to_string(),
+                                    index: Some(children.len()),
+                                },
+                            );
+                            paths.push(new_base.clone());
+                        }
+                        // If single field, skip directly to the first (and only) child.
+                        Multiplicity::Single => {}
+                    }
                 }
                 paths
             }
@@ -146,7 +146,12 @@ impl Model {
 
     fn view_node_list(&self, references: &[Ref], path: &Path) -> (Html, Vec<Html>) {
         let head = {
-            let selected = path == &self.cursor;
+            let mut path = path.clone();
+            if path.len() > 0 {
+                let path_len = path.len();
+                path[path_len - 1].index = Some(references.len());
+            }
+            let selected = path == self.cursor;
             let mut classes = vec!["node".to_string()];
             if selected {
                 classes.push("selected".to_string());
@@ -169,9 +174,6 @@ impl Model {
                 path[l - 1].index = Some(i);
                 self.view_node(n, &path)
             })
-            .chain(vec![html! {
-                <span>{ "+" }</span>
-            }])
             .collect::<Vec<_>>();
         (head, nodes)
     }
@@ -220,7 +222,6 @@ impl Model {
             // Empty list vs hole vs special value?
             // TODO: How to traverse nested lists in preorder?
             None => self.view_node(&"-".to_string(), &path),
-            // None => self.view_node_list(&[], &path),
         }
     }
 

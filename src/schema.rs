@@ -161,8 +161,8 @@ pub const SCHEMA: Schema = Schema {
                 });
                 html! {
                     <div>
-                    { items_head }
                     { for items }
+                    { items_head }
                     </div>
                 }
             },
@@ -312,7 +312,7 @@ pub const SCHEMA: Schema = Schema {
 
                 html! {
                     <span>
-                    { "{" }{ statements_head }{ for statements }{ "}" }
+                    { "{" }{ for statements }{ statements_head }{ "}" }
                     </span>
                 }
             },
@@ -353,8 +353,8 @@ pub const SCHEMA: Schema = Schema {
                         <div>
                             <span class="keyword">{ "match" }</span>{ expression }{ "{" }
                         </div>
-                        { match_arms_head }
                         { for match_arms }
+                        { match_arms_head }
                         <div>
                             { "}" }
                         </div>
@@ -481,7 +481,7 @@ pub const SCHEMA: Schema = Schema {
                 let (segments_head, segments) = model.view_children(value, "segments", &path);
                 let segments = segments.into_iter().intersperse(html! {{ "::" }});
                 html! {
-                    <span>{ segments_head }{ for segments }</span>
+                    <span>{ for segments }{ segments_head }</span>
                 }
             },
         },
@@ -629,7 +629,7 @@ pub const SCHEMA: Schema = Schema {
                         // { pub_ }
                         <div>
                           <span class="keyword">{ "fn" }</span>{ identifier }
-                          { "(" }{ parameters_head }{ for parameters }{ ")" }
+                          { "(" }{ for parameters }{ parameters_head }{ ")" }
                           { "->" }{ return_type }{ "{" }
                         </div>
                         <div class="indent">{ body }</div>
@@ -736,7 +736,7 @@ pub const SCHEMA: Schema = Schema {
                 html! {
                     <span>
                     { expression }
-                    { "(" }{ args_head }{ for args }{ ")" }
+                    { "(" }{ for args }{ args_head }{ ")" }
                     </span>
                 }
             },
@@ -775,7 +775,7 @@ pub const SCHEMA: Schema = Schema {
                 html! {
                     <span>
                     <span class="keyword">{ "struct" }</span>{ label }
-                    { "{" }{ fields_head }{ for fields }{ "}" }
+                    { "{" }{ for fields }{ fields_head }{ "}" }
                     </span>
                 }
             },
@@ -848,7 +848,7 @@ pub const SCHEMA: Schema = Schema {
                 html! {
                     <span>
                     <span class="keyword">{ "enum" }</span>{ identifier }
-                    { "{" }{ variants_head }{ for variants }{ "}" }
+                    { "{" }{ for variants }{ variants_head }{ "}" }
                     </span>
                 }
             },
@@ -880,7 +880,7 @@ pub const SCHEMA: Schema = Schema {
                 html! {
                     <span>
                     <span class="keyword">{ "enum" }</span>{ label }
-                    { "{" }{ variants_head }{ for variants }{ "}" }
+                    { "{" }{ for variants }{ variants_head }{ "}" }
                     </span>
                 }
             },
@@ -915,8 +915,8 @@ pub const SCHEMA: Schema = Schema {
                 });
                 html! {
                     <span>
-                    { items_head }
                     { for items }
+                    { items_head }
                     </span>
                 }
             },
@@ -979,9 +979,9 @@ pub const SCHEMA: Schema = Schema {
                 });
                 html! {
                     <span>
-                        { items_head }
                         <ul>
                             { for items }
+                            <li>{ items_head }</li>
                         </ul>
                     </span>
                 }
