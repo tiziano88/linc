@@ -51,6 +51,53 @@ fn rust_primitive_type(n: &str) -> Kind {
         },
     }
 }
+
+
+trait K {
+    fn name() -> String;
+    fn fields() -> &[Field];
+    fn parse(v: &str) -> Option<String>;
+    fn render(model: &Model, node: &Node, path: &Path) -> Html;
+}
+
+struct RustFragment;
+
+impl K for RustFragment {
+    fn name() -> String {
+        "rust_fragment".to_string()
+    }
+
+    fn fields() -> &[Field] {
+        &[Field {
+            name: "items",
+            kind: RUST_ITEM,
+            multiplicity: Multiplicity::Repeated,
+        }]
+    }
+
+    fn parse(v: &str) -> Option<String> {
+        if "rust_fragment".starts_with(v) {
+            Some("".to_string())
+        } else {
+            None
+        }
+    }
+
+    fn render(model: &Model, node: &Node, path: &Path) -> Html {
+        let (items_head, items) = model.view_children(&node, "items", &path);
+        let items = items.into_iter().map(|b| {
+            html! {
+                <div>{ b }</div>
+            }
+        });
+        html! {
+            <div>
+            { items_head }
+            { for items }
+            </div>
+        }
+    }
+}
 */
 
 pub const SCHEMA: Schema = Schema {
