@@ -115,7 +115,7 @@ impl Model {
                             &base,
                             Selector {
                                 field: field.name.to_string(),
-                                index: Some(n),
+                                index: n,
                             },
                         );
                         paths.push(new_base.clone());
@@ -129,7 +129,7 @@ impl Model {
                                 &base,
                                 Selector {
                                     field: field.name.to_string(),
-                                    index: Some(children.len()),
+                                    index: children.len(),
                                 },
                             );
                             paths.push(new_base.clone());
@@ -142,40 +142,6 @@ impl Model {
             }
             None => vec![],
         }
-    }
-
-    fn view_node_list(&self, references: &[Ref], path: &Path) -> (Html, Vec<Html>) {
-        let head = {
-            let mut path = path.clone();
-            if path.len() > 0 {
-                let path_len = path.len();
-                path[path_len - 1].index = Some(references.len());
-            }
-            let selected = path == self.cursor;
-            let mut classes = vec!["node".to_string()];
-            if selected {
-                classes.push("selected".to_string());
-            }
-            let path_clone = path.clone();
-            let callback = self
-                .link
-                .callback(move |_: MouseEvent| Msg::Select(path_clone.clone()));
-            html! {
-                <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
-            }
-        };
-
-        let nodes = references
-            .iter()
-            .enumerate()
-            .map(|(i, n)| {
-                let mut path = path.clone();
-                let l = path.len();
-                path[l - 1].index = Some(i);
-                self.view_node(n, &path)
-            })
-            .collect::<Vec<_>>();
-        (head, nodes)
     }
 
     fn view_node(&self, reference: &Ref, path: &Path) -> Html {
@@ -214,7 +180,7 @@ impl Model {
             &path,
             Selector {
                 field: field_name.to_string(),
-                index: Some(0),
+                index: 0,
             },
         );
         match node.children.get(field_name).and_then(|v| v.get(0)) {
@@ -227,11 +193,47 @@ impl Model {
 
     /// Returns the head and children, separately.
     pub fn view_children(&self, node: &Node, field_name: &str, path: &Path) -> (Html, Vec<Html>) {
-        let path = append(&path, field(field_name));
+        // let path = append(&path, field(field_name));
         // let cursor = sub_cursor(&cursor, field(field_name));
         let empty = vec![];
         let children = node.children.get(field_name).unwrap_or(&empty);
-        self.view_node_list(&children, &path)
+        let head = {
+            let path = append(
+                &path,
+                Selector {
+                    field: field_name.to_string(),
+                    index: children.len(),
+                },
+            );
+            let selected = path == self.cursor;
+            let mut classes = vec!["node".to_string()];
+            if selected {
+                classes.push("selected".to_string());
+            }
+            let path_clone = path.clone();
+            let callback = self
+                .link
+                .callback(move |_: MouseEvent| Msg::Select(path_clone.clone()));
+            html! {
+                <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
+            }
+        };
+
+        let nodes = children
+            .iter()
+            .enumerate()
+            .map(|(i, n)| {
+                let path = append(
+                    &path,
+                    Selector {
+                        field: field_name.to_string(),
+                        index: i,
+                    },
+                );
+                self.view_node(n, &path)
+            })
+            .collect::<Vec<_>>();
+        (head, nodes)
     }
 
     fn view_value(&self, node: &Node, path: &Path) -> Html {

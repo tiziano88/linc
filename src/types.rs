@@ -19,14 +19,7 @@ pub fn new_ref() -> Ref {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Selector {
     pub field: String,
-    pub index: Option<usize>,
-}
-
-pub fn field(name: &str) -> Selector {
-    Selector {
-        field: name.to_string(),
-        index: None,
-    }
+    pub index: usize,
 }
 
 pub type Path = VecDeque<Selector>;
@@ -62,13 +55,8 @@ impl Model {
             Some(head) => {
                 let base = self.lookup(reference).unwrap();
                 let children = &base.children.get(&head.field).cloned().unwrap_or_default();
-                match head.index {
-                    Some(index) => {
-                        let r = children.get(index).cloned().unwrap_or_default();
-                        self.lookup_path(&r, path)
-                    }
-                    None => None,
-                }
+                let r = children.get(head.index).cloned().unwrap_or_default();
+                self.lookup_path(&r, path)
             }
             None => Some(reference.clone()),
         }
@@ -179,13 +167,8 @@ impl Model {
 
         // If the field does not exist, create a default one.
         let children = parent.children.entry(selector.field).or_default();
-        match selector.index {
-            Some(i) => match children.get_mut(i) {
-                Some(c) => *c = new_ref,
-                None => children.push(new_ref),
-            },
-            // Cursor is pointing to a field but not a specific child, create the first
-            // child.
+        match children.get_mut(selector.index) {
+            Some(c) => *c = new_ref,
             None => children.push(new_ref),
         }
     }
@@ -246,15 +229,14 @@ fn display_selector(selector: &Selector) -> Vec<Html> {
     segments.push(html! {
         <span>
           { selector.field.clone() }
+              { format!("[{}]", selector.index) }
         </span>
     });
-    if let Some(index) = selector.index {
-        segments.push(html! {
-            <span>
-              { format!("[{}]", index) }
-            </span>
-        });
-    }
+    segments.push(html! {
+        <span>
+          { format!("[{}]", selector.index) }
+        </span>
+    });
     segments
 }
 
@@ -380,10 +362,10 @@ impl Component for Model {
                 log::info!("inner");
                 // If the field does not exist, create a default one.
                 let children = parent.children.entry(selector.field).or_default();
-                let new_index = selector.index.map(|i| i + 1).unwrap_or(0);
+                let new_index = selector.index + 1;
                 children.insert(new_index, new_ref);
                 // Select newly created element.
-                self.cursor.back_mut().unwrap().index = Some(new_index);
+                self.cursor.back_mut().unwrap().index = new_index;
             }
             Msg::DeleteItem => {
                 let selector = self.cursor.back().unwrap().clone();
@@ -391,7 +373,7 @@ impl Component for Model {
                 let parent = self.lookup_mut(&parent_ref).unwrap();
                 // If the field does not exist, create a default one.
                 let children = parent.children.entry(selector.field).or_default();
-                children.remove(selector.index.unwrap());
+                children.remove(selector.index);
             }
             Msg::SetCommand(v) => {
                 self.raw_command = v;
