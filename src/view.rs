@@ -145,11 +145,21 @@ impl Model {
     }
 
     fn view_node_list(&self, references: &[Ref], path: &Path) -> (Html, Vec<Html>) {
-        let selected = path == &self.cursor;
-        let mut classes = vec!["node".to_string()];
-        if selected {
-            classes.push("selected".to_string());
-        }
+        let head = {
+            let selected = path == &self.cursor;
+            let mut classes = vec!["node".to_string()];
+            if selected {
+                classes.push("selected".to_string());
+            }
+            let path_clone = path.clone();
+            let callback = self
+                .link
+                .callback(move |_: MouseEvent| Msg::Select(path_clone.clone()));
+            html! {
+                <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
+            }
+        };
+
         let nodes = references
             .iter()
             .enumerate()
@@ -159,18 +169,13 @@ impl Model {
                 path[l - 1].index = Some(i);
                 self.view_node(n, &path)
             })
+            .chain(vec![html! {
+                <span>{ "+" }</span>
+            }])
             .collect::<Vec<_>>();
-        let path = path.clone();
-        let callback = self
-            .link
-            .callback(move |_: MouseEvent| Msg::Select(path.clone()));
-        let head = html! {
-            <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
-        };
         (head, nodes)
     }
 
-    // fn view_node(&self, reference: &Ref, path: Path, cursor: Option<Path>) -> Html {
     fn view_node(&self, reference: &Ref, path: &Path) -> Html {
         let selected = path == &self.cursor;
         let mut classes = vec!["node".to_string()];

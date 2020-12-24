@@ -23,6 +23,19 @@ const RUST_TYPE: &[&str] = &[
     "slice_type",
     "tuple_type",
     "primitive_type",
+    "rust_primitive_type_bool",
+    "rust_primitive_type_char",
+    "rust_primitive_type_str",
+    "rust_primitive_type_u8",
+    "rust_primitive_type_u16",
+    "rust_primitive_type_u32",
+    "rust_primitive_type_u64",
+    "rust_primitive_type_u128",
+    "rust_primitive_type_i8",
+    "rust_primitive_type_i16",
+    "rust_primitive_type_i32",
+    "rust_primitive_type_i64",
+    "rust_primitive_type_i128",
 ];
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
@@ -30,6 +43,28 @@ const RUST_TYPE: &[&str] = &[
 // matches.
 
 // example: "true" may be an identifier, string literal, bool literal, type name.
+
+macro_rules! rust_primitive_type {
+    ($n:ident) => {
+        Kind {
+            name: concat!("rust_primitive_type_", stringify!($n)),
+            fields: &[],
+            inner: None,
+            parser: |v: &str| {
+                if stringify!($n).starts_with(v) {
+                    Some("".to_string())
+                } else {
+                    None
+                }
+            },
+            renderer: |model: &Model, value: &Node, path: &Path| {
+                html! {
+                    <span>{ stringify!($n).clone() }</span>
+                }
+            },
+        }
+    };
+}
 
 /*
 fn rust_primitive_type(n: &str) -> Kind {
@@ -132,6 +167,19 @@ pub const SCHEMA: Schema = Schema {
                 }
             },
         },
+        rust_primitive_type!(bool),
+        rust_primitive_type!(str),
+        rust_primitive_type!(char),
+        rust_primitive_type!(u8),
+        rust_primitive_type!(u16),
+        rust_primitive_type!(u32),
+        rust_primitive_type!(u64),
+        rust_primitive_type!(u128),
+        rust_primitive_type!(i8),
+        rust_primitive_type!(i16),
+        rust_primitive_type!(i32),
+        rust_primitive_type!(i64),
+        rust_primitive_type!(i128),
         Kind {
             name: "tuple_type",
             fields: &[Field {
