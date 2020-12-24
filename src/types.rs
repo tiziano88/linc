@@ -61,18 +61,13 @@ impl Model {
         match path.pop_front() {
             Some(head) => {
                 let base = self.lookup(reference).unwrap();
-                match &base.value {
-                    Value::Inner(v) => {
-                        let children = &v.children.get(&head.field).cloned().unwrap_or_default();
-                        match head.index {
-                            Some(index) => {
-                                let r = children.get(index).cloned().unwrap_or_default();
-                                self.lookup_path(&r, path)
-                            }
-                            None => None,
-                        }
+                let children = &base.children.get(&head.field).cloned().unwrap_or_default();
+                match head.index {
+                    Some(index) => {
+                        let r = children.get(index).cloned().unwrap_or_default();
+                        self.lookup_path(&r, path)
                     }
-                    _ => None,
+                    None => None,
                 }
             }
             None => Some(reference.clone()),
@@ -100,6 +95,7 @@ impl Model {
                         (kind.parser)(&self.raw_command).map(|value| Node {
                             kind: kind.name.to_string(),
                             value,
+                            children: HashMap::new(),
                         })
                     })
                     .collect::<Vec<_>>()
@@ -181,21 +177,16 @@ impl Model {
         let parent = self.lookup_mut(&parent_ref).unwrap();
         log::info!("parent: {:?}", parent);
 
-        match &mut parent.value {
-            Value::Inner(ref mut inner) => {
-                // If the field does not exist, create a default one.
-                let children = inner.children.entry(selector.field).or_default();
-                match selector.index {
-                    Some(i) => match children.get_mut(i) {
-                        Some(c) => *c = new_ref,
-                        None => children.push(new_ref),
-                    },
-                    // Cursor is pointing to a field but not a specific child, create the first
-                    // child.
-                    None => children.push(new_ref),
-                }
-            }
-            _ => {}
+        // If the field does not exist, create a default one.
+        let children = parent.children.entry(selector.field).or_default();
+        match selector.index {
+            Some(i) => match children.get_mut(i) {
+                Some(c) => *c = new_ref,
+                None => children.push(new_ref),
+            },
+            // Cursor is pointing to a field but not a specific child, create the first
+            // child.
+            None => children.push(new_ref),
         }
     }
 }
@@ -241,23 +232,12 @@ impl File {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Node {
-    // pub reference: Ref,
-    pub kind: String,
-    pub value: Value,
-}
-
 // TODO: Navigate to children directly, but use :var to navigate to variables, otherwise skip them
 // when navigating.
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub enum Value {
-    Leaf(String),
-    Inner(Inner),
-}
-
-#[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct Inner {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Node {
+    pub kind: String,
+    pub value: String,
     pub children: HashMap<String, Vec<Ref>>,
 }
 
@@ -394,35 +374,25 @@ impl Component for Model {
                 let parent_ref = self.parent_ref().unwrap();
                 let new_ref = self.file.add_node(Node {
                     kind: "invalid".to_string(),
-                    value: Value::Leaf("invalid".to_string()),
+                    value: "invalid".to_string(),
+                    children: HashMap::new(),
                 });
                 let parent = self.lookup_mut(&parent_ref).unwrap();
-                match &mut parent.value {
-                    Value::Inner(ref mut inner) => {
-                        log::info!("inner");
-                        // If the field does not exist, create a default one.
-                        let children = inner.children.entry(selector.field).or_default();
-                        let new_index = selector.index.map(|i| i + 1).unwrap_or(0);
-                        children.insert(new_index, new_ref);
-                        // Select newly created element.
-                        self.cursor.back_mut().unwrap().index = Some(new_index);
-                    }
-                    _ => {}
-                }
+                log::info!("inner");
+                // If the field does not exist, create a default one.
+                let children = parent.children.entry(selector.field).or_default();
+                let new_index = selector.index.map(|i| i + 1).unwrap_or(0);
+                children.insert(new_index, new_ref);
+                // Select newly created element.
+                self.cursor.back_mut().unwrap().index = Some(new_index);
             }
             Msg::DeleteItem => {
                 let selector = self.cursor.back().unwrap().clone();
                 let parent_ref = self.parent_ref().unwrap();
                 let parent = self.lookup_mut(&parent_ref).unwrap();
-                match &mut parent.value {
-                    Value::Inner(ref mut inner) => {
-                        log::info!("inner");
-                        // If the field does not exist, create a default one.
-                        let children = inner.children.entry(selector.field).or_default();
-                        children.remove(selector.index.unwrap());
-                    }
-                    _ => {}
-                }
+                // If the field does not exist, create a default one.
+                let children = parent.children.entry(selector.field).or_default();
+                children.remove(selector.index.unwrap());
             }
             Msg::SetCommand(v) => {
                 self.raw_command = v;

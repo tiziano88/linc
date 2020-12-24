@@ -1,4 +1,4 @@
-use crate::types::{Inner, Model, Path, Value};
+use crate::types::{Model, Node, Path};
 use itertools::Itertools;
 use yew::{html, Html};
 
@@ -42,12 +42,12 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             parser: |v: &str| {
                 if "rust_fragment".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some("".to_string())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let (items_head, items) = model.view_children(&value, "items", &path);
                 let items = items.into_iter().map(|b| {
                     html! {
@@ -72,12 +72,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("components"),
             parser: |v: &str| {
                 if "tuple_type".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some("".to_string())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| todo!(),
+            renderer: |model: &Model, value: &Node, path: &Path| todo!(),
         },
         Kind {
             name: "reference_type",
@@ -102,12 +102,12 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             parser: |v: &str| {
                 if "reference_type".starts_with(v) || "&".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some("".to_string())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let type_ = model.view_child(value, "type", &path);
                 html! {
                     <span>
@@ -138,12 +138,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("statements"),
             parser: |v: &str| {
                 if "const".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some("".to_string())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let identifier = model.view_child(value, "identifier", &path);
                 let type_ = model.view_child(value, "type", &path);
                 let expression = model.view_child(value, "expression", &path);
@@ -164,12 +164,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("statements"),
             parser: |v: &str| {
                 if "block".starts_with(v) || "{".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some("".to_string())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let (statements_head, statements) = model.view_children(value, "statements", &path);
                 let statements = statements.into_iter().map(|v| {
                     html! {
@@ -202,12 +202,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("expression"),
             parser: |v: &str| {
                 if "match".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some("".to_string())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let expression = model.view_child(value, "expression", &path);
                 let (match_arms_head, match_arms) = model.view_children(value, "match_arms", &path);
                 let match_arms = match_arms.into_iter().map(|v| {
@@ -251,12 +251,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("true_body"),
             parser: |v: &str| {
                 if "if".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some("".to_string())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let condition = model.view_child(value, "condition", &path);
                 let true_body = model.view_child(value, "true_body", &path);
                 let false_body = model.view_child(value, "false_body", &path);
@@ -285,8 +285,8 @@ pub const SCHEMA: Schema = Schema {
             name: "string_literal",
             fields: &[],
             inner: None,
-            parser: |v: &str| Some(Value::Leaf(v.to_string())),
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            parser: |v: &str| Some(v.to_string()),
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let value = model.view_child(value, "value", &path);
                 html! {
                     <span>
@@ -312,12 +312,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("object"),
             parser: |v: &str| {
                 if "field_access".starts_with(v) || ".".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let object = model.view_child(value, "object", &path);
                 let field = model.view_child(value, "field", &path);
                 html! {
@@ -339,12 +339,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("segments"),
             parser: |v: &str| {
                 if "simple_path".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let (segments_head, segments) = model.view_children(value, "segments", &path);
                 let segments = segments.into_iter().intersperse(html! {{ "::" }});
                 html! {
@@ -360,10 +360,10 @@ pub const SCHEMA: Schema = Schema {
                 if v.contains(' ') {
                     None
                 } else {
-                    Some(Value::Leaf(v.to_string()))
+                    Some(v.to_string())
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 html! {
                     <span class="keyword">{ "crate" }</span>
                 }
@@ -375,12 +375,12 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             parser: |v: &str| {
                 if "crate".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 html! {
                     <span class="keyword">{ "crate" }</span>
                 }
@@ -409,12 +409,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("left"),
             parser: |v: &str| {
                 if "binary_operator".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let operator = model.view_child(value, "operator", &path);
                 let left = model.view_child(value, "left", &path);
                 let right = model.view_child(value, "right", &path);
@@ -474,12 +474,12 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             parser: |v: &str| {
                 if "function_definition".starts_with(v) || "fn".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let comment = model.view_child(&value, "comment", &path);
                 let identifier = model.view_child(&value, "identifier", &path);
                 let (parameters_head, parameters) =
@@ -522,12 +522,12 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             parser: |v: &str| {
                 if "function_parameter".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let pattern = model.view_child(&value, "pattern", &path);
                 let type_ = model.view_child(&value, "type", &path);
                 html! {
@@ -561,12 +561,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("value"),
             parser: |v: &str| {
                 if "let".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let name = model.view_child(value, "name", &path);
                 let value = model.view_child(value, "value", &path);
                 html! {
@@ -591,12 +591,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("expression"),
             parser: |v: &str| {
                 if "function_call".starts_with(v) || "(".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let expression = model.view_child(value, "expression", path);
                 let (args_head, args) = model.view_children(value, "arguments", path);
                 let args = args.into_iter().intersperse(html! {{ "," }});
@@ -625,12 +625,12 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             parser: |v: &str| {
                 if "struct".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let label = model.view_child(value, "name", &path);
                 let (fields_head, fields) = model.view_children(value, "fields", &path);
                 let fields = fields.into_iter().map(|v| {
@@ -664,12 +664,12 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             parser: |v: &str| {
                 if "struct_field".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let name = model.view_child(value, "name", &path);
                 let type_ = model.view_child(value, "type", &path);
                 html! {
@@ -696,12 +696,12 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             parser: |v: &str| {
                 if "enum_variant".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let label = model.view_child(value, "name", &path);
                 let (variants_head, variants) = model.view_children(value, "variants", &path);
                 let variants = variants.into_iter().map(|v| {
@@ -734,12 +734,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("items"),
             parser: |v: &str| {
                 if "markdown_fragment".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let (items_head, items) = model.view_children(value, "items", &path);
                 let items = items.into_iter().map(|v| {
                     html! {
@@ -773,12 +773,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("text"),
             parser: |v: &str| {
                 if "markdown_heading".starts_with(v) || "#".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let level = model.view_child(value, "level", &path);
                 let text = model.view_child(value, "text", &path);
                 html! {
@@ -798,12 +798,12 @@ pub const SCHEMA: Schema = Schema {
             inner: Some("items"),
             parser: |v: &str| {
                 if "markdown_list".starts_with(v) || "-".starts_with(v) {
-                    Some(Value::Inner(Inner::default()))
+                    Some(String::new())
                 } else {
                     None
                 }
             },
-            renderer: |model: &Model, value: &Inner, path: &Path| {
+            renderer: |model: &Model, value: &Node, path: &Path| {
                 let (items_head, items) = model.view_children(value, "items", &path);
                 let items = items.into_iter().map(|v| {
                     html! {
@@ -823,8 +823,9 @@ pub const SCHEMA: Schema = Schema {
     ],
 };
 
-type Parser = fn(&str) -> Option<Value>;
-type Renderer = fn(&Model, &Inner, &Path) -> Html;
+// Parse only value.
+type Parser = fn(&str) -> Option<String>;
+type Renderer = fn(&Model, &Node, &Path) -> Html;
 
 pub struct Schema {
     pub kinds: &'static [Kind],

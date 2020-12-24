@@ -53,13 +53,10 @@ impl Model {
         match self.cursor.back() {
             Some(selector) => {
                 let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
-                match &parent.value {
-                    Value::Inner(v) => SCHEMA
-                        .get_kind(&parent.kind)
-                        .unwrap()
-                        .get_field(&selector.field),
-                    _ => None,
-                }
+                SCHEMA
+                    .get_kind(&parent.kind)
+                    .unwrap()
+                    .get_field(&selector.field)
             }
             None => None,
         }
@@ -101,51 +98,48 @@ impl Model {
     pub fn flatten_paths(&self, reference: &Ref, base: Path) -> Vec<Path> {
         log::info!("flatten: {:?} {:?}", reference, base);
         match &self.lookup(reference) {
-            Some(node) => match &node.value {
-                Value::Inner(v) => {
-                    let mut paths = vec![];
-                    for field in Model::traverse_fields(node.kind.as_ref()) {
-                        match field.multiplicity {
-                            // If repeated field, stay on the parent.
-                            Multiplicity::Repeated => {
-                                let new_base = append(
-                                    &base,
-                                    Selector {
-                                        field: field.name.to_string(),
-                                        index: None,
-                                    },
-                                );
-                                paths.push(new_base.clone());
-                            }
-                            // If single field, skip directly to the first (and only) child.
-                            Multiplicity::Single => {}
-                        }
-                        let mut children = v.children.get(field.name).cloned().unwrap_or_default();
-                        match field.multiplicity {
-                            Multiplicity::Single => {
-                                if children.is_empty() {
-                                    children.push("dummy".to_string());
-                                }
-                            }
-                            Multiplicity::Repeated => {}
-                        };
-                        for (n, child) in children.iter().enumerate() {
+            Some(node) => {
+                let mut paths = vec![];
+                for field in Model::traverse_fields(node.kind.as_ref()) {
+                    match field.multiplicity {
+                        // If repeated field, stay on the parent.
+                        Multiplicity::Repeated => {
                             let new_base = append(
                                 &base,
                                 Selector {
                                     field: field.name.to_string(),
-                                    index: Some(n),
+                                    index: None,
                                 },
                             );
                             paths.push(new_base.clone());
-                            log::info!("child: {:?}[{:?}]->{:?}", reference, field.name, child);
-                            paths.extend(self.flatten_paths(child, new_base));
                         }
+                        // If single field, skip directly to the first (and only) child.
+                        Multiplicity::Single => {}
                     }
-                    paths
+                    let mut children = node.children.get(field.name).cloned().unwrap_or_default();
+                    match field.multiplicity {
+                        Multiplicity::Single => {
+                            if children.is_empty() {
+                                children.push("dummy".to_string());
+                            }
+                        }
+                        Multiplicity::Repeated => {}
+                    };
+                    for (n, child) in children.iter().enumerate() {
+                        let new_base = append(
+                            &base,
+                            Selector {
+                                field: field.name.to_string(),
+                                index: Some(n),
+                            },
+                        );
+                        paths.push(new_base.clone());
+                        log::info!("child: {:?}[{:?}]->{:?}", reference, field.name, child);
+                        paths.extend(self.flatten_paths(child, new_base));
+                    }
                 }
-                _ => vec![],
-            },
+                paths
+            }
             None => vec![],
         }
     }
@@ -208,7 +202,7 @@ impl Model {
         }
     }
 
-    pub fn view_child(&self, value: &Inner, field_name: &str, path: &Path) -> Html {
+    pub fn view_child(&self, node: &Node, field_name: &str, path: &Path) -> Html {
         let path = append(
             &path,
             Selector {
@@ -216,7 +210,7 @@ impl Model {
                 index: Some(0),
             },
         );
-        match value.children.get(field_name).and_then(|v| v.get(0)) {
+        match node.children.get(field_name).and_then(|v| v.get(0)) {
             Some(n) => self.view_node(n, &path),
             // Empty list vs hole vs special value?
             // TODO: How to traverse nested lists in preorder?
@@ -226,23 +220,18 @@ impl Model {
     }
 
     /// Returns the head and children, separately.
-    pub fn view_children(&self, value: &Inner, field_name: &str, path: &Path) -> (Html, Vec<Html>) {
+    pub fn view_children(&self, node: &Node, field_name: &str, path: &Path) -> (Html, Vec<Html>) {
         let path = append(&path, field(field_name));
         // let cursor = sub_cursor(&cursor, field(field_name));
         let empty = vec![];
-        let children = value.children.get(field_name).unwrap_or(&empty);
+        let children = node.children.get(field_name).unwrap_or(&empty);
         self.view_node_list(&children, &path)
     }
 
     fn view_value(&self, node: &Node, path: &Path) -> Html {
-        match &node.value {
-            Value::Inner(v) => match SCHEMA.get_kind(&node.kind) {
-                Some(kind) => (kind.renderer)(self, &v, path),
-                None => html! { <span>{ node.kind.clone() }</span> },
-            },
-            Value::Leaf(v) => {
-                html! { <span>{ v }</span> }
-            }
+        match SCHEMA.get_kind(&node.kind) {
+            Some(kind) => (kind.renderer)(self, node, path),
+            None => html! { <span>{ node.kind.clone() }</span> },
         }
     }
 }
