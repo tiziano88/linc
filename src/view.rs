@@ -55,13 +55,9 @@ impl Model {
                 let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
                 match &parent.value {
                     Value::Inner(v) => SCHEMA
-                        .kinds
-                        .iter()
-                        .find(|k| k.name == parent.kind)
+                        .get_kind(&parent.kind)
                         .unwrap()
-                        .fields
-                        .iter()
-                        .find(|f| f.name == selector.field),
+                        .get_field(&selector.field),
                     _ => None,
                 }
             }
@@ -96,7 +92,7 @@ impl Model {
     }
 
     pub fn traverse_fields(kind: &str) -> &[Field] {
-        match SCHEMA.kinds.iter().find(|k| k.name == kind) {
+        match SCHEMA.get_kind(kind) {
             Some(kind) => kind.fields,
             None => &[],
         }
@@ -240,7 +236,7 @@ impl Model {
 
     fn view_value(&self, node: &Node, path: &Path) -> Html {
         match &node.value {
-            Value::Inner(v) => match SCHEMA.kinds.iter().find(|k| k.name == node.kind) {
+            Value::Inner(v) => match SCHEMA.get_kind(&node.kind) {
                 Some(kind) => (kind.renderer)(self, &v, path),
                 None => html! { <span>{ node.kind.clone() }</span> },
             },

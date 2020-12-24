@@ -830,6 +830,12 @@ pub struct Schema {
     pub kinds: &'static [Kind],
 }
 
+impl Schema {
+    pub fn get_kind(&self, kind: &str) -> Option<&Kind> {
+        self.kinds.iter().find(|k| k.name == kind)
+    }
+}
+
 pub struct Kind {
     pub name: &'static str,
     pub fields: &'static [Field],
@@ -837,6 +843,12 @@ pub struct Kind {
     pub renderer: Renderer,
     pub parser: Parser,
     // pub aliases: &'static [&'static str],
+}
+
+impl Kind {
+    pub fn get_field(&self, field: &str) -> Option<&Field> {
+        self.fields.iter().find(|f| f.name == field)
+    }
 }
 
 pub struct Field {

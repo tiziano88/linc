@@ -95,7 +95,7 @@ impl Model {
                 field
                     .kind
                     .iter()
-                    .filter_map(|kind| SCHEMA.kinds.iter().find(|k| &k.name == kind))
+                    .filter_map(|kind| SCHEMA.get_kind(kind))
                     .filter_map(|kind| {
                         (kind.parser)(&self.raw_command).map(|value| Node {
                             kind: kind.name.to_string(),
