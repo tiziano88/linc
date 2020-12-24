@@ -31,6 +31,28 @@ const RUST_TYPE: &[&str] = &[
 
 // example: "true" may be an identifier, string literal, bool literal, type name.
 
+/*
+fn rust_primitive_type(n: &str) -> Kind {
+    Kind {
+        name: &format!("rust_primitive_type_{}", n),
+        fields: &[],
+        inner: None,
+        parser: |v: &str| {
+            if n.starts_with(v) {
+                Some("".to_string())
+            } else {
+                None
+            }
+        },
+        renderer: |model: &Model, value: &Node, path: &Path| {
+            html! {
+                <span>{ v.clone() }</div>
+            }
+        },
+    }
+}
+*/
+
 pub const SCHEMA: Schema = Schema {
     kinds: &[
         Kind {
