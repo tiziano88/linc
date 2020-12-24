@@ -24,10 +24,6 @@
   display: inline-block;
 }
 
-.wrapper {
-  display: flex;
-}
-
 .column {
   flex: 1;
 }

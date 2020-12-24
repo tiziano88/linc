@@ -231,7 +231,7 @@ impl Model {
     fn view_value(&self, node: &Node, path: &Path) -> Html {
         match SCHEMA.get_kind(&node.kind) {
             Some(kind) => (kind.renderer)(self, node, path),
-            None => html! { <span>{ node.kind.clone() }</span> },
+            None => html! { <span>{ "unknown kind: " }{ node.kind.clone() }</span> },
         }
     }
 }

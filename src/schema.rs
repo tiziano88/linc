@@ -22,6 +22,7 @@ const RUST_TYPE: &[&str] = &[
     "simple_path",
     "slice_type",
     "tuple_type",
+    "primitive_type",
 ];
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
@@ -78,6 +79,21 @@ pub const SCHEMA: Schema = Schema {
                 }
             },
             renderer: |model: &Model, value: &Node, path: &Path| todo!(),
+        },
+        Kind {
+            name: "primitive_type",
+            fields: &[],
+            inner: None,
+            parser: |v: &str| match v {
+                "bool" | "char" | "str" | "u8" | "u16" | "u32" | "u64" | "u128" | "i8" | "i16"
+                | "i32" | "i64" | "i128" | "f32" | "f64" | "usize" | "isize" => Some(v.to_string()),
+                _ => None,
+            },
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span class="keyword">{ node.value.clone() }</span>
+                }
+            },
         },
         Kind {
             name: "reference_type",
@@ -363,9 +379,9 @@ pub const SCHEMA: Schema = Schema {
                     Some(v.to_string())
                 }
             },
-            renderer: |model: &Model, value: &Node, path: &Path| {
+            renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
-                    <span class="keyword">{ "crate" }</span>
+                    <span class="identifier">{ node.value.clone() }</span>
                 }
             },
         },
@@ -679,20 +695,54 @@ pub const SCHEMA: Schema = Schema {
                 }
             },
         },
+        // https://doc.rust-lang.org/nightly/reference/items/enumerations.html
         Kind {
             name: "enum",
             fields: &[
                 Field {
-                    name: "name",
+                    name: "identifier",
                     kind: &["identifier"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
                     name: "variants",
-                    kind: &["enum_variant"],
+                    // enum_variant
+                    kind: &["identifier"],
                     multiplicity: Multiplicity::Repeated,
                 },
             ],
+            inner: None,
+            parser: |v: &str| {
+                if "enum".starts_with(v) {
+                    Some(String::new())
+                } else {
+                    None
+                }
+            },
+            renderer: |model: &Model, value: &Node, path: &Path| {
+                let identifier = model.view_child(value, "identifier", &path);
+                let (variants_head, variants) = model.view_children(value, "variants", &path);
+                let variants = variants.into_iter().map(|v| {
+                    html! {
+                        <div class="indent">{ v }{ "," }</div>
+                    }
+                });
+
+                html! {
+                    <span>
+                    <span class="keyword">{ "enum" }</span>{ identifier }
+                    { "{" }{ variants_head }{ for variants }{ "}" }
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "enum_variant",
+            fields: &[Field {
+                name: "identifier",
+                kind: &["identifier"],
+                multiplicity: Multiplicity::Single,
+            }],
             inner: None,
             parser: |v: &str| {
                 if "enum_variant".starts_with(v) {

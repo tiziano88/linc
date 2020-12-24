@@ -301,11 +301,11 @@ impl Component for Model {
                 <div>{ self.view_actions() }</div>
                 <div class="grid grid-rows-2">
                     // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
-                    <div class="wrapper h-40">
+                    <div class="h-40">
                         <input oninput=oninput value=self.raw_command />
                         { for values }
                     </div>
-                    <div class="wrapper h-40">
+                    <div class="h-40">
                         <div class="column">{ self.view_file(&self.file) }</div>
                         <div class="column">
                             <div>{ display_cursor(&self.cursor) }</div>
@@ -341,7 +341,6 @@ impl Component for Model {
                 self.cursor = path;
                 self.parsed_commands = self.parse_commands();
             }
-
             // TODO: sibling vs inner
             Msg::Prev => {
                 self.prev();
@@ -410,9 +409,10 @@ impl Component for Model {
                     {
                         Some(node) => {
                             // Replace current node.
-                            self.file
-                                .nodes
-                                .insert(self.current_ref().unwrap(), node.clone());
+                            // self.file
+                            //     .nodes
+                            //     .insert(self.current_ref().unwrap(), node.clone());
+                            self.set_value(node.clone());
                             self.next();
                             self.raw_command = "".to_string();
                             self.parsed_commands = self.parse_commands();
