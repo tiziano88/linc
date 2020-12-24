@@ -4,12 +4,17 @@ use yew::{html, Html};
 
 // https://doc.rust-lang.org/stable/reference/expressions.html
 const RUST_EXPRESSION: &[&str] = &[
+    // XXX
+    "identifier",
     "field_access",
     "function_call",
     "if",
     "match",
     "operator",
     "string_literal",
+    "number_literal",
+    "bool_literal_false",
+    "bool_literal_true",
 ];
 
 // https://doc.rust-lang.org/stable/reference/items.html
@@ -419,12 +424,61 @@ pub const SCHEMA: Schema = Schema {
             fields: &[],
             inner: None,
             parser: |v: &str| Some(v.to_string()),
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let value = model.view_child(value, "value", &path);
+            renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
                     <span>
-                    { "\"" }{ value }{ "\"" }
+                    { "\"" }{ node.value.clone() }{ "\"" }
                     </span>
+                }
+            },
+        },
+        Kind {
+            name: "number_literal",
+            fields: &[],
+            inner: None,
+            // TODO: regex
+            parser: |v: &str| Some(v.to_string()),
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span>
+                    { node.value.clone() }
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "bool_literal_false",
+            fields: &[],
+            inner: None,
+            // TODO: regex
+            parser: |v: &str| {
+                if "false".starts_with(v) {
+                    Some(String::new())
+                } else {
+                    None
+                }
+            },
+            renderer: |model: &Model, value: &Node, path: &Path| {
+                html! {
+                    <span class="literal">{ "false" }</span>
+                }
+            },
+        },
+        Kind {
+            name: "bool_literal_true",
+            fields: &[],
+            inner: None,
+            // TODO: regex
+            parser: |v: &str| {
+                if "true".starts_with(v) {
+                    Some(String::new())
+                } else {
+                    None
+                }
+            },
+            renderer: |model: &Model, value: &Node, path: &Path| {
+                html! {
+                    <span class="literal">{ "true" }</span>
                 }
             },
         },
@@ -917,6 +971,19 @@ pub const SCHEMA: Schema = Schema {
                     <span>
                     { for items }
                     { items_head }
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "markdown_paragraph",
+            fields: &[],
+            inner: None,
+            parser: |v: &str| Some(v.to_string()),
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span>
+                    { node.value.clone() }
                     </span>
                 }
             },
