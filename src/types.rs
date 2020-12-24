@@ -387,6 +387,7 @@ impl Component for Model {
             Msg::ReplaceCurrentNode(n) => {
                 self.file.nodes.insert(self.current_ref().unwrap(), n);
                 self.parsed_commands = self.parse_commands();
+                self.selected_command_index = 0;
             }
             Msg::AddItem => {
                 let selector = self.cursor.back().unwrap().clone();
@@ -426,6 +427,7 @@ impl Component for Model {
             Msg::SetCommand(v) => {
                 self.raw_command = v;
                 self.parsed_commands = self.parse_commands();
+                self.selected_command_index = 0;
             }
             Msg::CommandKey(v) => {
                 log::info!("key: {}", v.key());
@@ -444,12 +446,14 @@ impl Component for Model {
                             self.next();
                             self.raw_command = "".to_string();
                             self.parsed_commands = self.parse_commands();
+                            self.selected_command_index = 0;
                         }
                         None => log::info!("invalid command"),
                     },
                     "Escape" => {
                         self.raw_command = "".to_string();
                         self.parsed_commands = self.parse_commands();
+                        self.selected_command_index = 0;
                     }
                     "ArrowUp" => {
                         if self.selected_command_index > 0 {
@@ -463,13 +467,16 @@ impl Component for Model {
                     }
                     "ArrowRight" if self.raw_command.is_empty() => {
                         self.next();
+                        self.parsed_commands = self.parse_commands();
+                        self.selected_command_index = 0;
                     }
                     "ArrowLeft" if self.raw_command.is_empty() => {
                         self.prev();
+                        self.parsed_commands = self.parse_commands();
+                        self.selected_command_index = 0;
                     }
                     _ => {}
                 }
-                self.parsed_commands = self.parse_commands();
             }
         };
         true
