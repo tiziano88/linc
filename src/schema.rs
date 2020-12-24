@@ -33,7 +33,7 @@ const RUST_TYPE: &[&str] = &[
 pub const SCHEMA: Schema = Schema {
     kinds: &[
         Kind {
-            name: "document",
+            name: "rust_fragment",
             fields: &[Field {
                 name: "items",
                 kind: RUST_ITEM,
@@ -41,7 +41,7 @@ pub const SCHEMA: Schema = Schema {
             }],
             inner: None,
             parser: |v: &str| {
-                if "document".starts_with(v) {
+                if "rust_fragment".starts_with(v) {
                     Some(Value::Inner(Inner::default()))
                 } else {
                     None
@@ -447,7 +447,7 @@ pub const SCHEMA: Schema = Schema {
                 */
                 Field {
                     name: "comment",
-                    kind: &["markdown_document"],
+                    kind: &["markdown_fragment"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
@@ -719,7 +719,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "markdown_document",
+            name: "markdown_fragment",
             fields: &[Field {
                 name: "items",
                 kind: &[
@@ -733,7 +733,7 @@ pub const SCHEMA: Schema = Schema {
             }],
             inner: Some("items"),
             parser: |v: &str| {
-                if "markdown_document".starts_with(v) {
+                if "markdown_fragment".starts_with(v) {
                     Some(Value::Inner(Inner::default()))
                 } else {
                     None
