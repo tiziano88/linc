@@ -1,11 +1,16 @@
 use crate::schema::SCHEMA;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use std::{
+    collections::{HashMap, VecDeque},
+    convert::TryInto,
+};
+use wasm_bindgen::JsCast;
 use yew::{
     html,
     prelude::*,
     services::{storage::Area, StorageService},
+    web_sys::HtmlElement,
 };
 
 pub type Ref = String;
@@ -172,10 +177,23 @@ impl Model {
             None => children.push(new_ref),
         }
     }
+
+    pub fn focus_command_line(&self) {
+        yew::utils::document()
+            .query_selector("#command-line")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<HtmlElement>()
+            .unwrap()
+            .focus()
+            .unwrap();
+    }
 }
 
 #[derive(Clone)]
 pub enum Msg {
+    Noop,
+
     Select(Path),
 
     Store,
@@ -255,13 +273,13 @@ impl Component for Model {
     type Properties = ();
 
     fn view(&self) -> Html {
-        let callback = self.link.callback(|v: String| Msg::SetCommand(v));
         let onkeypress = self
             .link
             .callback(move |e: KeyboardEvent| Msg::CommandKey(e));
         let oninput = self
             .link
             .callback(move |e: InputData| Msg::SetCommand(e.value));
+        let onblur = self.link.callback(move |e: FocusEvent| Msg::Noop);
         let values = self.parsed_commands.iter().enumerate().map(|(i, v)| {
             let s = v.clone();
             // let callback = self.link.callback(move |_| Msg::ReplaceCurrentNode(v));
@@ -284,7 +302,13 @@ impl Component for Model {
                 <div class="grid grid-rows-2">
                     // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
                     <div class="h-40">
-                        <input oninput=oninput value=self.raw_command />
+                        <input
+                          id="command-line"
+                          class="w-full border border-solid border-blue-500 bg-blue-100 font-mono"
+                          oninput=oninput
+                          onblur=onblur
+                          value=self.raw_command
+                        />
                         { for values }
                     </div>
                     <div class="h-40">
@@ -316,9 +340,14 @@ impl Component for Model {
         false
     }
 
+    fn rendered(&mut self, _first_render: bool) {
+        self.focus_command_line();
+    }
+
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         const KEY: &str = "linc_file";
         match msg {
+            Msg::Noop => {}
             Msg::Select(path) => {
                 self.cursor = path;
                 self.parsed_commands = self.parse_commands();
@@ -431,6 +460,7 @@ impl Component for Model {
                 }
             }
         };
+        self.focus_command_line();
         true
     }
 }

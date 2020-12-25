@@ -166,6 +166,7 @@ pub const SCHEMA: Schema = Schema {
                 });
                 html! {
                     <div>
+                    <div class="fragment-type">{ "rust" }</div>
                     { for items }
                     { items_head }
                     </div>
@@ -968,10 +969,11 @@ pub const SCHEMA: Schema = Schema {
                     }
                 });
                 html! {
-                    <span>
-                    { for items }
-                    { items_head }
-                    </span>
+                    <div>
+                        <div class="fragment-type">{ "markdown" }</div>
+                        { for items }
+                        { items_head }
+                    </div>
                 }
             },
         },
@@ -1046,7 +1048,7 @@ pub const SCHEMA: Schema = Schema {
                 });
                 html! {
                     <span>
-                        <ul>
+                        <ul class="list-disc">
                             { for items }
                             <li>{ items_head }</li>
                         </ul>

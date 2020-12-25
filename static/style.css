@@ -28,6 +28,14 @@
   flex: 1;
 }
 
+.fragment-type {
+  border: solid 1px black;
+  font-size: 0.8em;
+  opacity: 0.4;
+  background-color: black;
+  color: white;
+}
+
 .indent {
   margin-left: 40px;
 }
