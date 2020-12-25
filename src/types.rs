@@ -298,6 +298,9 @@ impl Component for Model {
         html! {
             <div onkeydown=onkeypress>
                 <div>{ "LINC" }</div>
+                <div>{ "left / right arrow keys (when command line is empty): move between existing nodes" }</div>
+                <div>{ "up / down arrow keys: select alternative completion result" }</div>
+                <div>{ "start typing in command line to filter available completion results" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="grid grid-rows-2">
                     // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
@@ -331,12 +334,17 @@ impl Component for Model {
             parsed_commands: vec![],
             selected_command_index: 0,
             file: super::initial::initial(),
-            cursor: VecDeque::new(),
+            cursor: vec![Selector {
+                field: "items".to_string(),
+                index: 0,
+            }]
+            .into(),
             link,
         }
     }
 
     fn change(&mut self, _props: ()) -> ShouldRender {
+        self.focus_command_line();
         false
     }
 
