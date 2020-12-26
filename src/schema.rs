@@ -1042,7 +1042,10 @@ pub struct Kind {
     pub inner: Option<&'static str>,
     pub renderer: Renderer,
     pub parser: Parser,
-    // pub aliases: &'static [&'static str],
+    /* pub aliases: &'static [&'static str],
+     * TODO: create list of elements, and then have validator function to filter them and
+     * provide feedback if not matching, without hiding the entry. Or return one of three values
+     * from parse: ok, hide, invalid */
 }
 
 impl Kind {
