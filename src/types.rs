@@ -164,6 +164,18 @@ impl Model {
     }
 
     fn set_value(&mut self, node: Node) {
+        let mut node = node;
+
+        let current_ref = self.current_ref();
+        let node_kind = SCHEMA.get_kind(&node.kind);
+
+        if let (Some(current_ref), Some(inner_field)) =
+            (current_ref, node_kind.and_then(|k| k.inner))
+        {
+            node.children
+                .insert(inner_field.to_string(), vec![current_ref.clone()]);
+        };
+
         let new_ref = self.file.add_node(node);
 
         let selector = self.cursor.back().unwrap().clone();
@@ -177,7 +189,7 @@ impl Model {
         match children.get_mut(selector.index) {
             Some(c) => *c = new_ref,
             None => children.push(new_ref),
-        }
+        };
     }
 
     pub fn focus_command_line(&self) {
