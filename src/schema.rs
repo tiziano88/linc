@@ -8,6 +8,7 @@ const RUST_EXPRESSION: &[&str] = &[
     "rust_identifier",
     "rust_field_access",
     "rust_function_call",
+    "rust_tuple_expression",
     "rust_if",
     "rust_match",
     "rust_operator",
@@ -27,6 +28,7 @@ const RUST_ITEM: &[&str] = &[
 
 // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
 const RUST_TYPE: &[&str] = &[
+    "rust_type_path",
     "rust_array_type",
     "rust_reference_type",
     "rust_simple_path",
@@ -146,7 +148,19 @@ pub const SCHEMA: Schema = Schema {
             }],
             inner: Some("components"),
             parser: |v: &str| vec!["(".to_string()],
-            renderer: |model: &Model, node: &Node, path: &Path| todo!(),
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let (components_head, components) = model.view_children(node, "components", path);
+                let components = components
+                    .into_iter()
+                    .intersperse(html! { <span>{ "," }</span>});
+                html! {
+                    <span>
+                      <span>{ "(" }</span>
+                      { for components }{ components_head }
+                      <span>{ ")" }</span>
+                    </span>
+                }
+            },
         },
         Kind {
             name: "rust_primitive_type",
@@ -180,6 +194,27 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
+            name: "rust_type_path",
+            fields: &[Field {
+                name: "segments",
+                kind: RUST_TYPE,
+                multiplicity: Multiplicity::Repeated,
+            }],
+            inner: Some("segments"),
+            parser: |v: &str| vec!["&".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let (segments_head, segments) = model.view_children(node, "segments", path);
+                let segments = segments
+                    .into_iter()
+                    .intersperse(html! { <span>{ "::" }</span>});
+                html! {
+                    <span>
+                    { for segments }{ segments_head }
+                    </span>
+                }
+            },
+        },
+        Kind {
             name: "rust_reference_type",
             fields: &[
                 Field {
@@ -199,7 +234,7 @@ pub const SCHEMA: Schema = Schema {
                     multiplicity: Multiplicity::Single,
                 },
             ],
-            inner: None,
+            inner: Some("type"),
             parser: |v: &str| vec!["&".to_string()],
             renderer: |model: &Model, node: &Node, path: &Path| {
                 let type_ = model.view_child(node, "type", path);
@@ -268,21 +303,14 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_match",
-            fields: &[
-                Field {
-                    name: "expression",
-                    kind: RUST_EXPRESSION,
-                    multiplicity: Multiplicity::Single,
-                },
-                Field {
-                    name: "match_arms",
-                    // XXX
-                    kind: RUST_EXPRESSION,
-                    multiplicity: Multiplicity::Single,
-                },
-            ],
-            inner: Some("expression"),
-            parser: |v: &str| vec!["match".to_string()],
+            fields: &[Field {
+                name: "match_arms",
+                // XXX
+                kind: &["rust_match_arm"],
+                multiplicity: Multiplicity::Repeated,
+            }],
+            inner: Some("match_arms"),
+            parser: |v: &str| vec!["match_arm".to_string()],
             renderer: |model: &Model, node: &Node, path: &Path| {
                 let expression = model.view_child(node, "expression", path);
                 let (match_arms_head, match_arms) = model.view_children(node, "match_arms", path);
@@ -301,6 +329,45 @@ pub const SCHEMA: Schema = Schema {
                         <div>
                             { "}" }
                         </div>
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "rust_match_arm",
+            fields: &[
+                Field {
+                    name: "patterns",
+                    kind: &["rust_pattern"],
+                    multiplicity: Multiplicity::Repeated,
+                },
+                Field {
+                    name: "guard",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "expression",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
+            inner: Some("match_arms"),
+            parser: |v: &str| vec!["match_arm".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let (patterns_head, patterns) = model.view_children(node, "patterns", path);
+                let patterns = patterns.into_iter().intersperse(html! {
+                        <span>{ "|" }</span>
+
+                });
+                let guard = model.view_child(node, "guard", path);
+                let expression = model.view_child(node, "expression", path);
+                html! {
+                    <span>
+                        <span>{ for patterns }{ patterns_head }</span>
+                        <span>{ "if" }{ guard }</span>
+                        <span>{ "=>" }</span>
+                        <span>{ expression }</span>
                     </span>
                 }
             },
@@ -446,10 +513,10 @@ pub const SCHEMA: Schema = Schema {
             fields: &[],
             inner: None,
             parser: |v: &str| {
-                if v.contains(' ') {
-                    vec![]
-                } else {
+                if v.starts_with(|c: char| c.is_alphabetic()) && !v.contains(' ') {
                     vec![v.to_string()]
+                } else {
+                    vec![]
                 }
             },
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -673,6 +740,25 @@ pub const SCHEMA: Schema = Schema {
                     <span>
                     { expression }
                     { "(" }{ for args }{ args_head }{ ")" }
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "rust_tuple_expression",
+            fields: &[Field {
+                name: "elements",
+                kind: RUST_EXPRESSION,
+                multiplicity: Multiplicity::Repeated,
+            }],
+            inner: Some("elements"),
+            parser: |v: &str| vec!["(".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let (elements_head, elements) = model.view_children(node, "elements", path);
+                let elements = elements.into_iter().intersperse(html! {{ "," }});
+                html! {
+                    <span>
+                    { "(" }{ for elements }{ elements_head }{ ")" }
                     </span>
                 }
             },

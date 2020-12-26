@@ -169,6 +169,17 @@ impl Model {
             .focus()
             .unwrap();
     }
+
+    pub fn scroll_into_view(&self, selector: &str) {
+        log::info!("scroll: {}", selector);
+        if let Some(element) = yew::utils::document().query_selector(selector).unwrap() {
+            log::info!("scroll");
+            element
+                .dyn_into::<HtmlElement>()
+                .unwrap()
+                .scroll_into_view_with_bool(false)
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -261,28 +272,38 @@ impl Component for Model {
             .link
             .callback(move |e: InputData| Msg::SetCommand(e.value));
         let onblur = self.link.callback(move |e: FocusEvent| Msg::Noop);
-        let values = self.parsed_commands.iter().enumerate().map(|(i, v)| {
-            let s = v.clone();
+        let values = self.parsed_commands.iter().enumerate().map(|(i, node)| {
             // let callback = self.link.callback(move |_| Msg::ReplaceCurrentNode(v));
             let mut classes = vec!["border", "border-solid", "border-blue-500"];
             if self.selected_command_index == i {
                 classes.push("bg-yellow-500");
             }
+            let (prefix, suffix) = match node.value.strip_prefix(&self.raw_command) {
+                Some(suffix) => (self.raw_command.clone(), suffix.to_string()),
+                None => ("".to_string(), node.value.clone()),
+            };
             html! {
                 <div
                 //   onclick=callback
                 // XXX
                   class=classes.join(" ")>
-                  <span class="font-mono">
-                    { v.kind.clone() }
+                  <span class="font-mono command-match">
+                    { prefix }
                   </span>
-                  <span>{ "::" }</span>
                   <span class="font-mono">
-                    { v.value.clone() }
+                    { suffix }
+                  </span>
+                  <span class="font-mono">{ "::" }</span>
+                  <span class="font-mono kind">
+                    { node.kind.clone() }
                   </span>
                 </div>
             }
         });
+        self.scroll_into_view(&format!(
+            "#values div:nth-child({})",
+            self.selected_command_index + 1,
+        ));
         html! {
             <div onkeydown=onkeypress>
                 <div>{ "LINC" }</div>
@@ -290,17 +311,19 @@ impl Component for Model {
                 <div>{ "up / down arrow keys: select alternative completion result" }</div>
                 <div>{ "start typing in command line to filter available completion results" }</div>
                 <div>{ self.view_actions() }</div>
-                <div class="grid grid-rows-2">
-                    // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
+                <div class="">
+                    <input
+                        id="command-line"
+                        class="w-full border border-solid border-blue-500 bg-blue-100 font-mono"
+                        oninput=oninput
+                        onblur=onblur
+                        value=self.raw_command
+                    />
                     <div class="h-40">
-                        <input
-                          id="command-line"
-                          class="w-full border border-solid border-blue-500 bg-blue-100 font-mono"
-                          oninput=oninput
-                          onblur=onblur
-                          value=self.raw_command
-                        />
-                        { for values }
+                        // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
+                        <div id="values" class="overflow-y-scroll h-40">
+                            { for values }
+                        </div>
                     </div>
                     <div class="h-40">
                         <div class="column">{ self.view_file(&self.file) }</div>
