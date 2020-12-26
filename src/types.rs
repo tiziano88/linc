@@ -301,7 +301,7 @@ impl Component for Model {
                   <i class="gg-attachment m-5"></i>
                   <div>
                     <div class="font-mono">
-                        <span class="text-green-500">
+                        <span class="text-green-400 font-bold underline">
                             { prefix }
                         </span>
                         <span class="">
@@ -309,7 +309,8 @@ impl Component for Model {
                         </span>
                     </div>
                     <div class="text-sm font-mono">
-                        <span class="kind">
+                        <span class="kind bg-blue-200 p-1 px-2 rounded-md">
+                            <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                             { node.kind.clone() }
                         </span>
                     </div>
@@ -506,6 +507,7 @@ impl Component for Model {
 }
 
 pub struct Action {
+    pub image: Option<String>,
     pub text: String,
     pub msg: Msg,
 }
