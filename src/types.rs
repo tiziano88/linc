@@ -285,7 +285,7 @@ impl Component for Model {
                 "m-2",
             ];
             if self.selected_command_index == i {
-                classes.push("bg-blue-500");
+                classes.push("bg-blue-300");
             } else {
                 classes.push("bg-gray-100");
             }
@@ -330,7 +330,9 @@ impl Component for Model {
                 <div>{ self.view_actions() }</div>
                 <div class="">
                     <div class="relative">
-                        <i class="gg-terminal"></i>
+                        <span class="inline-block absolute w-20 h-20 left-5 top-5">
+                            <i class="gg-terminal"></i>
+                        </span>
                         <input
                             id="command-line"
                             class="p-2 m-2 border border-blue-500 bg-blue-100 font-mono rounded-lg pl-10"
