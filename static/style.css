@@ -44,14 +44,14 @@
   color: fuchsia;
 }
 
-.command-match {
-  color: green;
-}
-
 .kind {
   color: blue;
 }
 
 .literal {
   color: red;
+}
+
+input:focus, textarea:focus {
+  outline: none;
 }

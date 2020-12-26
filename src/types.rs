@@ -274,9 +274,20 @@ impl Component for Model {
         let onblur = self.link.callback(move |e: FocusEvent| Msg::Noop);
         let values = self.parsed_commands.iter().enumerate().map(|(i, node)| {
             // let callback = self.link.callback(move |_| Msg::ReplaceCurrentNode(v));
-            let mut classes = vec!["border", "border-solid", "border-blue-500"];
+            let mut classes = vec![
+                "border",
+                "border-gray-200",
+                "flex",
+                "group",
+                "block",
+                "rounded-lg",
+                "p-2",
+                "m-2",
+            ];
             if self.selected_command_index == i {
-                classes.push("bg-yellow-500");
+                classes.push("bg-blue-500");
+            } else {
+                classes.push("bg-gray-100");
             }
             let (prefix, suffix) = match node.value.strip_prefix(&self.raw_command) {
                 Some(suffix) => (self.raw_command.clone(), suffix.to_string()),
@@ -287,16 +298,22 @@ impl Component for Model {
                 //   onclick=callback
                 // XXX
                   class=classes.join(" ")>
-                  <span class="font-mono command-match">
-                    { prefix }
-                  </span>
-                  <span class="font-mono">
-                    { suffix }
-                  </span>
-                  <span class="font-mono">{ "::" }</span>
-                  <span class="font-mono kind">
-                    { node.kind.clone() }
-                  </span>
+                  <i class="gg-attachment m-5"></i>
+                  <div>
+                    <div class="font-mono">
+                        <span class="text-green-500">
+                            { prefix }
+                        </span>
+                        <span class="">
+                            { suffix }
+                        </span>
+                    </div>
+                    <div class="text-sm font-mono">
+                        <span class="kind">
+                            { node.kind.clone() }
+                        </span>
+                    </div>
+                  </div>
                 </div>
             }
         });
@@ -312,16 +329,19 @@ impl Component for Model {
                 <div>{ "start typing in command line to filter available completion results" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="">
-                    <input
-                        id="command-line"
-                        class="w-full border border-solid border-blue-500 bg-blue-100 font-mono"
-                        oninput=oninput
-                        onblur=onblur
-                        value=self.raw_command
-                    />
-                    <div class="h-40">
+                    <div class="relative">
+                        <i class="gg-terminal"></i>
+                        <input
+                            id="command-line"
+                            class="p-2 m-2 border border-blue-500 bg-blue-100 font-mono rounded-lg pl-10"
+                            oninput=oninput
+                            onblur=onblur
+                            value=self.raw_command
+                        />
+                    </div>
+                    <div class="h-60">
                         // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
-                        <div id="values" class="overflow-y-scroll h-40">
+                        <div id="values" class="overflow-y-scroll h-60 gap-4">
                             { for values }
                         </div>
                     </div>

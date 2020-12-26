@@ -208,6 +208,32 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
+            name: "rust_path_ident_segment",
+            fields: &[Field {
+                name: "segments",
+                kind: RUST_TYPE,
+                multiplicity: Multiplicity::Repeated,
+            }],
+            inner: Some("segments"),
+            parser: |v: &str| {
+                vec![
+                    v.to_string(),
+                    "super".to_string(),
+                    "self".to_string(),
+                    "Self".to_string(),
+                    "crate".to_string(),
+                    "$crate".to_string(),
+                ]
+            },
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span>
+                    { node.value.clone() }
+                    </span>
+                }
+            },
+        },
+        Kind {
             name: "rust_type_path",
             fields: &[Field {
                 name: "segments",
@@ -508,7 +534,7 @@ pub const SCHEMA: Schema = Schema {
             name: "rust_simple_path",
             fields: &[Field {
                 name: "segments",
-                kind: &["rust_identifier"],
+                kind: &["rust_path_ident_segment"],
                 multiplicity: Multiplicity::Repeated,
             }],
             inner: Some("segments"),
