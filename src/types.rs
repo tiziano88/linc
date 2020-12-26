@@ -171,9 +171,7 @@ impl Model {
     }
 
     pub fn scroll_into_view(&self, selector: &str) {
-        log::info!("scroll: {}", selector);
         if let Some(element) = yew::utils::document().query_selector(selector).unwrap() {
-            log::info!("scroll");
             element
                 .dyn_into::<HtmlElement>()
                 .unwrap()
