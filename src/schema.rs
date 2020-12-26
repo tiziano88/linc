@@ -5,7 +5,7 @@ use yew::{html, Html};
 // https://doc.rust-lang.org/stable/reference/expressions.html
 const RUST_EXPRESSION: &[&str] = &[
     // XXX
-    "identifier",
+    "rust_identifier",
     "field_access",
     "function_call",
     "if",
@@ -27,20 +27,7 @@ const RUST_TYPE: &[&str] = &[
     "simple_path",
     "slice_type",
     "tuple_type",
-    "primitive_type",
-    "rust_primitive_type_bool",
-    "rust_primitive_type_char",
-    "rust_primitive_type_str",
-    "rust_primitive_type_u8",
-    "rust_primitive_type_u16",
-    "rust_primitive_type_u32",
-    "rust_primitive_type_u64",
-    "rust_primitive_type_u128",
-    "rust_primitive_type_i8",
-    "rust_primitive_type_i16",
-    "rust_primitive_type_i32",
-    "rust_primitive_type_i64",
-    "rust_primitive_type_i128",
+    "rust_primitive_type",
 ];
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
@@ -48,28 +35,6 @@ const RUST_TYPE: &[&str] = &[
 // matches.
 
 // example: "true" may be an identifier, string literal, bool literal, type name.
-
-macro_rules! rust_primitive_type {
-    ($n:ident) => {
-        Kind {
-            name: concat!("rust_primitive_type_", stringify!($n)),
-            fields: &[],
-            inner: None,
-            parser: |v: &str| {
-                if stringify!($n).starts_with(v) {
-                    Some("".to_string())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                html! {
-                    <span>{ stringify!($n).clone() }</span>
-                }
-            },
-        }
-    };
-}
 
 /*
 fn rust_primitive_type(n: &str) -> Kind {
@@ -150,15 +115,9 @@ pub const SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
             }],
             inner: None,
-            parser: |v: &str| {
-                if "rust_fragment".starts_with(v) {
-                    Some("".to_string())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let (items_head, items) = model.view_children(&value, "items", &path);
+            parser: |v: &str| vec!["".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let (items_head, items) = model.view_children(node, "items", path);
                 let items = items.into_iter().map(|b| {
                     html! {
                         <div>{ b }</div>
@@ -173,19 +132,6 @@ pub const SCHEMA: Schema = Schema {
                 }
             },
         },
-        rust_primitive_type!(bool),
-        rust_primitive_type!(str),
-        rust_primitive_type!(char),
-        rust_primitive_type!(u8),
-        rust_primitive_type!(u16),
-        rust_primitive_type!(u32),
-        rust_primitive_type!(u64),
-        rust_primitive_type!(u128),
-        rust_primitive_type!(i8),
-        rust_primitive_type!(i16),
-        rust_primitive_type!(i32),
-        rust_primitive_type!(i64),
-        rust_primitive_type!(i128),
         Kind {
             name: "tuple_type",
             fields: &[Field {
@@ -194,23 +140,33 @@ pub const SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
             }],
             inner: Some("components"),
-            parser: |v: &str| {
-                if "tuple_type".starts_with(v) {
-                    Some("".to_string())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| todo!(),
+            parser: |v: &str| vec!["(".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| todo!(),
         },
         Kind {
-            name: "primitive_type",
+            name: "rust_primitive_type",
             fields: &[],
             inner: None,
-            parser: |v: &str| match v {
-                "bool" | "char" | "str" | "u8" | "u16" | "u32" | "u64" | "u128" | "i8" | "i16"
-                | "i32" | "i64" | "i128" | "f32" | "f64" | "usize" | "isize" => Some(v.to_string()),
-                _ => None,
+            parser: |v: &str| {
+                vec![
+                    "bool".to_string(),
+                    "char".to_string(),
+                    "str".to_string(),
+                    "u8".to_string(),
+                    "u16".to_string(),
+                    "u32".to_string(),
+                    "u64".to_string(),
+                    "u128".to_string(),
+                    "i8".to_string(),
+                    "i16".to_string(),
+                    "i32".to_string(),
+                    "i64".to_string(),
+                    "i128".to_string(),
+                    "f32".to_string(),
+                    "f64".to_string(),
+                    "usize".to_string(),
+                    "isize".to_string(),
+                ]
             },
             renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
@@ -239,15 +195,9 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
-            parser: |v: &str| {
-                if "reference_type".starts_with(v) || "&".starts_with(v) {
-                    Some("".to_string())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let type_ = model.view_child(value, "type", &path);
+            parser: |v: &str| vec!["&".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let type_ = model.view_child(node, "type", path);
                 html! {
                     <span>
                     { "&" }{ type_ }
@@ -260,7 +210,7 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "identifier",
-                    kind: &["identifier"],
+                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
@@ -275,17 +225,11 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("statements"),
-            parser: |v: &str| {
-                if "const".starts_with(v) {
-                    Some("".to_string())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let identifier = model.view_child(value, "identifier", &path);
-                let type_ = model.view_child(value, "type", &path);
-                let expression = model.view_child(value, "expression", &path);
+            parser: |v: &str| vec!["const".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let identifier = model.view_child(node, "identifier", path);
+                let type_ = model.view_child(node, "type", path);
+                let expression = model.view_child(node, "expression", path);
                 html! {
                     <span>
                     { "const" }{ identifier }{ ":" }{ type_ }{ "=" }{ expression }{ ";" }
@@ -301,15 +245,9 @@ pub const SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
             }],
             inner: Some("statements"),
-            parser: |v: &str| {
-                if "block".starts_with(v) || "{".starts_with(v) {
-                    Some("".to_string())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let (statements_head, statements) = model.view_children(value, "statements", &path);
+            parser: |v: &str| vec!["{".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let (statements_head, statements) = model.view_children(node, "statements", path);
                 let statements = statements.into_iter().map(|v| {
                     html! {
                         <div class="indent">{ v }{ ";" }</div>
@@ -339,16 +277,10 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("expression"),
-            parser: |v: &str| {
-                if "match".starts_with(v) {
-                    Some("".to_string())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let expression = model.view_child(value, "expression", &path);
-                let (match_arms_head, match_arms) = model.view_children(value, "match_arms", &path);
+            parser: |v: &str| vec!["match".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let expression = model.view_child(node, "expression", path);
+                let (match_arms_head, match_arms) = model.view_children(node, "match_arms", path);
                 let match_arms = match_arms.into_iter().map(|v| {
                     html! {
                         <div class="indent">{ v }{ "," }</div>
@@ -388,17 +320,11 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("true_body"),
-            parser: |v: &str| {
-                if "if".starts_with(v) {
-                    Some("".to_string())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let condition = model.view_child(value, "condition", &path);
-                let true_body = model.view_child(value, "true_body", &path);
-                let false_body = model.view_child(value, "false_body", &path);
+            parser: |v: &str| vec!["if".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let condition = model.view_child(node, "condition", path);
+                let true_body = model.view_child(node, "true_body", path);
+                let false_body = model.view_child(node, "false_body", path);
                 html! {
                     <span>
                         <div>
@@ -424,7 +350,7 @@ pub const SCHEMA: Schema = Schema {
             name: "string_literal",
             fields: &[],
             inner: None,
-            parser: |v: &str| Some(v.to_string()),
+            parser: |v: &str| vec![v.to_string()],
             renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
                     <span>
@@ -438,7 +364,13 @@ pub const SCHEMA: Schema = Schema {
             fields: &[],
             inner: None,
             // TODO: regex
-            parser: |v: &str| Some(v.to_string()),
+            parser: |v: &str| {
+                if v.parse::<i32>().is_ok() {
+                    vec![v.to_string()]
+                } else {
+                    vec![]
+                }
+            },
             renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
                     <span>
@@ -448,38 +380,14 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "bool_literal_false",
+            name: "bool_literal",
             fields: &[],
             inner: None,
             // TODO: regex
-            parser: |v: &str| {
-                if "false".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
+            parser: |v: &str| vec!["false".to_string(), "true".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
-                    <span class="literal">{ "false" }</span>
-                }
-            },
-        },
-        Kind {
-            name: "bool_literal_true",
-            fields: &[],
-            inner: None,
-            // TODO: regex
-            parser: |v: &str| {
-                if "true".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                html! {
-                    <span class="literal">{ "true" }</span>
+                    <span class="literal">{ node.value.clone() }</span>
                 }
             },
         },
@@ -493,21 +401,15 @@ pub const SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "field",
-                    kind: &["identifier"],
+                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
                 },
             ],
             inner: Some("object"),
-            parser: |v: &str| {
-                if "field_access".starts_with(v) || ".".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let object = model.view_child(value, "object", &path);
-                let field = model.view_child(value, "field", &path);
+            parser: |v: &str| vec![".".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let object = model.view_child(node, "object", &path);
+                let field = model.view_child(node, "field", &path);
                 html! {
                     <span>
                     { object }
@@ -521,19 +423,13 @@ pub const SCHEMA: Schema = Schema {
             name: "simple_path",
             fields: &[Field {
                 name: "segments",
-                kind: &["identifier"],
+                kind: &["rust_identifier"],
                 multiplicity: Multiplicity::Repeated,
             }],
             inner: Some("segments"),
-            parser: |v: &str| {
-                if "simple_path".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let (segments_head, segments) = model.view_children(value, "segments", &path);
+            parser: |v: &str| vec!["::".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let (segments_head, segments) = model.view_children(node, "segments", &path);
                 let segments = segments.into_iter().intersperse(html! {{ "::" }});
                 html! {
                     <span>{ for segments }{ segments_head }</span>
@@ -541,14 +437,14 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "identifier",
+            name: "rust_identifier",
             fields: &[],
             inner: None,
             parser: |v: &str| {
                 if v.contains(' ') {
-                    None
+                    vec![]
                 } else {
-                    Some(v.to_string())
+                    vec![v.to_string()]
                 }
             },
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -561,14 +457,8 @@ pub const SCHEMA: Schema = Schema {
             name: "crate",
             fields: &[],
             inner: None,
-            parser: |v: &str| {
-                if "crate".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
+            parser: |v: &str| vec!["crate".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
                     <span class="keyword">{ "crate" }</span>
                 }
@@ -596,16 +486,27 @@ pub const SCHEMA: Schema = Schema {
             ],
             inner: Some("left"),
             parser: |v: &str| {
-                if "binary_operator".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
+                vec![
+                    "==".to_string(),
+                    "+".to_string(),
+                    "+=".to_string(),
+                    "-".to_string(),
+                    "-=".to_string(),
+                    "<<".to_string(),
+                    ">>".to_string(),
+                    "<".to_string(),
+                    ">".to_string(),
+                    "&&".to_string(),
+                    "||".to_string(),
+                    "&".to_string(),
+                    "|".to_string(),
+                    "^".to_string(),
+                ]
             },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let operator = model.view_child(value, "operator", &path);
-                let left = model.view_child(value, "left", &path);
-                let right = model.view_child(value, "right", &path);
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let operator = model.view_child(node, "operator", &path);
+                let left = model.view_child(node, "left", &path);
+                let right = model.view_child(node, "right", &path);
                 html! {
                     <span>
                     { left }
@@ -640,7 +541,7 @@ pub const SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "identifier",
-                    kind: &["identifier"],
+                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
@@ -660,21 +561,14 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
-            parser: |v: &str| {
-                if "function_definition".starts_with(v) || "fn".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let comment = model.view_child(&value, "comment", &path);
-                let identifier = model.view_child(&value, "identifier", &path);
-                let (parameters_head, parameters) =
-                    model.view_children(&value, "parameters", &path);
+            parser: |v: &str| vec!["fn".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let comment = model.view_child(node, "comment", path);
+                let identifier = model.view_child(node, "identifier", path);
+                let (parameters_head, parameters) = model.view_children(node, "parameters", path);
                 let parameters = parameters.into_iter().intersperse(html! {{ "," }});
-                let body = model.view_child(&value, "body", &path);
-                let return_type = model.view_child(&value, "return_type", &path);
+                let body = model.view_child(node, "body", path);
+                let return_type = model.view_child(node, "return_type", path);
                 // let async_ = self.view_child(&v, "async", &path);
                 // let pub_ = self.view_child(&v, "pub", &path);
 
@@ -698,7 +592,7 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "pattern",
-                    kind: &["identifier"],
+                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
@@ -708,16 +602,10 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
-            parser: |v: &str| {
-                if "function_parameter".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let pattern = model.view_child(&value, "pattern", &path);
-                let type_ = model.view_child(&value, "type", &path);
+            parser: |v: &str| vec!["param".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let pattern = model.view_child(node, "pattern", path);
+                let type_ = model.view_child(node, "type", path);
                 html! {
                     <span>
                     { pattern }{ ":" }{ type_ }
@@ -747,18 +635,12 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("value"),
-            parser: |v: &str| {
-                if "let".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let name = model.view_child(value, "name", &path);
-                let value = model.view_child(value, "value", &path);
+            parser: |v: &str| vec!["let".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let pattern = model.view_child(node, "pattern", path);
+                let value = model.view_child(node, "value", path);
                 html! {
-                    <span>{ "let" }{ name }{ "=" }{ value }</span>
+                    <span>{ "let" }{ pattern }{ "=" }{ value }</span>
                 }
             },
         },
@@ -777,16 +659,10 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: Some("expression"),
-            parser: |v: &str| {
-                if "function_call".starts_with(v) || "(".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let expression = model.view_child(value, "expression", path);
-                let (args_head, args) = model.view_children(value, "arguments", path);
+            parser: |v: &str| vec!["(".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let expression = model.view_child(node, "expression", path);
+                let (args_head, args) = model.view_children(node, "arguments", path);
                 let args = args.into_iter().intersperse(html! {{ "," }});
                 html! {
                     <span>
@@ -800,8 +676,8 @@ pub const SCHEMA: Schema = Schema {
             name: "struct",
             fields: &[
                 Field {
-                    name: "name",
-                    kind: &["identifier"],
+                    name: "identifier",
+                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
@@ -811,16 +687,10 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
-            parser: |v: &str| {
-                if "struct".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let label = model.view_child(value, "name", &path);
-                let (fields_head, fields) = model.view_children(value, "fields", &path);
+            parser: |v: &str| vec!["struct".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let identifier = model.view_child(node, "identifier", path);
+                let (fields_head, fields) = model.view_children(node, "fields", path);
                 let fields = fields.into_iter().map(|v| {
                     html! {
                         <div class="indent">{ v }{ "," }</div>
@@ -829,7 +699,7 @@ pub const SCHEMA: Schema = Schema {
 
                 html! {
                     <span>
-                    <span class="keyword">{ "struct" }</span>{ label }
+                    <span class="keyword">{ "struct" }</span>{ identifier }
                     { "{" }{ for fields }{ fields_head }{ "}" }
                     </span>
                 }
@@ -839,8 +709,8 @@ pub const SCHEMA: Schema = Schema {
             name: "struct_field",
             fields: &[
                 Field {
-                    name: "name",
-                    kind: &["identifier"],
+                    name: "identifier",
+                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
@@ -850,19 +720,13 @@ pub const SCHEMA: Schema = Schema {
                 },
             ],
             inner: None,
-            parser: |v: &str| {
-                if "struct_field".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let name = model.view_child(value, "name", &path);
-                let type_ = model.view_child(value, "type", &path);
+            parser: |v: &str| vec!["struct_field".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let identifier = model.view_child(node, "identifier", path);
+                let type_ = model.view_child(node, "type", path);
                 html! {
                     <span>
-                    { name }{ ":" }{ type_ }
+                    { identifier }{ ":" }{ type_ }
                     </span>
                 }
             },
@@ -873,27 +737,21 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "identifier",
-                    kind: &["identifier"],
+                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
                     name: "variants",
                     // enum_variant
-                    kind: &["identifier"],
+                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Repeated,
                 },
             ],
             inner: None,
-            parser: |v: &str| {
-                if "enum".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let identifier = model.view_child(value, "identifier", &path);
-                let (variants_head, variants) = model.view_children(value, "variants", &path);
+            parser: |v: &str| vec!["enum".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let identifier = model.view_child(node, "identifier", path);
+                let (variants_head, variants) = model.view_children(node, "variants", path);
                 let variants = variants.into_iter().map(|v| {
                     html! {
                         <div class="indent">{ v }{ "," }</div>
@@ -912,20 +770,14 @@ pub const SCHEMA: Schema = Schema {
             name: "enum_variant",
             fields: &[Field {
                 name: "identifier",
-                kind: &["identifier"],
+                kind: &["rust_identifier"],
                 multiplicity: Multiplicity::Single,
             }],
             inner: None,
-            parser: |v: &str| {
-                if "enum_variant".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let label = model.view_child(value, "name", &path);
-                let (variants_head, variants) = model.view_children(value, "variants", &path);
+            parser: |v: &str| vec!["enum_variant".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let label = model.view_child(node, "identifier", path);
+                let (variants_head, variants) = model.view_children(node, "variants", path);
                 let variants = variants.into_iter().map(|v| {
                     html! {
                         <div class="indent">{ v }{ "," }</div>
@@ -954,15 +806,9 @@ pub const SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
             }],
             inner: Some("items"),
-            parser: |v: &str| {
-                if "markdown_fragment".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let (items_head, items) = model.view_children(value, "items", &path);
+            parser: |v: &str| vec!["markdown_fragment".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let (items_head, items) = model.view_children(node, "items", path);
                 let items = items.into_iter().map(|v| {
                     html! {
                         <div>{ v }</div>
@@ -981,7 +827,7 @@ pub const SCHEMA: Schema = Schema {
             name: "markdown_paragraph",
             fields: &[],
             inner: None,
-            parser: |v: &str| Some(v.to_string()),
+            parser: |v: &str| vec![v.to_string()],
             renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
                     <span>
@@ -1002,21 +848,15 @@ pub const SCHEMA: Schema = Schema {
                 Field {
                     name: "text",
                     // XXX
-                    kind: &["identifier"],
+                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
                 },
             ],
             inner: Some("text"),
-            parser: |v: &str| {
-                if "markdown_heading".starts_with(v) || "#".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let level = model.view_child(value, "level", &path);
-                let text = model.view_child(value, "text", &path);
+            parser: |v: &str| vec!["#".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let level = model.view_child(node, "level", path);
+                let text = model.view_child(node, "text", path);
                 html! {
                     <span>
                     { "#" }{ level}{ text }
@@ -1032,15 +872,9 @@ pub const SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
             }],
             inner: Some("items"),
-            parser: |v: &str| {
-                if "markdown_list".starts_with(v) || "-".starts_with(v) {
-                    Some(String::new())
-                } else {
-                    None
-                }
-            },
-            renderer: |model: &Model, value: &Node, path: &Path| {
-                let (items_head, items) = model.view_children(value, "items", &path);
+            parser: |v: &str| vec!["-".to_string()],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let (items_head, items) = model.view_children(node, "items", path);
                 let items = items.into_iter().map(|v| {
                     html! {
                         <li>{ v }</li>
@@ -1059,8 +893,8 @@ pub const SCHEMA: Schema = Schema {
     ],
 };
 
-// Parse only value.
-type Parser = fn(&str) -> Option<String>;
+// Generate valid values.
+type Parser = fn(&str) -> Vec<String>;
 type Renderer = fn(&Model, &Node, &Path) -> Html;
 
 pub struct Schema {

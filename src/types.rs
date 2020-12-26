@@ -1,16 +1,13 @@
 use crate::schema::SCHEMA;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{HashMap, VecDeque},
-    convert::TryInto,
-};
+use std::collections::{HashMap, VecDeque};
 use wasm_bindgen::JsCast;
 use yew::{
     html,
-    prelude::*,
     services::{storage::Area, StorageService},
     web_sys::HtmlElement,
+    Component, ComponentLink, FocusEvent, Html, InputData, KeyboardEvent, ShouldRender,
 };
 
 pub type Ref = String;
@@ -84,14 +81,19 @@ impl Model {
                     .kind
                     .iter()
                     .filter_map(|kind| SCHEMA.get_kind(kind))
-                    .filter_map(|kind| {
-                        (kind.parser)(&self.raw_command).map(|value| Node {
-                            kind: kind.name.to_string(),
-                            value,
-                            children: HashMap::new(),
-                        })
+                    .flat_map(|kind| {
+                        (kind.parser)(&self.raw_command)
+                            .into_iter()
+                            // TODO: Different matching logic (e.g. fuzzy).
+                            .filter(|v| v.starts_with(&self.raw_command))
+                            .map(move |value| Node {
+                                kind: kind.name.to_string(),
+                                value,
+                                children: HashMap::new(),
+                            })
                     })
                     .collect::<Vec<_>>()
+                // TODO: Ranking.
             })
             .unwrap_or_default()
         // let mut value = match command {
@@ -291,7 +293,13 @@ impl Component for Model {
                 <div
                 //   onclick=callback
                 // XXX
-                  class=classes.join(" ")>{ v.kind.clone() }
+                  class=classes.join(" ")>
+                  <span>
+                    { v.kind.clone() }
+                  </span>
+                  <span>
+                    { v.value.clone() }
+                  </span>
                 </div>
             }
         });
