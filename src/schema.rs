@@ -26,6 +26,20 @@ const RUST_ITEM: &[&str] = &[
     "rust_struct",
 ];
 
+const RUST_PATTERN: &[&str] = &[
+    "rust_literal_pattern",
+    "rust_identifier_pattern",
+    "rust_wildcard_pattern",
+    "rust_rest_pattern",
+    "rust_reference_pattern",
+    "rust_struct_pattern",
+    "rust_tuple_struct_pattern",
+    "rust_tuple_pattern",
+    "rust_grouped_pattern",
+    "rust_path_pattern",
+    "rust_macro_invocation",
+];
+
 // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
 const RUST_TYPE: &[&str] = &[
     "rust_type_path",
@@ -305,7 +319,6 @@ pub const SCHEMA: Schema = Schema {
             name: "rust_match",
             fields: &[Field {
                 name: "match_arms",
-                // XXX
                 kind: &["rust_match_arm"],
                 multiplicity: Multiplicity::Repeated,
             }],
@@ -338,7 +351,7 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "patterns",
-                    kind: &["rust_pattern"],
+                    kind: RUST_PATTERN,
                     multiplicity: Multiplicity::Repeated,
                 },
                 Field {
@@ -691,8 +704,7 @@ pub const SCHEMA: Schema = Schema {
             fields: &[
                 Field {
                     name: "pattern",
-                    // XXX
-                    kind: &["rust_pattern"],
+                    kind: RUST_PATTERN,
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
