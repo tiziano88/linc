@@ -96,41 +96,6 @@ impl Model {
                 // TODO: Ranking.
             })
             .unwrap_or_default()
-        // let mut value = match command {
-        //     "false" => Some(Value::Bool(false)),
-        //     "true" => Some(Value::Bool(true)),
-        //     _ => {
-        //         if let Some(v) = command.strip_prefix('"') {
-        //             Some(Value::String(v.to_string()))
-        //         } else if let Ok(v) = command.parse::<i32>() {
-        //             Some(Value::Int(v))
-        //         } else if let Some(_) = SCHEMA.kinds.iter().find(|k| k.name == command) {
-        //             Some(Value::Inner(Inner {
-        //                 kind: command.to_string(),
-        //                 children: HashMap::new(),
-        //             }))
-        //         } else {
-        //             None
-        //         }
-        //     }
-        // };
-        // if let Some(Value::Inner(ref mut inner)) = value {
-        //     let kind = SCHEMA.kinds.iter().find(|k| k.name == inner.kind).unwrap();
-        //     if let Some(inner_field) = kind.inner {
-        //         if let Some(reference) = self.current_ref() {
-        //             inner
-        //                 .children
-        //                 .entry(inner_field.to_string())
-        //                 .or_default()
-        //                 .push(reference);
-        //         }
-        //     }
-        // }
-        // if let Some(v) = &value {
-        //     let valid = self.is_valid_value(v);
-        //     log::info!("valid: {:?}", valid);
-        // }
-        // value
     }
 
     fn prev(&mut self) {
@@ -172,8 +137,10 @@ impl Model {
         if let (Some(current_ref), Some(inner_field)) =
             (current_ref, node_kind.and_then(|k| k.inner))
         {
-            node.children
-                .insert(inner_field.to_string(), vec![current_ref.clone()]);
+            if current_ref != INVALID_REF {
+                node.children
+                    .insert(inner_field.to_string(), vec![current_ref.clone()]);
+            }
         };
 
         let new_ref = self.file.add_node(node);
@@ -306,10 +273,11 @@ impl Component for Model {
                 //   onclick=callback
                 // XXX
                   class=classes.join(" ")>
-                  <span>
+                  <span class="font-mono">
                     { v.kind.clone() }
                   </span>
-                  <span>
+                  <span>{ "::" }</span>
+                  <span class="font-mono">
                     { v.value.clone() }
                   </span>
                 </div>
@@ -416,7 +384,6 @@ impl Component for Model {
                     children: HashMap::new(),
                 });
                 let parent = self.lookup_mut(&parent_ref).unwrap();
-                log::info!("inner");
                 // If the field does not exist, create a default one.
                 let children = parent.children.entry(selector.field).or_default();
                 let new_index = selector.index + 1;

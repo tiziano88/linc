@@ -6,27 +6,32 @@ use yew::{html, Html};
 const RUST_EXPRESSION: &[&str] = &[
     // XXX
     "rust_identifier",
-    "field_access",
-    "function_call",
-    "if",
-    "match",
-    "operator",
-    "string_literal",
-    "number_literal",
-    "bool_literal_false",
-    "bool_literal_true",
+    "rust_field_access",
+    "rust_function_call",
+    "rust_if",
+    "rust_match",
+    "rust_operator",
+    "rust_string_literal",
+    "rust_number_literal",
+    "rust_bool_literal_false",
+    "rust_bool_literal_true",
 ];
 
 // https://doc.rust-lang.org/stable/reference/items.html
-const RUST_ITEM: &[&str] = &["constant", "enum", "function_definition", "struct"];
+const RUST_ITEM: &[&str] = &[
+    "rust_constant",
+    "rust_enum",
+    "rust_function_definition",
+    "rust_struct",
+];
 
 // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
 const RUST_TYPE: &[&str] = &[
-    "array_type",
-    "reference_type",
-    "simple_path",
-    "slice_type",
-    "tuple_type",
+    "rust_array_type",
+    "rust_reference_type",
+    "rust_simple_path",
+    "rust_slice_type",
+    "rust_tuple_type",
     "rust_primitive_type",
 ];
 
@@ -133,7 +138,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "tuple_type",
+            name: "rust_tuple_type",
             fields: &[Field {
                 name: "components",
                 kind: RUST_TYPE,
@@ -175,7 +180,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "reference_type",
+            name: "rust_reference_type",
             fields: &[
                 Field {
                     name: "type",
@@ -184,13 +189,13 @@ pub const SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "mutable",
-                    kind: &["bool"],
+                    kind: &["rust_bool"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
                     name: "lifetime",
                     // XXX
-                    kind: &["bool"],
+                    kind: &["rust_bool"],
                     multiplicity: Multiplicity::Single,
                 },
             ],
@@ -206,7 +211,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "constant",
+            name: "rust_constant",
             fields: &[
                 Field {
                     name: "identifier",
@@ -238,7 +243,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "block",
+            name: "rust_block",
             fields: &[Field {
                 name: "statements",
                 kind: RUST_EXPRESSION,
@@ -262,7 +267,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "match",
+            name: "rust_match",
             fields: &[
                 Field {
                     name: "expression",
@@ -301,7 +306,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "if",
+            name: "rust_if",
             fields: &[
                 Field {
                     name: "condition", // Expression
@@ -347,7 +352,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "string_literal",
+            name: "rust_string_literal",
             fields: &[],
             inner: None,
             parser: |v: &str| vec![v.to_string()],
@@ -360,7 +365,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "number_literal",
+            name: "rust_number_literal",
             fields: &[],
             inner: None,
             // TODO: regex
@@ -380,7 +385,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "bool_literal",
+            name: "rust_bool_literal",
             fields: &[],
             inner: None,
             // TODO: regex
@@ -392,7 +397,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "field_access",
+            name: "rust_field_access",
             fields: &[
                 Field {
                     name: "object",
@@ -420,7 +425,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "simple_path",
+            name: "rust_simple_path",
             fields: &[Field {
                 name: "segments",
                 kind: &["rust_identifier"],
@@ -454,7 +459,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "crate",
+            name: "rust_crate",
             fields: &[],
             inner: None,
             parser: |v: &str| vec!["crate".to_string()],
@@ -465,7 +470,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "binary_operator",
+            name: "rust_binary_operator",
             fields: &[
                 Field {
                     name: "operator",
@@ -518,7 +523,7 @@ pub const SCHEMA: Schema = Schema {
         },
         // https://doc.rust-lang.org/nightly/reference/items/functions.html
         Kind {
-            name: "function_definition",
+            name: "rust_function_definition",
             fields: &[
                 /*
                 Field {
@@ -546,7 +551,7 @@ pub const SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "parameters",
-                    kind: &["function_parameter"],
+                    kind: &["rust_function_parameter"],
                     multiplicity: Multiplicity::Repeated,
                 },
                 Field {
@@ -588,7 +593,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "function_parameter",
+            name: "rust_function_parameter",
             fields: &[
                 Field {
                     name: "pattern",
@@ -615,12 +620,12 @@ pub const SCHEMA: Schema = Schema {
         },
         // https://doc.rust-lang.org/nightly/reference/statements.html#let-statements
         Kind {
-            name: "let",
+            name: "rust_let",
             fields: &[
                 Field {
                     name: "pattern",
                     // XXX
-                    kind: &["pattern"],
+                    kind: &["rust_pattern"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
@@ -645,7 +650,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "function_call",
+            name: "rust_function_call",
             fields: &[
                 Field {
                     name: "expression",
@@ -673,7 +678,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "struct",
+            name: "rust_struct",
             fields: &[
                 Field {
                     name: "identifier",
@@ -682,7 +687,7 @@ pub const SCHEMA: Schema = Schema {
                 },
                 Field {
                     name: "fields",
-                    kind: &["struct_field"],
+                    kind: &["rust_struct_field"],
                     multiplicity: Multiplicity::Repeated,
                 },
             ],
@@ -706,7 +711,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "struct_field",
+            name: "rust_struct_field",
             fields: &[
                 Field {
                     name: "identifier",
@@ -733,7 +738,7 @@ pub const SCHEMA: Schema = Schema {
         },
         // https://doc.rust-lang.org/nightly/reference/items/enumerations.html
         Kind {
-            name: "enum",
+            name: "rust_enum",
             fields: &[
                 Field {
                     name: "identifier",
@@ -767,7 +772,7 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "enum_variant",
+            name: "rust_enum_variant",
             fields: &[Field {
                 name: "identifier",
                 kind: &["rust_identifier"],
