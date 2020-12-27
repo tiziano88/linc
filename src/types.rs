@@ -85,10 +85,16 @@ impl Model {
                         (kind.parser)(&self.raw_command)
                             .into_iter()
                             // TODO: Different matching logic (e.g. fuzzy).
-                            .filter(|v| v.starts_with(&self.raw_command))
+                            .filter(|v| match v {
+                                Ok(v) => v.starts_with(&self.raw_command),
+                                Err(_) => true,
+                            })
                             .map(move |value| Node {
                                 kind: kind.name.to_string(),
-                                value,
+                                value: match value {
+                                    Ok(v) => v,
+                                    Err(v) => v,
+                                },
                                 children: HashMap::new(),
                             })
                     })
