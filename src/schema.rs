@@ -247,7 +247,7 @@ pub const SCHEMA: Schema = Schema {
                 multiplicity: Multiplicity::Repeated,
             }],
             inner: Some("segments"),
-            parser: |v: &str| vec![Ok("&".to_string())],
+            parser: |v: &str| vec![Ok("::".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
                 let (segments_head, segments) = model.view_children(node, "segments", path);
                 let segments = segments
@@ -1098,6 +1098,10 @@ type Renderer = fn(&Model, &Node, &Path) -> Html;
 // (hierarchy of delegations).
 
 // Options such as pub or async for fns should be attributes of the fn block rather than children?
+// Also:
+// - mutability for references.
+// - markdown heading level
+// - markdown code block language
 
 pub struct Schema {
     pub kinds: &'static [Kind],
