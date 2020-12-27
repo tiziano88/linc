@@ -57,7 +57,10 @@ impl Model {
             Some(head) => {
                 let base = self.lookup(reference).unwrap();
                 let children = &base.children.get(&head.field).cloned().unwrap_or_default();
-                let r = children.get(head.index).cloned().unwrap_or_default();
+                let r = children
+                    .get(head.index)
+                    .cloned()
+                    .unwrap_or(INVALID_REF.to_string());
                 self.lookup_path(&r, path)
             }
             None => Some(reference.clone()),

@@ -12,6 +12,7 @@ const RUST_EXPRESSION: &[&str] = &[
     "rust_if",
     "rust_match",
     "rust_operator",
+    "rust_comparison_expression",
     "rust_string_literal",
     "rust_number_literal",
     "rust_bool_literal_false",
@@ -581,6 +582,53 @@ pub const SCHEMA: Schema = Schema {
             renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
                     <span class="keyword">{ "crate" }</span>
+                }
+            },
+        },
+        // https://doc.rust-lang.org/stable/reference/expressions/operator-expr.html#comparison-operators
+        Kind {
+            name: "rust_comparison_expression",
+            fields: &[
+                Field {
+                    name: "operator",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "left",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "right",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
+            inner: Some("left"),
+            parser: |v: &str| {
+                vec![
+                    "==".to_string(),
+                    "!=".to_string(),
+                    ">".to_string(),
+                    "<".to_string(),
+                    ">=".to_string(),
+                    "<=".to_string(),
+                ]
+                .into_iter()
+                .map(Ok)
+                .collect()
+            },
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                let operator = model.view_child(node, "operator", &path);
+                let left = model.view_child(node, "left", &path);
+                let right = model.view_child(node, "right", &path);
+                html! {
+                    <span>
+                    { left }
+                    { operator }
+                    { right }
+                    </span>
                 }
             },
         },
