@@ -1092,6 +1092,13 @@ pub const SCHEMA: Schema = Schema {
 type Parser = fn(&str) -> Vec<Result<String, String>>;
 type Renderer = fn(&Model, &Node, &Path) -> Html;
 
+// Generators either have logic to generate suggestions, or can delegate to other kinds.
+// For instance, rust_expression may delegate to rust_identifier and rust_field_access.
+// Suggestions from those may show up as `rust_expression > rust_identifier` when presented
+// (hierarchy of delegations).
+
+// Options such as pub or async for fns should be attributes of the fn block rather than children?
+
 pub struct Schema {
     pub kinds: &'static [Kind],
 }
