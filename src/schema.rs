@@ -1,4 +1,4 @@
-use crate::types::{Model, Node, Path};
+use crate::types::{Model, Node, Path, Ref};
 use itertools::Itertools;
 use yew::{html, Html};
 
@@ -119,24 +119,40 @@ impl K for RustFragment {
     }
 }
 
-trait K {
-    fn name() -> String;
+trait K: Sized {
+    const NAME: &'static str;
     // fn fields() -> &[Field];
-    fn parse(v: &str) -> Option<String>;
-    fn render(model: &Model, node: &Node, path: &Path) -> Html;
+    fn generate() -> Vec<String>;
+    // fn parse(v: &str) -> Option<Self>;
+    fn render(&self, model: &Model, path: &Path) -> Html;
     // fn decode(&self) -> Node,
     // fn encode(&self) -> Node,
 }
 
-pub enum RustVisibility {
-    Pub,
-    PubCrate,
-    PubSelf,
-    PubSuper,
-    PubIn,
+struct F {
+    name: String,
+}
+
+pub struct RustVisibility;
+
+impl K for RustVisibility {
+    const NAME: &'static str = "rust_visibility";
+
+    fn render(&self, model: &Model, path: &Path) -> Html {
+        todo!()
+    }
+
+    fn generate() -> Vec<String> {
+        vec![
+            "pub".to_string(),
+            "pub_crate".to_string(),
+            "pub_self".to_string(),
+            "pub_super".to_string(),
+            "pub_in".to_string(),
+        ]
+    }
 }
 */
-
 
 pub const SCHEMA: Schema = Schema {
     kinds: &[
@@ -258,19 +274,27 @@ pub const SCHEMA: Schema = Schema {
             parser: |v: &str| {
                 vec![
                     "pub".to_string(),
-                    "pub(crate)".to_string(),
-                    "pub(self)".to_string(),
-                    "pub(super)".to_string(),
-                    "pub(in)".to_string(),
+                    "pub_crate".to_string(),
+                    "pub_self".to_string(),
+                    "pub_super".to_string(),
+                    "pub_in".to_string(),
                 ]
                 .into_iter()
                 .map(Ok)
                 .collect()
             },
             renderer: |model: &Model, node: &Node, path: &Path| {
+                let v = match node.value.as_ref() {
+                    "pub" => "pub",
+                    "pub_crate" => "pub(crate)",
+                    "pub_self" => "pub(self)",
+                    "pub_super" => "pub(super)",
+                    "pub_in" => "pub(in ...)",
+                    _ => "invalid",
+                };
                 html! {
                     <span class="keyword">
-                    { node.value.clone() }
+                    { v }
                     </span>
                 }
             },
@@ -326,7 +350,7 @@ pub const SCHEMA: Schema = Schema {
             parser: |v: &str| vec![Ok("pub_in".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
                 html! {
-                    <span class="keyword">{ "pub(super)" }</span>
+                    <span class="keyword">{ "pub(in)" }</span>
                 }
             },
         },

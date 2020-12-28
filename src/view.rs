@@ -104,7 +104,8 @@ impl Model {
         }
     }
 
-    pub fn traverse_fields(kind: &str) -> &[Field] {
+    pub fn traverse_fields(node: &Node) -> &[Field] {
+        let kind = &node.kind;
         match SCHEMA.get_kind(kind) {
             Some(kind) => kind.fields,
             None => &[],
@@ -116,7 +117,7 @@ impl Model {
         match &self.lookup(reference) {
             Some(node) => {
                 let mut paths = vec![];
-                for field in Model::traverse_fields(node.kind.as_ref()) {
+                for field in Model::traverse_fields(&node) {
                     let mut children = node.children.get(field.name).cloned().unwrap_or_default();
                     match field.multiplicity {
                         Multiplicity::Single => {
