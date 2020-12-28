@@ -79,12 +79,6 @@ fn rust_primitive_type(n: &str) -> Kind {
 }
 
 
-trait K {
-    fn name() -> String;
-    fn fields() -> &[Field];
-    fn parse(v: &str) -> Option<String>;
-    fn render(model: &Model, node: &Node, path: &Path) -> Html;
-}
 
 struct RustFragment;
 
@@ -124,7 +118,25 @@ impl K for RustFragment {
         }
     }
 }
+
+trait K {
+    fn name() -> String;
+    // fn fields() -> &[Field];
+    fn parse(v: &str) -> Option<String>;
+    fn render(model: &Model, node: &Node, path: &Path) -> Html;
+    // fn decode(&self) -> Node,
+    // fn encode(&self) -> Node,
+}
+
+pub enum RustVisibility {
+    Pub,
+    PubCrate,
+    PubSelf,
+    PubSuper,
+    PubIn,
+}
 */
+
 
 pub const SCHEMA: Schema = Schema {
     kinds: &[
@@ -236,6 +248,85 @@ pub const SCHEMA: Schema = Schema {
                     <span>
                     { node.value.clone() }
                     </span>
+                }
+            },
+        },
+        Kind {
+            name: "rust_visibility",
+            fields: &[],
+            inner: Some("segments"),
+            parser: |v: &str| {
+                vec![
+                    "pub".to_string(),
+                    "pub(crate)".to_string(),
+                    "pub(self)".to_string(),
+                    "pub(super)".to_string(),
+                    "pub(in)".to_string(),
+                ]
+                .into_iter()
+                .map(Ok)
+                .collect()
+            },
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span class="keyword">
+                    { node.value.clone() }
+                    </span>
+                }
+            },
+        },
+        Kind {
+            name: "rust_visibility_pub",
+            fields: &[],
+            inner: None,
+            parser: |v: &str| vec![Ok("pub".to_string())],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span class="keyword">{ "pub" }</span>
+                }
+            },
+        },
+        Kind {
+            name: "rust_visibility_pub_crate",
+            fields: &[],
+            inner: None,
+            parser: |v: &str| vec![Ok("pub_crate".to_string())],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span class="keyword">{ "pub(crate)" }</span>
+                }
+            },
+        },
+        Kind {
+            name: "rust_visibility_pub_self",
+            fields: &[],
+            inner: None,
+            parser: |v: &str| vec![Ok("pub_self".to_string())],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span class="keyword">{ "pub(self)" }</span>
+                }
+            },
+        },
+        Kind {
+            name: "rust_visibility_pub_super",
+            fields: &[],
+            inner: None,
+            parser: |v: &str| vec![Ok("pub_crate".to_string())],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span class="keyword">{ "pub(super)" }</span>
+                }
+            },
+        },
+        Kind {
+            name: "rust_visibility_pub_in",
+            fields: &[],
+            inner: None,
+            parser: |v: &str| vec![Ok("pub_in".to_string())],
+            renderer: |model: &Model, node: &Node, path: &Path| {
+                html! {
+                    <span class="keyword">{ "pub(super)" }</span>
                 }
             },
         },
@@ -691,23 +782,19 @@ pub const SCHEMA: Schema = Schema {
         Kind {
             name: "rust_function_definition",
             fields: &[
-                /*
-                Field {
-                    name: "pub",
-                    type_: Type::Bool,
-                    multiplicity: Multiplicity::Single,
-                    validator: whatever,
-                },
-                Field {
-                    name: "async",
-                    type_: Type::Bool,
-                    multiplicity: Multiplicity::Single,
-                    validator: whatever,
-                },
-                */
                 Field {
                     name: "comment",
                     kind: &["markdown_fragment"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "async",
+                    kind: &["rust_bool_literal"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "extern",
+                    kind: &["rust_bool_literal"],
                     multiplicity: Multiplicity::Single,
                 },
                 Field {
@@ -735,19 +822,31 @@ pub const SCHEMA: Schema = Schema {
             parser: |v: &str| vec![Ok("fn".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
                 let comment = model.view_child(node, "comment", path);
+                let async_ = model.view_child(node, "async", path);
+                let extern_ = model.view_child(node, "extern", path);
                 let identifier = model.view_child(node, "identifier", path);
                 let (parameters_head, parameters) = model.view_children(node, "parameters", path);
                 let parameters = parameters.into_iter().intersperse(html! {{ "," }});
                 let body = model.view_child(node, "body", path);
                 let return_type = model.view_child(node, "return_type", path);
-                // let async_ = self.view_child(&v, "async", &path);
-                // let pub_ = self.view_child(&v, "pub", &path);
+
+                let async_0 = if node.children.get("async").is_some() {
+                    html! {
+                          <span class="keyword">{ "async" }</span>
+                    }
+                } else {
+                    html! {
+                          <></>
+                    }
+                };
 
                 html! {
                     <span>
                         <div>{ "//" }{ comment }</div>
-                        // { pub_ }
+                        <div>{ "async" }{ async_ }</div>
+                        <div>{ "extern" }{ extern_ }</div>
                         <div>
+                          { async_0 }
                           <span class="keyword">{ "fn" }</span>{ identifier }
                           { "(" }{ for parameters }{ parameters_head }{ ")" }
                           { "->" }{ return_type }{ "{" }
@@ -898,6 +997,11 @@ pub const SCHEMA: Schema = Schema {
             name: "rust_struct_field",
             fields: &[
                 Field {
+                    name: "visibility",
+                    kind: &["rust_visibility"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
                     name: "identifier",
                     kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
@@ -911,11 +1015,12 @@ pub const SCHEMA: Schema = Schema {
             inner: None,
             parser: |v: &str| vec![Ok("struct_field".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
+                let visibility = model.view_child(node, "visibility", path);
                 let identifier = model.view_child(node, "identifier", path);
                 let type_ = model.view_child(node, "type", path);
                 html! {
                     <span>
-                    { identifier }{ ":" }{ type_ }
+                    { visibility }{ identifier }{ ":" }{ type_ }
                     </span>
                 }
             },
@@ -1102,6 +1207,10 @@ type Renderer = fn(&Model, &Node, &Path) -> Html;
 // - mutability for references.
 // - markdown heading level
 // - markdown code block language
+// These can probably be represented as enums / variants stored as value and validated when parsed
+// (even for bools and ints).
+// Maybe we can use :field to navigate to "hidden" fields of a block and then edit them as children?
+// But it seems quite noisy to treat them as children, they are more like attributes.
 
 pub struct Schema {
     pub kinds: &'static [Kind],
