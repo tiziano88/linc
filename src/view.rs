@@ -63,7 +63,7 @@ impl Model {
                 SCHEMA
                     .get_kind(&parent.kind)
                     .unwrap()
-                    .get_field(&selector.field)
+                    .get_field(parent, &selector.field)
             }
             None => None,
         }
@@ -107,7 +107,7 @@ impl Model {
     pub fn traverse_fields(node: &Node) -> &[Field] {
         let kind = &node.kind;
         match SCHEMA.get_kind(kind) {
-            Some(kind) => kind.fields,
+            Some(kind) => (kind.fields)(node),
             None => &[],
         }
     }
