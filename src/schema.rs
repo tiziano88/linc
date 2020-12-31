@@ -1272,9 +1272,9 @@ impl Schema {
 pub struct Kind {
     pub name: &'static str,
     fields: &'static [Field],
-    pub inner: Option<&'static str>,
-    pub renderer: Renderer,
-    pub parser: Parser,
+    inner: Option<&'static str>,
+    renderer: Renderer,
+    parser: Parser,
     /* pub aliases: &'static [&'static str],
      * TODO: create list of elements, and then have validator function to filter them and
      * provide feedback if not matching, without hiding the entry. Or return one of three values
@@ -1288,6 +1288,18 @@ impl Kind {
 
     pub fn get_fields(&self) -> &[Field] {
         self.fields
+    }
+
+    pub fn inner(&self) -> Option<&'static str> {
+        self.inner
+    }
+
+    pub fn render(&self, model: &Model, node: &Node, path: &Path) -> Html {
+        (self.renderer)(model, node, path)
+    }
+
+    pub fn parse(&self, v: &str) -> Vec<Result<String, String>> {
+        (self.parser)(v)
     }
 }
 

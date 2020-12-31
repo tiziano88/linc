@@ -85,7 +85,7 @@ impl Model {
                     .iter()
                     .filter_map(|kind| SCHEMA.get_kind(kind))
                     .flat_map(|kind| {
-                        (kind.parser)(&self.raw_command)
+                        kind.parse(&self.raw_command)
                             .into_iter()
                             // TODO: Different matching logic (e.g. fuzzy).
                             .filter(|v| match v {
@@ -144,7 +144,7 @@ impl Model {
         let node_kind = SCHEMA.get_kind(&node.kind);
 
         if let (Some(current_ref), Some(inner_field)) =
-            (current_ref, node_kind.and_then(|k| k.inner))
+            (current_ref, node_kind.and_then(|k| k.inner()))
         {
             if current_ref != INVALID_REF {
                 node.children
