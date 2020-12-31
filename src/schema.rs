@@ -137,18 +137,15 @@ impl K for RustFragment {
     }
 }
 
+
 trait K: Sized {
     const NAME: &'static str;
-    // fn fields() -> &[Field];
+    fn fields() -> &'static [Field];
     fn generate() -> Vec<String>;
     // fn parse(v: &str) -> Option<Self>;
     fn render(&self, model: &Model, path: &Path) -> Html;
     // fn decode(&self) -> Node,
     // fn encode(&self) -> Node,
-}
-
-struct F {
-    name: String,
 }
 
 pub struct RustVisibility;
@@ -168,6 +165,10 @@ impl K for RustVisibility {
             "pub_super".to_string(),
             "pub_in".to_string(),
         ]
+    }
+
+    fn fields() -> &'static [Field] {
+        todo!()
     }
 }
 */
@@ -356,7 +357,13 @@ pub const SCHEMA: Schema = Schema {
             renderer: |model: &Model, node: &Node, path: &Path| {
                 let path = model.view_child(node, "path", &path);
                 html! {
-                    <span class="keyword">{ "pub(in" }{ path }{ ")" }</span>
+                    <span>
+                        <span class="keyword">{ "pub" }</span>
+                        <span>{ "(" }</span>
+                        <span class="keyword">{ "in" }</span>
+                        { path }
+                        <span>{ ")" }</span>
+                    </span>
                 }
             },
         },
@@ -1264,7 +1271,7 @@ impl Schema {
 
 pub struct Kind {
     pub name: &'static str,
-    pub fields: &'static [Field],
+    fields: &'static [Field],
     pub inner: Option<&'static str>,
     pub renderer: Renderer,
     pub parser: Parser,
