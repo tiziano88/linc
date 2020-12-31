@@ -11,8 +11,7 @@ const RUST_EXPRESSION: &[&str] = &[
     "rust_match",
     "rust_operator",
     "rust_comparison_expression",
-    "rust_bool_literal_false",
-    "rust_bool_literal_true",
+    "rust_bool_literal",
     "rust_number_literal",
     "rust_identifier",
     "rust_string_literal",
@@ -58,7 +57,7 @@ const RUST_VISIBILITY: &[&str] = &[
     "rust_visibility_pub_in",
 ];
 
-const RUST_BOOL_LITERAL: &[&str] = &["rust_bool_literal_false", "rust_bool_literal_true"];
+// const RUST_BOOL_LITERAL: &[&str] = &["rust_bool_literal_false", "rust_bool_literal_true"];
 
 const RUST_PATH_IDENT_SEGMENT: &[&str] = &[
     "rust_path_ident_segment_super",
@@ -670,6 +669,12 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
+            name: "rust_bool_literal",
+            value: KindValue::Enum {
+                variants: &["rust_bool_literal_false", "rust_bool_literal_true"],
+            },
+        },
+        Kind {
             name: "rust_bool_literal_false",
             value: KindValue::Struct {
                 fields: &[],
@@ -898,12 +903,12 @@ pub const SCHEMA: Schema = Schema {
                     },
                     Field {
                         name: "async",
-                        kind: RUST_BOOL_LITERAL,
+                        kind: &["rust_bool_literal"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "extern",
-                        kind: RUST_BOOL_LITERAL,
+                        kind: &["rust_bool_literal"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -1373,21 +1378,24 @@ pub enum KindValue {
         renderer: Renderer,
         parser: Parser,
     },
-    Enum {},
+    Enum {
+        variants: &'static [&'static str],
+    },
 }
 
 impl Kind {
-    pub fn get_field<'a>(&'a self, field: &str) -> Option<&'a Field> {
-        self.get_fields().iter().find(|f| f.name == field)
+    pub fn get_field(&self, field: &str) -> Option<Field> {
+        self.get_fields().into_iter().find(|f| f.name == field)
     }
 
-    pub fn get_fields<'a>(&'a self) -> &'a [Field] {
+    pub fn get_fields(&self) -> Vec<Field> {
         match self.value {
-            KindValue::Struct { fields, .. } => fields,
-            KindValue::Enum { .. } => {
-                // XXX
-                &[]
-            }
+            KindValue::Struct { fields, .. } => fields.iter().cloned().collect(),
+            KindValue::Enum { variants } => variants
+                .iter()
+                .filter_map(|n| SCHEMA.get_kind(n))
+                .flat_map(|k| k.get_fields())
+                .collect(),
         }
     }
 
@@ -1416,20 +1424,23 @@ impl Kind {
     pub fn parse(&self, v: &str) -> Vec<Result<String, String>> {
         match self.value {
             KindValue::Struct { parser, .. } => parser(v),
-            KindValue::Enum { .. } => {
-                // XXX
-                vec![]
-            }
+            KindValue::Enum { variants } => variants
+                .iter()
+                .filter_map(|n| SCHEMA.get_kind(n))
+                .flat_map(|k| k.parse(v))
+                .collect(),
         }
     }
 }
 
+#[derive(Clone)]
 pub struct Field {
     pub name: &'static str,
     pub kind: &'static [&'static str],
     pub multiplicity: Multiplicity,
 }
 
+#[derive(Clone)]
 pub enum Multiplicity {
     // Required -- show hole if not present
     // Optional -- hide if not present

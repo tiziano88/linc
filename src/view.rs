@@ -56,7 +56,7 @@ impl Model {
         }
     }
 
-    pub fn current_field(&self) -> Option<&Field> {
+    pub fn current_field(&self) -> Option<Field> {
         match self.cursor.back() {
             Some(selector) => {
                 let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
@@ -104,11 +104,11 @@ impl Model {
         }
     }
 
-    pub fn traverse_fields(node: &Node) -> &[Field] {
+    pub fn traverse_fields(node: &Node) -> Vec<Field> {
         let kind = &node.kind;
         match SCHEMA.get_kind(kind) {
             Some(kind) => kind.get_fields(),
-            None => &[],
+            None => vec![],
         }
     }
 
