@@ -1421,16 +1421,35 @@ impl Kind {
         }
     }
 
-    pub fn parse(&self, v: &str) -> Vec<Result<String, String>> {
+    pub fn parse(&self, v: &str) -> Vec<ParsedValue> {
         match self.value {
-            KindValue::Struct { parser, .. } => parser(v),
+            KindValue::Struct { parser, .. } => parser(v)
+                .into_iter()
+                .map(|value| ParsedValue {
+                    kind_hierarchy: vec![self.name.to_string()],
+                    value,
+                })
+                .collect(),
             KindValue::Enum { variants } => variants
                 .iter()
                 .filter_map(|n| SCHEMA.get_kind(n))
                 .flat_map(|k| k.parse(v))
+                .map(|v| {
+                    let mut kind_hierarchy = v.kind_hierarchy;
+                    kind_hierarchy.insert(0, self.name.to_string());
+                    ParsedValue {
+                        kind_hierarchy,
+                        value: v.value,
+                    }
+                })
                 .collect(),
         }
     }
+}
+
+pub struct ParsedValue {
+    pub kind_hierarchy: Vec<String>,
+    pub value: Result<String, String>,
 }
 
 #[derive(Clone)]

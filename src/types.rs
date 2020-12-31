@@ -88,13 +88,13 @@ impl Model {
                         kind.parse(&self.raw_command)
                             .into_iter()
                             // TODO: Different matching logic (e.g. fuzzy).
-                            .filter(|v| match v {
+                            .filter(|v| match &v.value {
                                 Ok(v) => v.starts_with(&self.raw_command),
                                 Err(_) => true,
                             })
                             .map(move |value| Node {
-                                kind: kind.name.to_string(),
-                                value: match value {
+                                kind: value.kind_hierarchy.last().unwrap().clone(),
+                                value: match value.value {
                                     Ok(v) => v,
                                     Err(v) => v,
                                 },
