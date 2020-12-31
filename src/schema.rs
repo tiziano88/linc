@@ -1264,7 +1264,6 @@ impl Schema {
 
 pub struct Kind {
     pub name: &'static str,
-    // pub fields: &'static [Field],
     pub fields: &'static [Field],
     pub inner: Option<&'static str>,
     pub renderer: Renderer,
@@ -1276,8 +1275,12 @@ pub struct Kind {
 }
 
 impl Kind {
-    pub fn get_field<'a>(&self, node: &'a Node, field: &str) -> Option<&'a Field> {
+    pub fn get_field<'a>(&self, field: &str) -> Option<&'a Field> {
         self.fields.iter().find(|f| f.name == field)
+    }
+
+    pub fn get_fields(&self) -> &[Field] {
+        self.fields
     }
 }
 
