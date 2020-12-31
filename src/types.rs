@@ -1,4 +1,4 @@
-use crate::schema::SCHEMA;
+use crate::schema::{ParsedValue, SCHEMA};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
@@ -40,7 +40,7 @@ pub struct Model {
     pub link: ComponentLink<Self>,
 
     pub raw_command: String,
-    pub parsed_commands: Vec<Node>,
+    pub parsed_commands: Vec<ParsedValue>,
     pub selected_command_index: usize,
 }
 
@@ -77,7 +77,7 @@ impl Model {
         self.lookup_path(&self.file.root, self.cursor.clone())
     }
 
-    fn parse_commands(&mut self) -> Vec<Node> {
+    fn parse_commands(&mut self) -> Vec<ParsedValue> {
         self.current_field()
             .map(|field| {
                 field
@@ -91,14 +91,6 @@ impl Model {
                             .filter(|v| match &v.value {
                                 Ok(v) => v.starts_with(&self.raw_command),
                                 Err(_) => true,
-                            })
-                            .map(move |value| Node {
-                                kind: value.kind_hierarchy.last().unwrap().clone(),
-                                value: match value.value {
-                                    Ok(v) => v,
-                                    Err(v) => v,
-                                },
-                                children: HashMap::new(),
                             })
                     })
                     .collect::<Vec<_>>()
@@ -279,7 +271,7 @@ impl Component for Model {
             .link
             .callback(move |e: InputData| Msg::SetCommand(e.value));
         let onblur = self.link.callback(move |e: FocusEvent| Msg::Noop);
-        let values = self.parsed_commands.iter().enumerate().map(|(i, node)| {
+        let values = self.parsed_commands.iter().enumerate().map(|(i, parsed_value)| {
             // let callback = self.link.callback(move |_| Msg::ReplaceCurrentNode(v));
             let mut classes = vec![
                 "border",
@@ -296,10 +288,19 @@ impl Component for Model {
             } else {
                 classes.push("bg-gray-100");
             }
-            let (prefix, suffix) = match node.value.strip_prefix(&self.raw_command) {
+            let value = parsed_value.value.clone().ok().unwrap_or_default();
+            let (prefix, suffix) = match value.strip_prefix(&self.raw_command) {
                 Some(suffix) => (self.raw_command.clone(), suffix.to_string()),
-                None => ("".to_string(), node.value.clone()),
+                None => ("".to_string(), value.clone()),
             };
+            let kinds = parsed_value.kind_hierarchy.iter().map(|k| {
+                html!{
+                    <span class="kind bg-blue-200 p-1 px-2 rounded-md">
+                        <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                        { k }
+                    </span>
+                }
+            });
             html! {
                 <div
                 //   onclick=callback
@@ -316,10 +317,7 @@ impl Component for Model {
                         </span>
                     </div>
                     <div class="text-sm font-mono">
-                        <span class="kind bg-blue-200 p-1 px-2 rounded-md">
-                            <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                            { node.kind.clone() }
-                        </span>
+                        { for kinds }
                     </div>
                   </div>
                 </div>
@@ -466,16 +464,21 @@ impl Component for Model {
                         .get(self.selected_command_index)
                         .clone()
                     {
-                        Some(node) => {
+                        Some(parsed_value) => {
                             // Replace current node.
                             // self.file
                             //     .nodes
                             //     .insert(self.current_ref().unwrap(), node.clone());
-                            self.set_value(node.clone());
-                            self.next();
-                            self.raw_command = "".to_string();
-                            self.parsed_commands = self.parse_commands();
-                            self.selected_command_index = 0;
+                            match parsed_value.to_node() {
+                                Some(node) => {
+                                    self.set_value(node.clone());
+                                    self.next();
+                                    self.raw_command = "".to_string();
+                                    self.parsed_commands = self.parse_commands();
+                                    self.selected_command_index = 0;
+                                }
+                                None => {}
+                            }
                         }
                         None => log::info!("invalid command"),
                     },

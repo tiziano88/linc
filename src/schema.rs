@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::types::{Model, Node, Path, Ref};
 use itertools::Itertools;
 use yew::{html, Html};
@@ -1517,6 +1519,16 @@ impl Kind {
 pub struct ParsedValue {
     pub kind_hierarchy: Vec<String>,
     pub value: Result<String, String>,
+}
+
+impl ParsedValue {
+    pub fn to_node(&self) -> Option<Node> {
+        self.value.clone().ok().map(|v| Node {
+            kind: self.kind_hierarchy.last().unwrap().clone(),
+            value: v,
+            children: HashMap::new(),
+        })
+    }
 }
 
 #[derive(Clone)]
