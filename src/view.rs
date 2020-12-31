@@ -107,7 +107,7 @@ impl Model {
     pub fn traverse_fields(node: &Node) -> &[Field] {
         let kind = &node.kind;
         match SCHEMA.get_kind(kind) {
-            Some(kind) => (kind.fields)(node),
+            Some(kind) => kind.fields,
             None => &[],
         }
     }

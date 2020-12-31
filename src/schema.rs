@@ -11,9 +11,9 @@ const RUST_EXPRESSION: &[&str] = &[
     "rust_match",
     "rust_operator",
     "rust_comparison_expression",
-    "rust_number_literal",
     "rust_bool_literal_false",
     "rust_bool_literal_true",
+    "rust_number_literal",
     "rust_identifier",
     "rust_string_literal",
 ];
@@ -176,13 +176,11 @@ pub const SCHEMA: Schema = Schema {
     kinds: &[
         Kind {
             name: "rust_fragment",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "items",
-                    kind: RUST_ITEM,
-                    multiplicity: Multiplicity::Repeated,
-                }]
-            },
+            fields: &[Field {
+                name: "items",
+                kind: RUST_ITEM,
+                multiplicity: Multiplicity::Repeated,
+            }],
             inner: None,
             parser: |v: &str| vec![Ok("".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -203,13 +201,11 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_tuple_type",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "components",
-                    kind: RUST_TYPE,
-                    multiplicity: Multiplicity::Repeated,
-                }]
-            },
+            fields: &[Field {
+                name: "components",
+                kind: RUST_TYPE,
+                multiplicity: Multiplicity::Repeated,
+            }],
             inner: Some("components"),
             parser: |v: &str| vec![Ok("(".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -228,7 +224,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_primitive_type",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| {
                 vec![
@@ -262,7 +258,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_path_ident_segment_super",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("super".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -273,7 +269,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_path_ident_segment_self",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("self".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -284,7 +280,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_path_ident_segment_self_upper",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("Self".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -295,7 +291,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_path_ident_segment_crate",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("crate".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -306,7 +302,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_path_ident_segment_crate_dollar",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("$crate".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -317,7 +313,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_visibility_pub",
-            fields: |node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("pub".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -328,7 +324,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_visibility_pub_crate",
-            fields: |node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("pub_crate".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -339,7 +335,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_visibility_pub_self",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("pub_self".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -350,13 +346,11 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_visibility_pub_in",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "path",
-                    kind: &["rust_simple_path"],
-                    multiplicity: Multiplicity::Single,
-                }]
-            },
+            fields: &[Field {
+                name: "path",
+                kind: &["rust_simple_path"],
+                multiplicity: Multiplicity::Single,
+            }],
             inner: None,
             parser: |v: &str| vec![Ok("pub_in".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -368,13 +362,11 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_type_path",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "segments",
-                    kind: RUST_TYPE,
-                    multiplicity: Multiplicity::Repeated,
-                }]
-            },
+            fields: &[Field {
+                name: "segments",
+                kind: RUST_TYPE,
+                multiplicity: Multiplicity::Repeated,
+            }],
             inner: Some("segments"),
             parser: |v: &str| vec![Ok("::".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -391,26 +383,24 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_reference_type",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "type",
-                        kind: RUST_TYPE,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "mutable",
-                        kind: &["rust_bool"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "lifetime",
-                        // XXX
-                        kind: &["rust_bool"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "type",
+                    kind: RUST_TYPE,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "mutable",
+                    kind: &["rust_bool"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "lifetime",
+                    // XXX
+                    kind: &["rust_bool"],
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: Some("type"),
             parser: |v: &str| vec![Ok("&".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -424,25 +414,23 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_constant",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "identifier",
-                        kind: &["rust_identifier"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "type",
-                        kind: RUST_TYPE,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "expression",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "identifier",
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "type",
+                    kind: RUST_TYPE,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "expression",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: Some("statements"),
             parser: |v: &str| vec![Ok("const".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -458,13 +446,11 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_block",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "statements",
-                    kind: RUST_EXPRESSION,
-                    multiplicity: Multiplicity::Repeated,
-                }]
-            },
+            fields: &[Field {
+                name: "statements",
+                kind: RUST_EXPRESSION,
+                multiplicity: Multiplicity::Repeated,
+            }],
             inner: Some("statements"),
             parser: |v: &str| vec![Ok("{".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -484,13 +470,11 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_match",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "match_arms",
-                    kind: &["rust_match_arm"],
-                    multiplicity: Multiplicity::Repeated,
-                }]
-            },
+            fields: &[Field {
+                name: "match_arms",
+                kind: &["rust_match_arm"],
+                multiplicity: Multiplicity::Repeated,
+            }],
             inner: Some("match_arms"),
             parser: |v: &str| vec![Ok("match_arm".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -517,25 +501,23 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_match_arm",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "patterns",
-                        kind: RUST_PATTERN,
-                        multiplicity: Multiplicity::Repeated,
-                    },
-                    Field {
-                        name: "guard",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "expression",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "patterns",
+                    kind: RUST_PATTERN,
+                    multiplicity: Multiplicity::Repeated,
+                },
+                Field {
+                    name: "guard",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "expression",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: Some("match_arms"),
             parser: |v: &str| vec![Ok("match_arm".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -558,25 +540,23 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_if",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "condition", // Expression
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "true_body", // Expression
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "false_body", // Expression
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "condition", // Expression
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "true_body", // Expression
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "false_body", // Expression
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: Some("true_body"),
             parser: |v: &str| vec![Ok("if".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -606,7 +586,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_string_literal",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok(v.to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -619,7 +599,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_number_literal",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             // TODO: regex
             parser: |v: &str| {
@@ -639,7 +619,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_bool_literal_false",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("false".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -650,7 +630,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_bool_literal_true",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("true".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -661,20 +641,18 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_field_access",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "object",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "field",
-                        kind: &["rust_identifier"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "object",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "field",
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: Some("object"),
             parser: |v: &str| vec![Ok(".".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -691,13 +669,11 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_simple_path",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "segments",
-                    kind: RUST_PATH_IDENT_SEGMENT,
-                    multiplicity: Multiplicity::Repeated,
-                }]
-            },
+            fields: &[Field {
+                name: "segments",
+                kind: RUST_PATH_IDENT_SEGMENT,
+                multiplicity: Multiplicity::Repeated,
+            }],
             inner: Some("segments"),
             parser: |v: &str| vec![Ok("::".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -710,7 +686,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_identifier",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| {
                 vec![if v.is_empty() {
@@ -731,7 +707,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_crate",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| vec![Ok("crate".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -743,25 +719,23 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/stable/reference/expressions/operator-expr.html#comparison-operators
         Kind {
             name: "rust_comparison_expression",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "operator",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "left",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "right",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "operator",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "left",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "right",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: Some("left"),
             parser: |v: &str| {
                 vec![
@@ -791,26 +765,24 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_binary_operator",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "operator",
-                        // XXX
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "left",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "right",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "operator",
+                    // XXX
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "left",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "right",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: Some("left"),
             parser: |v: &str| {
                 vec![
@@ -849,45 +821,43 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/nightly/reference/items/functions.html
         Kind {
             name: "rust_function_definition",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "comment",
-                        kind: &["markdown_fragment"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "async",
-                        kind: RUST_BOOL_LITERAL,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "extern",
-                        kind: RUST_BOOL_LITERAL,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "identifier",
-                        kind: &["rust_identifier"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "parameters",
-                        kind: &["rust_function_parameter"],
-                        multiplicity: Multiplicity::Repeated,
-                    },
-                    Field {
-                        name: "return_type",
-                        kind: RUST_TYPE,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "body",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "comment",
+                    kind: &["markdown_fragment"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "async",
+                    kind: RUST_BOOL_LITERAL,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "extern",
+                    kind: RUST_BOOL_LITERAL,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "identifier",
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "parameters",
+                    kind: &["rust_function_parameter"],
+                    multiplicity: Multiplicity::Repeated,
+                },
+                Field {
+                    name: "return_type",
+                    kind: RUST_TYPE,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "body",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: None,
             parser: |v: &str| vec![Ok("fn".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -929,20 +899,18 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_function_parameter",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "pattern",
-                        kind: &["rust_identifier"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "type",
-                        kind: RUST_TYPE,
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "pattern",
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "type",
+                    kind: RUST_TYPE,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: None,
             parser: |v: &str| vec![Ok("param".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -958,25 +926,23 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/nightly/reference/statements.html#let-statements
         Kind {
             name: "rust_let",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "pattern",
-                        kind: RUST_PATTERN,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "type",
-                        kind: RUST_TYPE,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "value", // Expression
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "pattern",
+                    kind: RUST_PATTERN,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "type",
+                    kind: RUST_TYPE,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "value", // Expression
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: Some("value"),
             parser: |v: &str| vec![Ok("let".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -989,20 +955,18 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_function_call",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "expression",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "arguments",
-                        kind: RUST_EXPRESSION,
-                        multiplicity: Multiplicity::Repeated,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "expression",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "arguments",
+                    kind: RUST_EXPRESSION,
+                    multiplicity: Multiplicity::Repeated,
+                },
+            ],
             inner: Some("expression"),
             parser: |v: &str| vec![Ok("(".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -1019,13 +983,11 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_tuple_expression",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "elements",
-                    kind: RUST_EXPRESSION,
-                    multiplicity: Multiplicity::Repeated,
-                }]
-            },
+            fields: &[Field {
+                name: "elements",
+                kind: RUST_EXPRESSION,
+                multiplicity: Multiplicity::Repeated,
+            }],
             inner: Some("elements"),
             parser: |v: &str| vec![Ok("(".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -1040,20 +1002,18 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_struct",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "identifier",
-                        kind: &["rust_identifier"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "fields",
-                        kind: &["rust_struct_field"],
-                        multiplicity: Multiplicity::Repeated,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "identifier",
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "fields",
+                    kind: &["rust_struct_field"],
+                    multiplicity: Multiplicity::Repeated,
+                },
+            ],
             inner: None,
             parser: |v: &str| vec![Ok("struct".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -1075,25 +1035,23 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_struct_field",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "visibility",
-                        kind: RUST_VISIBILITY,
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "identifier",
-                        kind: &["rust_identifier"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "type", // Type
-                        kind: RUST_TYPE,
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "visibility",
+                    kind: RUST_VISIBILITY,
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "identifier",
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "type", // Type
+                    kind: RUST_TYPE,
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: None,
             parser: |v: &str| vec![Ok("struct_field".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -1110,21 +1068,19 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/nightly/reference/items/enumerations.html
         Kind {
             name: "rust_enum",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "identifier",
-                        kind: &["rust_identifier"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "variants",
-                        // enum_variant
-                        kind: &["rust_identifier"],
-                        multiplicity: Multiplicity::Repeated,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "identifier",
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "variants",
+                    // enum_variant
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Repeated,
+                },
+            ],
             inner: None,
             parser: |v: &str| vec![Ok("enum".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -1146,13 +1102,11 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_enum_variant",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "identifier",
-                    kind: &["rust_identifier"],
-                    multiplicity: Multiplicity::Single,
-                }]
-            },
+            fields: &[Field {
+                name: "identifier",
+                kind: &["rust_identifier"],
+                multiplicity: Multiplicity::Single,
+            }],
             inner: None,
             parser: |v: &str| vec![Ok("enum_variant".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -1174,19 +1128,17 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "markdown_fragment",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "items",
-                    kind: &[
-                        "markdown_paragraph",
-                        "markdown_heading",
-                        "markdown_code",
-                        "markdown_quote",
-                        "markdown_list",
-                    ],
-                    multiplicity: Multiplicity::Repeated,
-                }]
-            },
+            fields: &[Field {
+                name: "items",
+                kind: &[
+                    "markdown_paragraph",
+                    "markdown_heading",
+                    "markdown_code",
+                    "markdown_quote",
+                    "markdown_list",
+                ],
+                multiplicity: Multiplicity::Repeated,
+            }],
             inner: Some("items"),
             parser: |v: &str| vec![Ok("markdown_fragment".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -1207,7 +1159,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "markdown_paragraph",
-            fields: |_node: &Node| &[],
+            fields: &[],
             inner: None,
             parser: |v: &str| {
                 vec![if v.is_empty() {
@@ -1226,22 +1178,20 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "markdown_heading",
-            fields: |_node: &Node| {
-                &[
-                    Field {
-                        name: "level",
-                        // XXX
-                        kind: &[],
-                        multiplicity: Multiplicity::Single,
-                    },
-                    Field {
-                        name: "text",
-                        // XXX
-                        kind: &["rust_identifier"],
-                        multiplicity: Multiplicity::Single,
-                    },
-                ]
-            },
+            fields: &[
+                Field {
+                    name: "level",
+                    // XXX
+                    kind: &[],
+                    multiplicity: Multiplicity::Single,
+                },
+                Field {
+                    name: "text",
+                    // XXX
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                },
+            ],
             inner: Some("text"),
             parser: |v: &str| vec![Ok("#".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -1256,13 +1206,11 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "markdown_list",
-            fields: |_node: &Node| {
-                &[Field {
-                    name: "items",
-                    kind: &["markdown_paragraph"],
-                    multiplicity: Multiplicity::Repeated,
-                }]
-            },
+            fields: &[Field {
+                name: "items",
+                kind: &["markdown_paragraph"],
+                multiplicity: Multiplicity::Repeated,
+            }],
             inner: Some("items"),
             parser: |v: &str| vec![Ok("-".to_string())],
             renderer: |model: &Model, node: &Node, path: &Path| {
@@ -1288,7 +1236,6 @@ pub const SCHEMA: Schema = Schema {
 // Generate valid values.
 type Parser = fn(&str) -> Vec<Result<String, String>>;
 type Renderer = fn(&Model, &Node, &Path) -> Html;
-type Fields = fn(&Node) -> &[Field];
 
 // Generators either have logic to generate suggestions, or can delegate to other kinds.
 // For instance, rust_expression may delegate to rust_identifier and rust_field_access.
@@ -1318,7 +1265,7 @@ impl Schema {
 pub struct Kind {
     pub name: &'static str,
     // pub fields: &'static [Field],
-    pub fields: Fields,
+    pub fields: &'static [Field],
     pub inner: Option<&'static str>,
     pub renderer: Renderer,
     pub parser: Parser,
@@ -1330,7 +1277,7 @@ pub struct Kind {
 
 impl Kind {
     pub fn get_field<'a>(&self, node: &'a Node, field: &str) -> Option<&'a Field> {
-        (self.fields)(node).iter().find(|f| f.name == field)
+        self.fields.iter().find(|f| f.name == field)
     }
 }
 
