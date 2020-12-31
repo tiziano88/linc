@@ -2,72 +2,6 @@ use crate::types::{Model, Node, Path, Ref};
 use itertools::Itertools;
 use yew::{html, Html};
 
-// https://doc.rust-lang.org/stable/reference/expressions.html
-const RUST_EXPRESSION: &[&str] = &[
-    "rust_field_access",
-    "rust_function_call",
-    "rust_tuple_expression",
-    "rust_if",
-    "rust_match",
-    "rust_operator",
-    "rust_comparison_expression",
-    "rust_bool_literal",
-    "rust_number_literal",
-    "rust_identifier",
-    "rust_string_literal",
-];
-
-// https://doc.rust-lang.org/stable/reference/items.html
-const RUST_ITEM: &[&str] = &[
-    "rust_constant",
-    "rust_enum",
-    "rust_function_definition",
-    "rust_struct",
-];
-
-const RUST_PATTERN: &[&str] = &[
-    "rust_literal_pattern",
-    "rust_wildcard_pattern",
-    "rust_rest_pattern",
-    "rust_reference_pattern",
-    "rust_struct_pattern",
-    "rust_tuple_struct_pattern",
-    "rust_tuple_pattern",
-    "rust_grouped_pattern",
-    "rust_path_pattern",
-    "rust_macro_invocation",
-    "rust_identifier_pattern",
-];
-
-// https://doc.rust-lang.org/stable/reference/types.html#type-expressions
-const RUST_TYPE: &[&str] = &[
-    "rust_type_path",
-    "rust_array_type",
-    "rust_reference_type",
-    "rust_slice_type",
-    "rust_tuple_type",
-    "rust_primitive_type",
-];
-
-const RUST_VISIBILITY: &[&str] = &[
-    "rust_visibility_pub",
-    "rust_visibility_pub_crate",
-    "rust_visibility_pub_self",
-    "rust_visibility_pub_super",
-    "rust_visibility_pub_in",
-];
-
-// const RUST_BOOL_LITERAL: &[&str] = &["rust_bool_literal_false", "rust_bool_literal_true"];
-
-const RUST_PATH_IDENT_SEGMENT: &[&str] = &[
-    "rust_path_ident_segment_super",
-    "rust_path_ident_segment_self",
-    "rust_path_ident_segment_self_upper",
-    "rust_path_ident_segment_crate",
-    "rust_path_ident_segment_crate_dollar",
-    "rust_identifier",
-];
-
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
 //the kind field of Inner, and we then try to parse each element with all of them until one
 // matches.
@@ -179,7 +113,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "items",
-                    kind: RUST_ITEM,
+                    kind: &["rust_item"],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: None,
@@ -201,12 +135,100 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        // https://doc.rust-lang.org/stable/reference/items.html
+        Kind {
+            name: "rust_item",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_constant",
+                    "rust_enum",
+                    "rust_function_definition",
+                    "rust_struct",
+                ],
+            },
+        },
+        Kind {
+            name: "rust_visibility",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_visibility_pub",
+                    "rust_visibility_pub_crate",
+                    "rust_visibility_pub_self",
+                    "rust_visibility_pub_super",
+                    "rust_visibility_pub_in",
+                ],
+            },
+        },
+        Kind {
+            name: "rust_path_ident_segment",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_path_ident_segment_super",
+                    "rust_path_ident_segment_self",
+                    "rust_path_ident_segment_self_upper",
+                    "rust_path_ident_segment_crate",
+                    "rust_path_ident_segment_crate_dollar",
+                    "rust_identifier",
+                ],
+            },
+        },
+        Kind {
+            name: "rust_pattern",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_literal_pattern",
+                    "rust_wildcard_pattern",
+                    "rust_rest_pattern",
+                    "rust_reference_pattern",
+                    "rust_struct_pattern",
+                    "rust_tuple_struct_pattern",
+                    "rust_tuple_pattern",
+                    "rust_grouped_pattern",
+                    "rust_path_pattern",
+                    "rust_macro_invocation",
+                    "rust_identifier_pattern",
+                ],
+            },
+        },
+        // https://doc.rust-lang.org/stable/reference/expressions.html
+        Kind {
+            name: "rust_expression",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_field_access",
+                    "rust_function_call",
+                    "rust_tuple_expression",
+                    "rust_if",
+                    "rust_match",
+                    "rust_operator",
+                    "rust_comparison_expression",
+                    "rust_bool_literal",
+                    "rust_number_literal",
+                    "rust_identifier",
+                    "rust_string_literal",
+                ],
+            },
+        },
+        // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
+        Kind {
+            name: "rust_type",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_type_path",
+                    "rust_array_type",
+                    "rust_reference_type",
+                    "rust_slice_type",
+                    "rust_tuple_type",
+                    "rust_primitive_type",
+                ],
+            },
+        },
         Kind {
             name: "rust_tuple_type",
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "components",
-                    kind: RUST_TYPE,
+                    kind: &["rust_type"],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("components"),
@@ -396,7 +418,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "segments",
-                    kind: RUST_TYPE,
+                    kind: &["rust_type"],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("segments"),
@@ -420,7 +442,7 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "type",
-                        kind: RUST_TYPE,
+                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -458,12 +480,12 @@ pub const SCHEMA: Schema = Schema {
                     },
                     Field {
                         name: "type",
-                        kind: RUST_TYPE,
+                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "expression",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -486,7 +508,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "statements",
-                    kind: RUST_EXPRESSION,
+                    kind: &["rust_expression"],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("statements"),
@@ -548,17 +570,17 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "patterns",
-                        kind: RUST_PATTERN,
+                        kind: &["rust_pattern"],
                         multiplicity: Multiplicity::Repeated,
                     },
                     Field {
                         name: "guard",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "expression",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -588,18 +610,18 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[
                     Field {
-                        name: "condition", // Expression
-                        kind: RUST_EXPRESSION,
+                        name: "condition",
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
-                        name: "true_body", // Expression
-                        kind: RUST_EXPRESSION,
+                        name: "true_body",
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
-                        name: "false_body", // Expression
-                        kind: RUST_EXPRESSION,
+                        name: "false_body",
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -706,7 +728,7 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "object",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -735,7 +757,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "segments",
-                    kind: RUST_PATH_IDENT_SEGMENT,
+                    kind: &["rust_path_ident_segment"],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("segments"),
@@ -792,17 +814,17 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "operator",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "left",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "right",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -841,17 +863,17 @@ pub const SCHEMA: Schema = Schema {
                     Field {
                         name: "operator",
                         // XXX
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "left",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "right",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -923,12 +945,12 @@ pub const SCHEMA: Schema = Schema {
                     },
                     Field {
                         name: "return_type",
-                        kind: RUST_TYPE,
+                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "body",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -984,7 +1006,7 @@ pub const SCHEMA: Schema = Schema {
                     },
                     Field {
                         name: "type",
-                        kind: RUST_TYPE,
+                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -1008,17 +1030,17 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "pattern",
-                        kind: RUST_PATTERN,
+                        kind: &["rust_pattern"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "type",
-                        kind: RUST_TYPE,
+                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "value", // Expression
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -1039,12 +1061,12 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "expression",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "arguments",
-                        kind: RUST_EXPRESSION,
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Repeated,
                     },
                 ],
@@ -1068,7 +1090,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "elements",
-                    kind: RUST_EXPRESSION,
+                    kind: &["rust_expression"],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("elements"),
@@ -1125,7 +1147,7 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "visibility",
-                        kind: RUST_VISIBILITY,
+                        kind: &["rust_visibility"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -1135,7 +1157,7 @@ pub const SCHEMA: Schema = Schema {
                     },
                     Field {
                         name: "type", // Type
-                        kind: RUST_TYPE,
+                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
