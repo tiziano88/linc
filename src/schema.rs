@@ -190,6 +190,19 @@ pub const SCHEMA: Schema = Schema {
                 ],
             },
         },
+        Kind {
+            name: "rust_comparison_operator",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_comparison_operator_==",
+                    "rust_comparison_operator_!=",
+                    "rust_comparison_operator_>",
+                    "rust_comparison_operator_<",
+                    "rust_comparison_operator_>=",
+                    "rust_comparison_operator_<=",
+                ],
+            },
+        },
         // https://doc.rust-lang.org/stable/reference/expressions.html
         Kind {
             name: "rust_expression",
@@ -814,7 +827,7 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "operator",
-                        kind: &["rust_expression"],
+                        kind: &["rust_comparison_operator"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -852,6 +865,32 @@ pub const SCHEMA: Schema = Schema {
                         { operator }
                         { right }
                         </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_comparison_operator_==",
+            value: KindValue::Struct {
+                fields: &[],
+                inner: None,
+                parser: |v: &str| vec![Ok("==".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    html! {
+                        <span class="keyword">{ "==" }</span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_comparison_operator_!=",
+            value: KindValue::Struct {
+                fields: &[],
+                inner: None,
+                parser: |v: &str| vec![Ok("!=".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    html! {
+                        <span class="keyword">{ "==" }</span>
                     }
                 },
             },
@@ -1245,13 +1284,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "items",
-                    kind: &[
-                        "markdown_paragraph",
-                        "markdown_heading",
-                        "markdown_code",
-                        "markdown_quote",
-                        "markdown_list",
-                    ],
+                    kind: &["markdown_item"],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("items"),
@@ -1271,6 +1304,18 @@ pub const SCHEMA: Schema = Schema {
                         </div>
                     }
                 },
+            },
+        },
+        Kind {
+            name: "markdown_item",
+            value: KindValue::Enum {
+                variants: &[
+                    "markdown_paragraph",
+                    "markdown_heading",
+                    "markdown_code",
+                    "markdown_quote",
+                    "markdown_list",
+                ],
             },
         },
         Kind {
