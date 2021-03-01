@@ -129,7 +129,7 @@ impl Model {
         }
     }
 
-    fn set_value(&mut self, node: Node) {
+    fn set_node(&mut self, node: Node) {
         let mut node = node;
 
         let current_ref = self.current_ref();
@@ -158,6 +158,27 @@ impl Model {
             Some(c) => *c = new_ref,
             None => children.push(new_ref),
         };
+    }
+
+    fn replace_node(&mut self, node: Node) {
+        if let Some(current_ref) = self.current_ref() {
+            if current_ref != INVALID_REF {
+                self.file.replace_node(&current_ref, node);
+            } else {
+                let new_ref = self.file.add_node(node);
+                let selector = self.cursor.back().unwrap().clone();
+                let parent_ref = self.parent_ref().unwrap();
+                log::info!("parent ref: {:?}", parent_ref);
+                let parent = self.lookup_mut(&parent_ref).unwrap();
+                log::info!("parent: {:?}", parent);
+                // If the field does not exist, create a default one.
+                let children = parent.children.entry(selector.field).or_default();
+                match children.get_mut(selector.index) {
+                    Some(c) => *c = new_ref,
+                    None => children.push(new_ref),
+                };
+            }
+        }
     }
 
     pub fn focus_command_line(&self) {
@@ -221,6 +242,10 @@ impl File {
         let reference = new_ref();
         self.nodes.insert(reference.clone(), node);
         reference
+    }
+
+    fn replace_node(&mut self, reference: &Ref, node: Node) {
+        self.nodes.insert(reference.clone(), node);
     }
 }
 
@@ -422,7 +447,7 @@ impl Component for Model {
                 }
             }
             Msg::ReplaceCurrentNode(n) => {
-                self.file.nodes.insert(self.current_ref().unwrap(), n);
+                self.file.replace_node(&self.current_ref().unwrap(), n);
                 self.parsed_commands = self.parse_commands();
                 self.selected_command_index = 0;
             }
@@ -471,7 +496,8 @@ impl Component for Model {
                             //     .insert(self.current_ref().unwrap(), node.clone());
                             match parsed_value.to_node() {
                                 Some(node) => {
-                                    self.set_value(node.clone());
+                                    // self.set_node(node.clone());
+                                    self.replace_node(node.clone());
                                     self.next();
                                     self.raw_command = "".to_string();
                                     self.parsed_commands = self.parse_commands();
