@@ -1354,7 +1354,7 @@ pub const SCHEMA: Schema = Schema {
                     Field {
                         name: "text",
                         // XXX
-                        kind: &["rust_identifier"],
+                        kind: &["markdown_paragraph"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],

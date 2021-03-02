@@ -3,6 +3,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use wasm_bindgen::JsCast;
+use yew::prelude::*;
 use yew::{
     html,
     services::{storage::Area, StorageService},
@@ -350,12 +351,18 @@ impl Component for Model {
                 </div>
             }
         });
-        self.scroll_into_view(&format!(
-            "#values div:nth-child({})",
-            self.selected_command_index + 1,
-        ));
+        // self.scroll_into_view(&format!(
+        //     "#values div:nth-child({})",
+        //     self.selected_command_index + 1,
+        // ));
+        let onmouseover = self
+            .link
+            .callback(move |e: MouseEvent| {
+                e.stop_propagation();
+                Msg::Hover(vec![].into())
+            });
         html! {
-            <div onkeydown=onkeypress>
+            <div onkeydown=onkeypress onmouseover=onmouseover>
                 <div>{ "LINC" }</div>
                 <div>{ "left / right arrow keys (when command line is empty): move between existing nodes" }</div>
                 <div>{ "up / down arrow keys: select alternative completion result" }</div>
