@@ -170,7 +170,10 @@ impl Model {
         let path_clone = path.clone();
         let callback = self
             .link
-            .callback(move |_: MouseEvent| Msg::Select(path_clone.clone()));
+            .callback(move |e: MouseEvent| {
+                e.stop_propagation();
+                Msg::Select(path_clone.clone())
+            });
         let value = if reference == INVALID_REF {
             html! {
                 <span>{ "◆" }</span>
@@ -230,7 +233,10 @@ impl Model {
             let path_clone = path.clone();
             let callback = self
                 .link
-                .callback(move |_: MouseEvent| Msg::Select(path_clone.clone()));
+                .callback(move |e: MouseEvent| {
+                    e.stop_propagation();
+                    Msg::Select(path_clone.clone())
+                });
             html! {
                 <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
             }
