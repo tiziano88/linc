@@ -162,18 +162,30 @@ impl Model {
     }
 
     fn view_node(&self, reference: &Ref, path: &Path) -> Html {
-        let selected = path == &self.cursor;
         let mut classes = vec!["node".to_string()];
-        if selected {
+        if path == &self.cursor {
             classes.push("selected".to_string());
         }
+        if path == &self.hover {
+            classes.push("hover".to_string());
+        }
+
         let path_clone = path.clone();
-        let callback = self
+        let onclick = self
             .link
             .callback(move |e: MouseEvent| {
                 e.stop_propagation();
                 Msg::Select(path_clone.clone())
             });
+
+        let path_clone = path.clone();
+        let onmouseover = self
+            .link
+            .callback(move |e: MouseEvent| {
+                e.stop_propagation();
+                Msg::Hover(path_clone.clone())
+            });
+
         let value = if reference == INVALID_REF {
             html! {
                 <span>{ "◆" }</span>
@@ -189,7 +201,7 @@ impl Model {
             }
         };
         html! {
-            <div class=classes.join(" ") onclick=callback>
+            <div class=classes.join(" ") onclick=onclick onmouseover=onmouseover>
                 { value }
             </div>
         }
@@ -225,20 +237,32 @@ impl Model {
                     index: children.len(),
                 },
             );
-            let selected = path == self.cursor;
             let mut classes = vec!["node".to_string()];
-            if selected {
+            if path == self.cursor {
                 classes.push("selected".to_string());
             }
+            if path == self.hover {
+                classes.push("hover".to_string());
+            }
+
             let path_clone = path.clone();
-            let callback = self
+            let onclick = self
                 .link
                 .callback(move |e: MouseEvent| {
                     e.stop_propagation();
                     Msg::Select(path_clone.clone())
                 });
+
+            let path_clone = path.clone();
+            let onmouseover = self
+                .link
+                .callback(move |e: MouseEvent| {
+                    e.stop_propagation();
+                    Msg::Hover(path_clone.clone())
+                });
+
             html! {
-                <div onclick=callback class=classes.join(" ")>{ "▷" }</div>
+                <div onclick=onclick onmouseover=onmouseover class=classes.join(" ")>{ "▷" }</div>
             }
         };
 

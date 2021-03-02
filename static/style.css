@@ -3,6 +3,7 @@
   display: inline-block;
   border: 1px dotted;
   border-color: gray;
+  cursor: default;
 }
 
 .row {
@@ -12,6 +13,10 @@
 .selected {
   outline: 2px solid;
   outline-color: blue;
+}
+
+.hover {
+  background-color: rgba(104, 104, 250, 0.431);
 }
 
 .target {

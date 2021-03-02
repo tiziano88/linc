@@ -36,6 +36,7 @@ pub struct Model {
     pub file: File,
     pub store: StorageService,
     pub cursor: Path,
+    pub hover: Path,
 
     pub link: ComponentLink<Self>,
 
@@ -207,6 +208,7 @@ pub enum Msg {
     Noop,
 
     Select(Path),
+    Hover(Path),
 
     Store,
     Load,
@@ -403,6 +405,7 @@ impl Component for Model {
                 index: 0,
             }]
             .into(),
+            hover: vec![].into(),
             link,
         }
     }
@@ -423,6 +426,9 @@ impl Component for Model {
             Msg::Select(path) => {
                 self.cursor = path;
                 self.parsed_commands = self.parse_commands();
+            }
+            Msg::Hover(path) => {
+                self.hover = path;
             }
             // TODO: sibling vs inner
             Msg::Prev => {
