@@ -425,23 +425,26 @@ impl Component for Model {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        fn update_from_selected(model: &mut Model) {
+            let current_node = model.current_ref().and_then(|r| model.lookup(&r)).cloned();
+            let current_kind = current_node.clone().map(|n| n.kind.clone());
+            model.selected_command_index = model
+                .parsed_commands
+                .iter()
+                .position(|parsed_value| {
+                    parsed_value.kind_hierarchy.last() == current_kind.as_ref()
+                })
+                .unwrap_or(0);
+            model.raw_command = current_node.map(|n| n.value.clone()).unwrap_or_default();
+        }
+
         const KEY: &str = "linc_file";
         match msg {
             Msg::Noop => {}
             Msg::Select(path) => {
                 self.cursor = path;
                 self.parsed_commands = self.parse_commands();
-                let current_kind = self
-                    .current_ref()
-                    .and_then(|r| self.lookup(&r))
-                    .map(|n| n.kind.clone());
-                self.selected_command_index = self
-                    .parsed_commands
-                    .iter()
-                    .position(|parsed_value| {
-                        parsed_value.kind_hierarchy.last() == current_kind.as_ref()
-                    })
-                    .unwrap_or(0);
+                update_from_selected(self);
             }
             Msg::Hover(path) => {
                 self.hover = path;
@@ -450,15 +453,18 @@ impl Component for Model {
             Msg::Prev => {
                 self.prev();
                 self.parsed_commands = self.parse_commands();
+                update_from_selected(self);
             }
             // Preorder tree traversal.
             Msg::Next => {
                 self.next();
                 self.parsed_commands = self.parse_commands();
+                update_from_selected(self);
             }
             Msg::Parent => {
                 self.cursor.pop_back();
                 self.parsed_commands = self.parse_commands();
+                update_from_selected(self);
             }
             Msg::Store => {
                 self.store.store(KEY, yew::format::Json(&self.file));
@@ -549,11 +555,13 @@ impl Component for Model {
                         self.next();
                         self.parsed_commands = self.parse_commands();
                         self.selected_command_index = 0;
+                        update_from_selected(self);
                     }
                     "ArrowLeft" if self.raw_command.is_empty() => {
                         self.prev();
                         self.parsed_commands = self.parse_commands();
                         self.selected_command_index = 0;
+                        update_from_selected(self);
                     }
                     _ => {}
                 }
