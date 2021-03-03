@@ -3,9 +3,9 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use wasm_bindgen::JsCast;
-use yew::prelude::*;
 use yew::{
     html,
+    prelude::*,
     services::{storage::Area, StorageService},
     web_sys::HtmlElement,
     Component, ComponentLink, FocusEvent, Html, InputData, KeyboardEvent, ShouldRender,
@@ -355,12 +355,10 @@ impl Component for Model {
         //     "#values div:nth-child({})",
         //     self.selected_command_index + 1,
         // ));
-        let onmouseover = self
-            .link
-            .callback(move |e: MouseEvent| {
-                e.stop_propagation();
-                Msg::Hover(vec![].into())
-            });
+        let onmouseover = self.link.callback(move |e: MouseEvent| {
+            e.stop_propagation();
+            Msg::Hover(vec![].into())
+        });
         html! {
             <div onkeydown=onkeypress onmouseover=onmouseover>
                 <div>{ "LINC" }</div>
@@ -433,6 +431,17 @@ impl Component for Model {
             Msg::Select(path) => {
                 self.cursor = path;
                 self.parsed_commands = self.parse_commands();
+                let current_kind = self
+                    .current_ref()
+                    .and_then(|r| self.lookup(&r))
+                    .map(|n| n.kind.clone());
+                self.selected_command_index = self
+                    .parsed_commands
+                    .iter()
+                    .position(|parsed_value| {
+                        parsed_value.kind_hierarchy.last() == current_kind.as_ref()
+                    })
+                    .unwrap_or(0);
             }
             Msg::Hover(path) => {
                 self.hover = path;
