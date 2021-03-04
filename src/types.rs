@@ -592,10 +592,10 @@ impl Component for Model {
                 self.selected_command_index = 0;
                 self.mode = Mode::Normal;
             }
-            Msg::CommandKey(v) => {
-                log::info!("key: {}", v.key());
+            Msg::CommandKey(e) => {
+                log::info!("key: {}", e.key());
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
-                match v.key().as_ref() {
+                match e.key().as_ref() {
                     "Enter" if self.mode == Mode::Edit => self.link.send_message(Msg::EnterCommand),
                     "Escape" => self.link.send_message(Msg::EscapeCommand),
                     "ArrowUp" => self.link.send_message(Msg::PrevCommand),
@@ -603,12 +603,15 @@ impl Component for Model {
                     "ArrowLeft" if self.mode == Mode::Normal => self.link.send_message(Msg::Prev),
                     "ArrowRight" if self.mode == Mode::Normal => self.link.send_message(Msg::Next),
                     "i" if self.mode == Mode::Normal => {
+                        e.prevent_default();
                         self.link.send_message(Msg::SetMode(Mode::Edit))
                     }
                     "c" if self.mode == Mode::Normal => {
+                        e.prevent_default();
                         self.link.send_message(Msg::SetMode(Mode::Edit))
                     }
                     "e" if self.mode == Mode::Normal => {
+                        e.prevent_default();
                         self.link.send_message(Msg::SetMode(Mode::Edit))
                     }
                     _ => {}
