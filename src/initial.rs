@@ -10,5 +10,6 @@ pub fn initial() -> File {
             children: HashMap::new(),
         }],
         root: "101010".to_string(),
+        log: vec![],
     }
 }

@@ -244,6 +244,7 @@ pub enum Msg {
 pub struct File {
     pub nodes: HashMap<Ref, Node>,
     pub root: Ref,
+    pub log: Vec<(Ref, Node)>,
 }
 
 impl File {
@@ -257,11 +258,12 @@ impl File {
 
     fn add_node(&mut self, node: Node) -> Ref {
         let reference = new_ref();
-        self.nodes.insert(reference.clone(), node);
+        self.replace_node(&reference, node);
         reference
     }
 
     fn replace_node(&mut self, reference: &Ref, node: Node) {
+        self.log.push((reference.clone(), node.clone()));
         self.nodes.insert(reference.clone(), node);
     }
 }
@@ -390,7 +392,7 @@ impl Component for Model {
                         </span>
                         <input
                             id="command-line"
-                            class="p-2 m-2 border border-blue-500 bg-blue-100 font-mono rounded-lg pl-10"
+                            class="p-2 m-2 border border-blue-500 bg-blue-100 font-mono rounded-lg pl-10 w-full"
                             oninput=oninput
                             onblur=onblur
                             disabled={ self.mode == Mode::Normal }
@@ -409,6 +411,7 @@ impl Component for Model {
                             <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
                         </div>
                         <div class="column">{ self.view_file_json(&self.file) }</div>
+                        <div class="column">{ format!("{:?}", self.file.log) }</div>
                     </div>
                 </div>
             </div>
@@ -446,6 +449,8 @@ impl Component for Model {
         fn update_from_selected(model: &mut Model) {
             let current_node = model.current_ref().and_then(|r| model.lookup(&r)).cloned();
             let current_kind = current_node.clone().map(|n| n.kind.clone());
+            model.raw_command = current_node.map(|n| n.value.clone()).unwrap_or_default();
+            model.parsed_commands = model.parse_commands();
             model.selected_command_index = model
                 .parsed_commands
                 .iter()
@@ -453,7 +458,6 @@ impl Component for Model {
                     parsed_value.kind_hierarchy.last() == current_kind.as_ref()
                 })
                 .unwrap_or(0);
-            model.raw_command = current_node.map(|n| n.value.clone()).unwrap_or_default();
         }
 
         const KEY: &str = "linc_file";
@@ -461,7 +465,6 @@ impl Component for Model {
             Msg::Noop => {}
             Msg::Select(path) => {
                 self.cursor = path;
-                self.parsed_commands = self.parse_commands();
                 update_from_selected(self);
             }
             Msg::Hover(path) => {
@@ -470,18 +473,15 @@ impl Component for Model {
             // TODO: sibling vs inner
             Msg::Prev => {
                 self.prev();
-                self.parsed_commands = self.parse_commands();
                 update_from_selected(self);
             }
             // Preorder tree traversal.
             Msg::Next => {
                 self.next();
-                self.parsed_commands = self.parse_commands();
                 update_from_selected(self);
             }
             Msg::Parent => {
                 self.cursor.pop_back();
-                self.parsed_commands = self.parse_commands();
                 update_from_selected(self);
             }
             Msg::Store => {
