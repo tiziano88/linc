@@ -6,7 +6,11 @@ use wasm_bindgen::JsCast;
 use yew::{
     html,
     prelude::*,
-    services::{storage::Area, StorageService},
+    services::{
+        keyboard::{KeyListenerHandle, KeyboardService},
+        storage::Area,
+        StorageService,
+    },
     web_sys::HtmlElement,
     Component, ComponentLink, FocusEvent, Html, InputData, KeyboardEvent, ShouldRender,
 };
@@ -41,7 +45,10 @@ pub enum Mode {
 
 pub struct Model {
     pub file: File,
+
     pub store: StorageService,
+    pub key_listener: KeyListenerHandle,
+
     pub cursor: Path,
     pub hover: Path,
     pub mode: Mode,
@@ -383,7 +390,12 @@ impl Component for Model {
                 <div class="">
                     <div class="column">{ self.view_file(&self.file) }</div>
 
-                    <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
+                    <div class="column">
+                        <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
+                        <div>{ display_cursor(&self.cursor) }</div>
+                        <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
+                    </div>
+
                     <div>{ self.view_actions() }</div>
                     <div class="relative">
                         <span class="inline-block absolute w-2 h-20 left-5 top-5">
@@ -405,10 +417,6 @@ impl Component for Model {
                         </div>
                     </div>
                     <div class="h-40">
-                        <div class="column">
-                            <div>{ display_cursor(&self.cursor) }</div>
-                            <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
-                        </div>
                         <div class="column">{ self.view_file_json(&self.file) }</div>
                     </div>
                 </div>
@@ -417,8 +425,18 @@ impl Component for Model {
     }
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let key_listener = KeyboardService::register_key_down(
+            &yew::utils::window(),
+            link.callback(move |e: KeyboardEvent| {
+                // e.stop_propagation();
+                // e.stop_immediate_propagation();
+                // e.prevent_default();
+                Msg::CommandKey(e)
+            }),
+        );
         Model {
             store: StorageService::new(Area::Local).expect("could not create storage service"),
+            key_listener,
             raw_command: "".to_string(),
             parsed_commands: vec![],
             selected_command_index: 0,
@@ -579,21 +597,17 @@ impl Component for Model {
                     "Escape" => self.link.send_message(Msg::EscapeCommand),
                     "ArrowUp" => self.link.send_message(Msg::PrevCommand),
                     "ArrowDown" => self.link.send_message(Msg::NextCommand),
-
-                    /*
-                    "ArrowRight" if self.raw_command.is_empty() => {
-                        self.next();
-                        self.parsed_commands = self.parse_commands();
-                        self.selected_command_index = 0;
-                        update_from_selected(self);
+                    "ArrowLeft" if self.mode == Mode::Normal => self.link.send_message(Msg::Prev),
+                    "ArrowRight" if self.mode == Mode::Normal => self.link.send_message(Msg::Next),
+                    "i" if self.mode == Mode::Normal => {
+                        self.link.send_message(Msg::SetMode(Mode::Edit))
                     }
-                    "ArrowLeft" if self.raw_command.is_empty() => {
-                        self.prev();
-                        self.parsed_commands = self.parse_commands();
-                        self.selected_command_index = 0;
-                        update_from_selected(self);
+                    "c" if self.mode == Mode::Normal => {
+                        self.link.send_message(Msg::SetMode(Mode::Edit))
                     }
-                    */
+                    "e" if self.mode == Mode::Normal => {
+                        self.link.send_message(Msg::SetMode(Mode::Edit))
+                    }
                     _ => {}
                 }
             }
