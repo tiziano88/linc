@@ -231,6 +231,11 @@ pub enum Msg {
     SetMode(Mode),
 
     SetCommand(String),
+    NextCommand,
+    PrevCommand,
+    EnterCommand,
+    EscapeCommand,
+
     ReplaceCurrentNode(Node),
     CommandKey(KeyboardEvent),
 }
@@ -374,11 +379,13 @@ impl Component for Model {
                 <div>{ "left / right arrow keys (when command line is empty): move between existing nodes" }</div>
                 <div>{ "up / down arrow keys: select alternative completion result" }</div>
                 <div>{ "start typing in command line to filter available completion results" }</div>
-                <div>{ self.view_actions() }</div>
                 <div class="">
+                    <div class="column">{ self.view_file(&self.file) }</div>
+
                     <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
+                    <div>{ self.view_actions() }</div>
                     <div class="relative">
-                        <span class="inline-block absolute w-20 h-20 left-5 top-5">
+                        <span class="inline-block absolute w-2 h-20 left-5 top-5">
                             <i class="gg-terminal"></i>
                         </span>
                         <input
@@ -389,15 +396,14 @@ impl Component for Model {
                             disabled={ self.mode == Mode::Normal }
                             value=self.raw_command
                         />
-                    </div>
-                    <div class="h-60">
-                        // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
-                        <div id="values" class="overflow-y-scroll h-60 gap-4">
-                            { for values }
+                        <div class="h-60">
+                            // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
+                            <div id="values" class="overflow-y-scroll h-60 gap-4">
+                                { for values }
+                            </div>
                         </div>
                     </div>
                     <div class="h-40">
-                        <div class="column">{ self.view_file(&self.file) }</div>
                         <div class="column">
                             <div>{ display_cursor(&self.cursor) }</div>
                             <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
@@ -523,50 +529,58 @@ impl Component for Model {
                 self.parsed_commands = self.parse_commands();
                 self.selected_command_index = 0;
             }
+            Msg::NextCommand => {
+                if self.selected_command_index < (self.parsed_commands.len() - 1) {
+                    self.selected_command_index += 1;
+                }
+            }
+            Msg::PrevCommand => {
+                if self.selected_command_index > 0 {
+                    self.selected_command_index -= 1;
+                }
+            }
+            Msg::EnterCommand => {
+                match self
+                    .parsed_commands
+                    .get(self.selected_command_index)
+                    .clone()
+                {
+                    Some(parsed_value) => {
+                        // Replace current node.
+                        // self.file
+                        //     .nodes
+                        //     .insert(self.current_ref().unwrap(), node.clone());
+                        match parsed_value.to_node() {
+                            Some(node) => {
+                                // self.set_node(node.clone());
+                                self.replace_node(node.clone());
+                                self.next();
+                                self.raw_command = "".to_string();
+                                self.parsed_commands = self.parse_commands();
+                                self.selected_command_index = 0;
+                            }
+                            None => {}
+                        }
+                    }
+                    None => log::info!("invalid command"),
+                }
+            }
+            Msg::EscapeCommand => {
+                self.raw_command = "".to_string();
+                self.parsed_commands = self.parse_commands();
+                self.selected_command_index = 0;
+                self.mode = Mode::Normal;
+            }
             Msg::CommandKey(v) => {
                 log::info!("key: {}", v.key());
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match v.key().as_ref() {
-                    "Enter" => match self
-                        .parsed_commands
-                        .get(self.selected_command_index)
-                        .clone()
-                    {
-                        Some(parsed_value) => {
-                            // Replace current node.
-                            // self.file
-                            //     .nodes
-                            //     .insert(self.current_ref().unwrap(), node.clone());
-                            match parsed_value.to_node() {
-                                Some(node) => {
-                                    // self.set_node(node.clone());
-                                    self.replace_node(node.clone());
-                                    self.next();
-                                    self.raw_command = "".to_string();
-                                    self.parsed_commands = self.parse_commands();
-                                    self.selected_command_index = 0;
-                                }
-                                None => {}
-                            }
-                        }
-                        None => log::info!("invalid command"),
-                    },
-                    "Escape" => {
-                        self.raw_command = "".to_string();
-                        self.parsed_commands = self.parse_commands();
-                        self.selected_command_index = 0;
-                        self.mode = Mode::Normal;
-                    }
-                    "ArrowUp" => {
-                        if self.selected_command_index > 0 {
-                            self.selected_command_index -= 1;
-                        }
-                    }
-                    "ArrowDown" => {
-                        if self.selected_command_index < (self.parsed_commands.len() - 1) {
-                            self.selected_command_index += 1;
-                        }
-                    }
+                    "Enter" => self.link.send_message(Msg::EnterCommand),
+                    "Escape" => self.link.send_message(Msg::EscapeCommand),
+                    "ArrowUp" => self.link.send_message(Msg::PrevCommand),
+                    "ArrowDown" => self.link.send_message(Msg::NextCommand),
+
+                    /*
                     "ArrowRight" if self.raw_command.is_empty() => {
                         self.next();
                         self.parsed_commands = self.parse_commands();
@@ -579,6 +593,7 @@ impl Component for Model {
                         self.selected_command_index = 0;
                         update_from_selected(self);
                     }
+                    */
                     _ => {}
                 }
             }
