@@ -57,9 +57,6 @@ impl Model {
     pub fn lookup(&self, reference: &Ref) -> Option<&Node> {
         self.file.lookup(reference)
     }
-    pub fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
-        self.file.lookup_mut(reference)
-    }
     pub fn lookup_path(&self, reference: &Ref, relative_path: Path) -> Option<Ref> {
         let mut path = relative_path;
         match path.pop_front() {
@@ -158,7 +155,7 @@ impl Model {
         let selector = self.cursor.back().unwrap().clone();
         let parent_ref = self.parent_ref().unwrap();
         log::info!("parent ref: {:?}", parent_ref);
-        let parent = self.lookup_mut(&parent_ref).unwrap();
+        let mut parent = self.file.lookup(&parent_ref).unwrap().clone();
         log::info!("parent: {:?}", parent);
 
         // If the field does not exist, create a default one.
@@ -167,6 +164,7 @@ impl Model {
             Some(c) => *c = new_ref,
             None => children.push(new_ref),
         };
+        self.file.replace_node(&parent_ref, parent);
     }
 
     fn replace_node(&mut self, node: Node) {
@@ -178,7 +176,7 @@ impl Model {
                 let selector = self.cursor.back().unwrap().clone();
                 let parent_ref = self.parent_ref().unwrap();
                 log::info!("parent ref: {:?}", parent_ref);
-                let parent = self.lookup_mut(&parent_ref).unwrap();
+                let mut parent = self.file.lookup(&parent_ref).unwrap().clone();
                 log::info!("parent: {:?}", parent);
                 // If the field does not exist, create a default one.
                 let children = parent.children.entry(selector.field).or_default();
@@ -186,6 +184,7 @@ impl Model {
                     Some(c) => *c = new_ref,
                     None => children.push(new_ref),
                 };
+                self.file.replace_node(&parent_ref, parent);
             }
         }
     }
@@ -252,9 +251,9 @@ impl File {
         self.nodes.get(reference)
     }
 
-    fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
-        self.nodes.get_mut(reference)
-    }
+    // fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
+    //     self.nodes.get_mut(reference)
+    // }
 
     fn add_node(&mut self, node: Node) -> Ref {
         let reference = new_ref();
@@ -411,7 +410,6 @@ impl Component for Model {
                             <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
                         </div>
                         <div class="column">{ self.view_file_json(&self.file) }</div>
-                        <div class="column">{ format!("{:?}", self.file.log) }</div>
                     </div>
                 </div>
             </div>
@@ -508,21 +506,23 @@ impl Component for Model {
                     value: "invalid".to_string(),
                     children: HashMap::new(),
                 });
-                let parent = self.lookup_mut(&parent_ref).unwrap();
+                let mut parent = self.file.lookup(&parent_ref).unwrap().clone();
                 // If the field does not exist, create a default one.
                 let children = parent.children.entry(selector.field).or_default();
                 let new_index = selector.index + 1;
                 children.insert(new_index, new_ref);
+                self.file.replace_node(&parent_ref, parent);
                 // Select newly created element.
                 self.cursor.back_mut().unwrap().index = new_index;
             }
             Msg::DeleteItem => {
                 let selector = self.cursor.back().unwrap().clone();
                 let parent_ref = self.parent_ref().unwrap();
-                let parent = self.lookup_mut(&parent_ref).unwrap();
+                let mut parent = self.file.lookup(&parent_ref).unwrap().clone();
                 // If the field does not exist, create a default one.
                 let children = parent.children.entry(selector.field).or_default();
                 children.remove(selector.index);
+                self.file.replace_node(&parent_ref, parent);
             }
             Msg::SetCommand(v) => {
                 self.raw_command = v;
