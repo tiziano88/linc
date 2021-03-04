@@ -314,9 +314,9 @@ impl Component for Model {
     type Properties = ();
 
     fn view(&self) -> Html {
-        let onkeypress = self
-            .link
-            .callback(move |e: KeyboardEvent| Msg::CommandKey(e));
+        // let onkeypress = self
+        //     .link
+        //     .callback(move |e: KeyboardEvent| Msg::CommandKey(e));
         let oninput = self
             .link
             .callback(move |e: InputData| Msg::SetCommand(e.value));
@@ -382,7 +382,10 @@ impl Component for Model {
             Msg::Hover(vec![].into())
         });
         html! {
-            <div onkeydown=onkeypress onmouseover=onmouseover>
+            <div
+            //   onkeydown=onkeypress
+              onmouseover=onmouseover
+              >
                 <div>{ "LINC" }</div>
                 <div>{ "left / right arrow keys (when command line is empty): move between existing nodes" }</div>
                 <div>{ "up / down arrow keys: select alternative completion result" }</div>
@@ -403,7 +406,7 @@ impl Component for Model {
                         </span>
                         <input
                             id="command-line"
-                            class="p-2 m-2 border border-blue-500 bg-blue-100 font-mono rounded-lg pl-10 w-full"
+                            class="p-2 border border-blue-500 bg-blue-100 font-mono rounded-lg pl-10 w-full"
                             oninput=oninput
                             onblur=onblur
                             disabled={ self.mode == Mode::Normal }
@@ -593,7 +596,7 @@ impl Component for Model {
                 log::info!("key: {}", v.key());
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match v.key().as_ref() {
-                    "Enter" => self.link.send_message(Msg::EnterCommand),
+                    "Enter" if self.mode == Mode::Edit => self.link.send_message(Msg::EnterCommand),
                     "Escape" => self.link.send_message(Msg::EscapeCommand),
                     "ArrowUp" => self.link.send_message(Msg::PrevCommand),
                     "ArrowDown" => self.link.send_message(Msg::NextCommand),
