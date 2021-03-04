@@ -33,11 +33,18 @@ pub fn append(path: &Path, selector: Selector) -> Path {
     new_path
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Mode {
+    Normal,
+    Edit,
+}
+
 pub struct Model {
     pub file: File,
     pub store: StorageService,
     pub cursor: Path,
     pub hover: Path,
+    pub mode: Mode,
 
     pub link: ComponentLink<Self>,
 
@@ -221,6 +228,8 @@ pub enum Msg {
     AddItem,
     DeleteItem,
 
+    SetMode(Mode),
+
     SetCommand(String),
     ReplaceCurrentNode(Node),
     CommandKey(KeyboardEvent),
@@ -367,6 +376,7 @@ impl Component for Model {
                 <div>{ "start typing in command line to filter available completion results" }</div>
                 <div>{ self.view_actions() }</div>
                 <div class="">
+                    <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
                     <div class="relative">
                         <span class="inline-block absolute w-20 h-20 left-5 top-5">
                             <i class="gg-terminal"></i>
@@ -376,6 +386,7 @@ impl Component for Model {
                             class="p-2 m-2 border border-blue-500 bg-blue-100 font-mono rounded-lg pl-10"
                             oninput=oninput
                             onblur=onblur
+                            disabled={ self.mode == Mode::Normal }
                             value=self.raw_command
                         />
                     </div>
@@ -405,6 +416,7 @@ impl Component for Model {
             parsed_commands: vec![],
             selected_command_index: 0,
             file: super::initial::initial(),
+            mode: Mode::Normal,
             cursor: vec![Selector {
                 field: "items".to_string(),
                 index: 0,
@@ -474,6 +486,9 @@ impl Component for Model {
                     self.file = file;
                 }
             }
+            Msg::SetMode(mode) => {
+                self.mode = mode;
+            }
             Msg::ReplaceCurrentNode(n) => {
                 self.file.replace_node(&self.current_ref().unwrap(), n);
                 self.parsed_commands = self.parse_commands();
@@ -540,6 +555,7 @@ impl Component for Model {
                         self.raw_command = "".to_string();
                         self.parsed_commands = self.parse_commands();
                         self.selected_command_index = 0;
+                        self.mode = Mode::Normal;
                     }
                     "ArrowUp" => {
                         if self.selected_command_index > 0 {

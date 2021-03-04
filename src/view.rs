@@ -19,6 +19,16 @@ impl Model {
                 msg: Msg::Load,
             },
             Action {
+                image: None,
+                text: "Normal mode".to_string(),
+                msg: Msg::SetMode(Mode::Normal),
+            },
+            Action {
+                image: None,
+                text: "Edit mode".to_string(),
+                msg: Msg::SetMode(Mode::Edit),
+            },
+            Action {
                 image: Some("gg-arrow-left".to_string()),
                 text: "prev".to_string(),
                 msg: Msg::Prev,
