@@ -174,6 +174,7 @@ pub const SCHEMA: Schema = Schema {
                 ],
             },
         },
+        // https://doc.rust-lang.org/stable/reference/patterns.html
         Kind {
             name: "rust_pattern",
             value: KindValue::Enum {
@@ -190,6 +191,33 @@ pub const SCHEMA: Schema = Schema {
                     "rust_macro_invocation",
                     "rust_identifier_pattern",
                 ],
+            },
+        },
+        // https://doc.rust-lang.org/stable/reference/patterns.html#literal-patterns
+        Kind {
+            name: "rust_literal_pattern",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_bool_literal",
+                    "rust_char_literal",
+                    "rust_byte_literal",
+                    "rust_string_literal",
+                    "rust_number_literal",
+                ],
+            },
+        },
+        // https://doc.rust-lang.org/stable/reference/patterns.html#wildcard-pattern
+        Kind {
+            name: "rust_wildcard_pattern",
+            value: KindValue::Struct {
+                fields: &[],
+                inner: None,
+                parser: |v: &str| vec![Ok("_".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    html! {
+                      <span>{ "_" }</span>
+                    }
+                },
             },
         },
         Kind {
@@ -222,6 +250,13 @@ pub const SCHEMA: Schema = Schema {
                     "rust_identifier",
                     "rust_string_literal",
                 ],
+            },
+        },
+        // https://doc.rust-lang.org/stable/reference/statements.html
+        Kind {
+            name: "rust_statement",
+            value: KindValue::Enum {
+                variants: &["rust_item", "rust_let", "rust_expression"],
             },
         },
         // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
@@ -548,13 +583,20 @@ pub const SCHEMA: Schema = Schema {
         Kind {
             name: "rust_match",
             value: KindValue::Struct {
-                fields: &[Field {
-                    name: "match_arms",
-                    kind: &["rust_match_arm"],
-                    multiplicity: Multiplicity::Repeated,
-                }],
+                fields: &[
+                    Field {
+                        name: "expression",
+                        kind: &["rust_expression"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "match_arms",
+                        kind: &["rust_match_arm"],
+                        multiplicity: Multiplicity::Repeated,
+                    },
+                ],
                 inner: Some("match_arms"),
-                parser: |v: &str| vec![Ok("match_arm".to_string())],
+                parser: |v: &str| vec![Ok("match".to_string())],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let expression = model.view_child(node, "expression", path);
                     let (match_arms_head, match_arms) =
@@ -991,7 +1033,7 @@ pub const SCHEMA: Schema = Schema {
                     },
                     Field {
                         name: "body",
-                        kind: &["rust_expression"],
+                        kind: &["rust_block"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -1027,10 +1069,9 @@ pub const SCHEMA: Schema = Schema {
                               { async_0 }
                               <span class="keyword">{ "fn" }</span>{ identifier }
                               { "(" }{ for parameters }{ parameters_head }{ ")" }
-                              { "->" }{ return_type }{ "{" }
+                              { "->" }{ return_type }
+                              <div class="indent">{ body }</div>
                             </div>
-                            <div class="indent">{ body }</div>
-                            { "}" }
                         </span>
                     }
                 },
