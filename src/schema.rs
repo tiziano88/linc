@@ -1082,13 +1082,23 @@ pub const SCHEMA: Schema = Schema {
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
+                        name: "const",
+                        kind: &["rust_function_qualifier_const"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
                         name: "async",
-                        kind: &["rust_bool_literal"],
+                        kind: &["rust_function_qualifier_async"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "unsafe",
+                        kind: &["rust_function_qualifier_unsafe"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "extern",
-                        kind: &["rust_bool_literal"],
+                        kind: &["rust_function_qualifier_extern"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -1121,8 +1131,12 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("fn".to_string())],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let comment = model.view_child(node, "comment", path);
+
+                    let const_ = model.view_child(node, "const", path);
                     let async_ = model.view_child(node, "async", path);
+                    let unsafe_ = model.view_child(node, "unsafe", path);
                     let extern_ = model.view_child(node, "extern", path);
+
                     let identifier = model.view_child(node, "identifier", path);
                     let generic = model.view_child(node, "generic", path);
                     let (parameters_head, parameters) =
@@ -1131,29 +1145,74 @@ pub const SCHEMA: Schema = Schema {
                     let body = model.view_child(node, "body", path);
                     let return_type = model.view_child(node, "return_type", path);
 
-                    let async_0 = if node.children.get("async").is_some() {
-                        html! {
-                              <span class="keyword">{ "async" }</span>
-                        }
-                    } else {
-                        html! {
-                              <></>
-                        }
-                    };
-
                     html! {
                         <span>
                             <div>{ "//" }{ comment }</div>
-                            <div>{ "async" }{ async_ }</div>
-                            <div>{ "extern" }{ extern_ }</div>
                             <div>
-                              { async_0 }
+                              { const_ }{ async_ }{ unsafe_ }{ extern_ }
                               <span class="keyword">{ "fn" }</span>{ identifier }{ generic }
                               { "(" }{ for parameters }{ parameters_head }{ ")" }
                               { "->" }{ return_type }
                               <div class="indent">{ body }</div>
                             </div>
                         </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_function_qualifier_const",
+            value: KindValue::Struct {
+                fields: &[],
+                inner: None,
+                parser: |v: &str| vec![Ok("const".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    html! {
+                        <span>{ "const" }</span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_function_qualifier_async",
+            value: KindValue::Struct {
+                fields: &[],
+                inner: None,
+                parser: |v: &str| vec![Ok("async".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    html! {
+                        <span>{ "async" }</span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_function_qualifier_unsafe",
+            value: KindValue::Struct {
+                fields: &[],
+                inner: None,
+                parser: |v: &str| vec![Ok("unsafe".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    html! {
+                        <span>{ "unsafe" }</span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_function_qualifier_extern",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "abi",
+                    kind: &["rust_string_literal"],
+                    multiplicity: Multiplicity::Single,
+                }],
+                inner: None,
+                parser: |v: &str| vec![Ok("extern".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let abi = model.view_child(node, "abi", path);
+                    html! {
+                        <span>{ "extern" }{ abi }</span>
                     }
                 },
             },
@@ -1459,9 +1518,8 @@ pub const SCHEMA: Schema = Schema {
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
-                        name: "variants",
-                        // enum_variant
-                        kind: &["rust_identifier"],
+                        name: "items",
+                        kind: &["rust_enum_item"],
                         multiplicity: Multiplicity::Repeated,
                     },
                 ],
@@ -1469,8 +1527,8 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("enum".to_string())],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let identifier = model.view_child(node, "identifier", path);
-                    let (variants_head, variants) = model.view_children(node, "variants", path);
-                    let variants = variants.into_iter().map(|v| {
+                    let (items_head, items) = model.view_children(node, "items", path);
+                    let items = items.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ "," }</div>
                         }
@@ -1479,35 +1537,120 @@ pub const SCHEMA: Schema = Schema {
                     html! {
                         <span>
                         <span class="keyword">{ "enum" }</span>{ identifier }
-                        { "{" }{ for variants }{ variants_head }{ "}" }
+                        { "{" }{ for items }{ items_head }{ "}" }
                         </span>
                     }
                 },
             },
         },
         Kind {
-            name: "rust_enum_variant",
+            name: "rust_enum_item",
             value: KindValue::Struct {
-                fields: &[Field {
-                    name: "identifier",
-                    kind: &["rust_identifier"],
-                    multiplicity: Multiplicity::Single,
-                }],
+                fields: &[
+                    Field {
+                        name: "visibility",
+                        kind: &["rust_visibility"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "identifier",
+                        kind: &["rust_identifier"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "inner",
+                        kind: &["rust_enum_item_inner"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
                 inner: None,
                 parser: |v: &str| vec![Ok("enum_variant".to_string())],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let label = model.view_child(node, "identifier", path);
-                    let (variants_head, variants) = model.view_children(node, "variants", path);
-                    let variants = variants.into_iter().map(|v| {
-                        html! {
-                            <div class="indent">{ v }{ "," }</div>
-                        }
-                    });
+                    let visibility = model.view_child(node, "visibility", path);
+                    let identifier = model.view_child(node, "identifier", path);
+                    let inner = model.view_child(node, "inner", path);
 
                     html! {
                         <span>
-                        <span class="keyword">{ "enum" }</span>{ label }
-                        { "{" }{ for variants }{ variants_head }{ "}" }
+                        { visibility }{ identifier }{ inner }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_enum_item_inner",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_enum_item_tuple",
+                    "rust_enum_item_struct",
+                    "rust_enum_item_discriminant",
+                ],
+            },
+        },
+        Kind {
+            name: "rust_enum_item_tuple",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "fields",
+                    kind: &["rust_tuple_field"],
+                    multiplicity: Multiplicity::Repeated,
+                }],
+                inner: None,
+                parser: |v: &str| vec![Ok("(".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let (fields_head, fields) = model.view_children(node, "fields", path);
+                    let fields = fields
+                        .into_iter()
+                        .intersperse(html! { <span>{ "," }</span>});
+
+                    html! {
+                        <span>
+                        { "(" }{ for fields }{ fields_head }{ ")" }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_enum_item_struct",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "fields",
+                    kind: &["rust_struct_field"],
+                    multiplicity: Multiplicity::Repeated,
+                }],
+                inner: None,
+                parser: |v: &str| vec![Ok("{".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let (fields_head, fields) = model.view_children(node, "fields", path);
+                    let fields = fields
+                        .into_iter()
+                        .intersperse(html! { <span>{ "," }</span>});
+
+                    html! {
+                        <span>
+                        { "{" }{ for fields }{ fields_head }{ "}" }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_enum_item_discriminant",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "value",
+                    kind: &["rust_expression"],
+                    multiplicity: Multiplicity::Single,
+                }],
+                inner: None,
+                parser: |v: &str| vec![Ok("=".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let value = model.view_child(node, "value", path);
+                    html! {
+                        <span>
+                        { "=" }{ value }
                         </span>
                     }
                 },

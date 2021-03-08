@@ -172,6 +172,10 @@ impl Model {
     }
 
     fn view_node(&self, reference: &Ref, path: &Path) -> Html {
+        self.view_node_with_placeholder(reference, path, "◆")
+    }
+
+    fn view_node_with_placeholder(&self, reference: &Ref, path: &Path, placeholder: &str) -> Html {
         let mut classes = vec!["node".to_string()];
         if path == &self.cursor {
             classes.push("selected".to_string());
@@ -194,7 +198,7 @@ impl Model {
 
         let value = if reference == INVALID_REF {
             html! {
-                <span>{ "◆" }</span>
+                <span class="placeholder">{ placeholder }</span>
             }
         } else {
             match self.lookup(reference) {
@@ -214,6 +218,16 @@ impl Model {
     }
 
     pub fn view_child(&self, node: &Node, field_name: &str, path: &Path) -> Html {
+        self.view_child_with_placeholder(node, field_name, path, field_name)
+    }
+
+    pub fn view_child_with_placeholder(
+        &self,
+        node: &Node,
+        field_name: &str,
+        path: &Path,
+        placeholder: &str,
+    ) -> Html {
         let path = append(
             &path,
             Selector {
@@ -222,10 +236,10 @@ impl Model {
             },
         );
         match node.children.get(field_name).and_then(|v| v.get(0)) {
-            Some(n) => self.view_node(n, &path),
+            Some(n) => self.view_node_with_placeholder(n, &path, placeholder),
             // Empty list vs hole vs special value?
             // TODO: How to traverse nested lists in preorder?
-            None => self.view_node(&"-".to_string(), &path),
+            None => self.view_node_with_placeholder(&"-".to_string(), &path, placeholder),
         }
     }
 

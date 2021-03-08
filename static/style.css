@@ -23,6 +23,10 @@
   color: blue;
 }
 
+.placeholder {
+  color: gray;
+}
+
 .action {
   border: 1px solid;
   padding: 5px;
