@@ -144,8 +144,9 @@ pub const SCHEMA: Schema = Schema {
                 variants: &[
                     "rust_constant",
                     "rust_enum",
-                    "rust_function_definition",
+                    "rust_function",
                     "rust_struct",
+                    "rust_impl",
                 ],
             },
         },
@@ -171,6 +172,77 @@ pub const SCHEMA: Schema = Schema {
                     "rust_path_ident_segment_crate",
                     "rust_path_ident_segment_crate_dollar",
                     "rust_identifier",
+                ],
+            },
+        },
+        // https://doc.rust-lang.org/stable/reference/items/implementations.html
+        Kind {
+            name: "rust_impl",
+            value: KindValue::Enum {
+                variants: &["rust_trait_impl", "rust_inherent_impl"],
+            },
+        },
+        Kind {
+            name: "rust_trait_impl",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "generics",
+                        kind: &["rust_type"],
+                        multiplicity: Multiplicity::Repeated,
+                    },
+                    Field {
+                        name: "trait",
+                        kind: &["rust_type"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "type",
+                        kind: &["rust_type"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "items",
+                        kind: &["rust_trait_impl_item"],
+                        multiplicity: Multiplicity::Repeated,
+                    },
+                ],
+                inner: None,
+                parser: |v: &str| vec![Ok("impl_trait".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let trait_ = model.view_child(node, "trait", path);
+                    let type_ = model.view_child(node, "type", path);
+
+                    let (items_head, items) = model.view_children(node, "items", path);
+                    let items = items.into_iter().map(|b| {
+                        html! {
+                            <div>{ b }</div>
+                        }
+                    });
+
+                    html! {
+                        <span>
+                            <div>{ "impl" }{ trait_ }{ "for" }{ type_ }{ "{" }</div>
+                            <div class="indent">
+                              { for items }
+                              { items_head }
+                            </div>
+                            <div>
+                              { "}" }
+                            </div>
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_trait_impl_item",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_type_alias",
+                    "rust_constant",
+                    "rust_function",
+                    "rust_method",
                 ],
             },
         },
@@ -265,11 +337,14 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Enum {
                 variants: &[
                     "rust_type_path",
-                    "rust_array_type",
-                    "rust_reference_type",
-                    "rust_slice_type",
                     "rust_tuple_type",
+                    "rust_never_type",
+                    "rust_raw_pointer_type",
+                    "rust_reference_type",
+                    "rust_array_type",
+                    "rust_slice_type",
                     "rust_primitive_type",
+                    "rust_inferred_type",
                 ],
             },
         },
@@ -468,7 +543,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "segments",
-                    kind: &["rust_type"],
+                    kind: &["rust_path_ident_segment"],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("segments"),
@@ -480,7 +555,7 @@ pub const SCHEMA: Schema = Schema {
                         .intersperse(html! { <span>{ "::" }</span>});
                     html! {
                         <span>
-                        { for segments }{ segments_head }
+                        { "::" }{ for segments }{ segments_head }
                         </span>
                     }
                 },
@@ -998,7 +1073,7 @@ pub const SCHEMA: Schema = Schema {
         },
         // https://doc.rust-lang.org/nightly/reference/items/functions.html
         Kind {
-            name: "rust_function_definition",
+            name: "rust_function",
             value: KindValue::Struct {
                 fields: &[
                     Field {
@@ -1019,6 +1094,11 @@ pub const SCHEMA: Schema = Schema {
                     Field {
                         name: "identifier",
                         kind: &["rust_identifier"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "generic",
+                        kind: &["rust_generic_params"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -1044,6 +1124,7 @@ pub const SCHEMA: Schema = Schema {
                     let async_ = model.view_child(node, "async", path);
                     let extern_ = model.view_child(node, "extern", path);
                     let identifier = model.view_child(node, "identifier", path);
+                    let generic = model.view_child(node, "generic", path);
                     let (parameters_head, parameters) =
                         model.view_children(node, "parameters", path);
                     let parameters = parameters.into_iter().intersperse(html! {{ "," }});
@@ -1067,7 +1148,7 @@ pub const SCHEMA: Schema = Schema {
                             <div>{ "extern" }{ extern_ }</div>
                             <div>
                               { async_0 }
-                              <span class="keyword">{ "fn" }</span>{ identifier }
+                              <span class="keyword">{ "fn" }</span>{ identifier }{ generic }
                               { "(" }{ for parameters }{ parameters_head }{ ")" }
                               { "->" }{ return_type }
                               <div class="indent">{ body }</div>
@@ -1100,6 +1181,116 @@ pub const SCHEMA: Schema = Schema {
                     html! {
                         <span>
                         { pattern }{ ":" }{ type_ }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_generic_params",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "parameters",
+                    kind: &["rust_generic_param"],
+                    multiplicity: Multiplicity::Repeated,
+                }],
+                inner: None,
+                parser: |v: &str| vec![Ok("generic".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let (parameters_head, parameters) =
+                        model.view_children(node, "parameters", path);
+                    let parameters = parameters.into_iter().intersperse(html! {{ "," }});
+                    html! {
+                        <span>
+                        { "<" }{ for parameters }{ parameters_head }{ ">" }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_generic_param",
+            value: KindValue::Enum {
+                variants: &["rust_lifetime_param", "rust_type_param", "rust_const_param"],
+            },
+        },
+        Kind {
+            name: "rust_lifetime_param",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "identifier",
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                }],
+                inner: None,
+                parser: |v: &str| vec![Ok("'".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let identifier = model.view_child(node, "identifier", path);
+                    html! {
+                        <span>
+                        { "'" }{ identifier }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_type_param",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "identifier",
+                        kind: &["rust_identifier"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "bounds",
+                        kind: &["rust_identifier"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "type",
+                        kind: &["rust_type"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
+                inner: None,
+                parser: |v: &str| vec![Ok("type".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let identifier = model.view_child(node, "identifier", path);
+                    let bounds = model.view_child(node, "bounds", path);
+                    let type_ = model.view_child(node, "type", path);
+                    html! {
+                        <span>
+                        { identifier }{ ":" }{ bounds }{ "=" }{ type_ }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_const_param",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "identifier",
+                        kind: &["rust_identifier"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "type",
+                        kind: &["rust_type"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
+                inner: None,
+                parser: |v: &str| vec![Ok("const".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let identifier = model.view_child(node, "identifier", path);
+                    let type_ = model.view_child(node, "type", path);
+                    html! {
+                        <span>
+                        { "const" }{ identifier }{ ":" }{ type_ }
                         </span>
                     }
                 },
