@@ -561,13 +561,14 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        // https://doc.rust-lang.org/nightly/reference/types/pointer.html#references--and-mut
         Kind {
             name: "rust_reference_type",
             value: KindValue::Struct {
                 fields: &[
                     Field {
-                        name: "type",
-                        kind: &["rust_type"],
+                        name: "lifetime",
+                        kind: &["rust_lifetime"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -576,19 +577,20 @@ pub const SCHEMA: Schema = Schema {
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
-                        name: "lifetime",
-                        // XXX
-                        kind: &["rust_bool"],
+                        name: "type",
+                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
                 inner: Some("type"),
                 parser: |v: &str| vec![Ok("&".to_string())],
                 renderer: |model: &Model, node: &Node, path: &Path| {
+                    let lifetime = model.view_child(node, "lifetime", path);
+                    let mutable = model.view_child(node, "mutable", path);
                     let type_ = model.view_child(node, "type", path);
                     html! {
                         <span>
-                        { "&" }{ type_ }
+                        { "&" }{ lifetime }{ mutable }{ type_ }
                         </span>
                     }
                 },
@@ -939,6 +941,51 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        Kind {
+            name: "rust_lifetime_static",
+            value: KindValue::Struct {
+                fields: &[],
+                inner: None,
+                parser: |v: &str| vec![Ok("static".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    html! {
+                        <span>{ "'static" }</span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_lifetime_underscore",
+            value: KindValue::Struct {
+                fields: &[],
+                inner: None,
+                parser: |v: &str| vec![Ok("_".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    html! {
+                        <span>{ "'_" }</span>
+                    }
+                },
+            },
+        },
+        // https://doc.rust-lang.org/nightly/reference/tokens.html#lifetimes-and-loop-labels
+        Kind {
+            name: "rust_lifetime_or_label",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "identifier",
+                    kind: &["rust_identifier"],
+                    multiplicity: Multiplicity::Single,
+                }],
+                inner: None,
+                parser: |v: &str| vec![Ok("'".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let identifier = model.view_child(node, "identifier", &path);
+                    html! {
+                        <span>{ "'" }{ identifier }</span>
+                    }
+                },
+            },
+        },
         // https://doc.rust-lang.org/stable/reference/expressions/operator-expr.html#comparison-operators
         Kind {
             name: "rust_comparison_expression",
@@ -1276,18 +1323,26 @@ pub const SCHEMA: Schema = Schema {
         Kind {
             name: "rust_lifetime_param",
             value: KindValue::Struct {
-                fields: &[Field {
-                    name: "identifier",
-                    kind: &["rust_identifier"],
-                    multiplicity: Multiplicity::Single,
-                }],
+                fields: &[
+                    Field {
+                        name: "lifetime",
+                        kind: &["rust_lifetime_or_label"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "bounds",
+                        kind: &["rust_lifetime_bounds"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
                 inner: None,
                 parser: |v: &str| vec![Ok("'".to_string())],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let identifier = model.view_child(node, "identifier", path);
+                    let lifetime = model.view_child(node, "lifetime", path);
+                    let bounds = model.view_child(node, "bounds", path);
                     html! {
                         <span>
-                        { "'" }{ identifier }
+                        { lifetime }{ ":" }{ bounds }
                         </span>
                     }
                 },
@@ -1350,6 +1405,93 @@ pub const SCHEMA: Schema = Schema {
                     html! {
                         <span>
                         { "const" }{ identifier }{ ":" }{ type_ }
+                        </span>
+                    }
+                },
+            },
+        },
+        // https://doc.rust-lang.org/nightly/reference/items/generics.html#where-clauses
+        Kind {
+            name: "rust_where_clause",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "items",
+                    kind: &["rust_where_clause_item"],
+                    multiplicity: Multiplicity::Repeated,
+                }],
+                inner: None,
+                parser: |v: &str| vec![Ok("where".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let (items_head, items) = model.view_children(node, "items", path);
+                    let items = items.into_iter().intersperse(html! {{ "," }});
+                    html! {
+                        <span>
+                        { "where" }{ for items }{ items_head }{ ">" }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_where_clause_item",
+            value: KindValue::Enum {
+                variants: &[
+                    "rust_lifetime_where_clause_item",
+                    "rust_type_bound_where_clause_item",
+                ],
+            },
+        },
+        Kind {
+            name: "rust_lifetime_where_clause_item",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "lifetime",
+                        kind: &["rust_lifetime"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "bounds",
+                        kind: &["rust_lifetime_bounds"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
+                inner: None,
+                parser: |v: &str| vec![Ok("'".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let lifetime = model.view_child(node, "lifetime", path);
+                    let bounds = model.view_child(node, "bounds", path);
+                    html! {
+                        <span>
+                        { lifetime }{ ":" }{ bounds }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_type_bound_where_clause_item",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "type",
+                        kind: &["rust_type"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "bounds",
+                        kind: &["rust_type_param_bounds"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
+                inner: None,
+                parser: |v: &str| vec![Ok("where".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let type_ = model.view_child(node, "type", path);
+                    let bounds = model.view_child(node, "bounds", path);
+                    html! {
+                        <span>
+                        { type_ }{ ":" }{ bounds }
                         </span>
                     }
                 },
@@ -1518,6 +1660,16 @@ pub const SCHEMA: Schema = Schema {
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
+                        name: "generic",
+                        kind: &["rust_generic_params"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "where",
+                        kind: &["rust_where_clause"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
                         name: "items",
                         kind: &["rust_enum_item"],
                         multiplicity: Multiplicity::Repeated,
@@ -1527,6 +1679,9 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("enum".to_string())],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let identifier = model.view_child(node, "identifier", path);
+                    let generic = model.view_child(node, "generic", path);
+                    let where_ = model.view_child(node, "where", path);
+
                     let (items_head, items) = model.view_children(node, "items", path);
                     let items = items.into_iter().map(|v| {
                         html! {
@@ -1536,7 +1691,7 @@ pub const SCHEMA: Schema = Schema {
 
                     html! {
                         <span>
-                        <span class="keyword">{ "enum" }</span>{ identifier }
+                        <span class="keyword">{ "enum" }</span>{ identifier }{ generic }{ where_ }
                         { "{" }{ for items }{ items_head }{ "}" }
                         </span>
                     }
@@ -1624,9 +1779,11 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("{".to_string())],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let (fields_head, fields) = model.view_children(node, "fields", path);
-                    let fields = fields
-                        .into_iter()
-                        .intersperse(html! { <span>{ "," }</span>});
+                    let fields = fields.into_iter().map(|v| {
+                        html! {
+                            <div class="indent">{ v }{ "," }</div>
+                        }
+                    });
 
                     html! {
                         <span>
