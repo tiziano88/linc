@@ -257,7 +257,7 @@ impl Model {
                     index: children.len(),
                 },
             );
-            let mut classes = vec!["node".to_string()];
+            let mut classes = vec!["node".to_string(), "placeholder".to_string()];
             if path == self.cursor {
                 classes.push("selected".to_string());
             }
@@ -278,7 +278,7 @@ impl Model {
             });
 
             html! {
-                <div onclick=onclick onmouseover=onmouseover class=classes.join(" ")>{ "▷" }</div>
+                <div onclick=onclick onmouseover=onmouseover class=classes.join(" ")>{ field_name }{ "▷" }</div>
             }
         };
 
