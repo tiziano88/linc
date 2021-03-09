@@ -141,6 +141,38 @@ pub const SCHEMA: Schema = Schema {
         Kind {
             name: "rust_item",
             value: KindValue::Enum {
+                variants: &["rust_vis_item", "rust_macro_item"],
+            },
+        },
+        Kind {
+            name: "rust_vis_item",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "visibility",
+                        kind: &["rust_visibility"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "item",
+                        kind: &["rust_vis_item_inner"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
+                inner: None,
+                parser: |v: &str| vec![Ok("vis_item".to_string())],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let visibility = model.view_child(node, "visibility", path);
+                    let inner = model.view_child(node, "item", path);
+                    html! {
+                        <div>{ visibility }{ inner }</div>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_vis_item_inner",
+            value: KindValue::Enum {
                 variants: &[
                     "rust_constant",
                     "rust_enum",
