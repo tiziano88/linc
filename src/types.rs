@@ -381,6 +381,21 @@ impl Component for Model {
             e.stop_propagation();
             Msg::Hover(vec![].into())
         });
+        let mut input_classes = vec![
+            "p-2",
+            "border",
+            "border-blue-500",
+            "font-mono",
+            "rounded-lg",
+            "pl-10",
+            "w-full",
+        ];
+
+        if self.parsed_commands.is_empty() {
+            input_classes.push("bg-red-400");
+        } else {
+            input_classes.push("bg-blue-100");
+        }
         html! {
             <div
             //   onkeydown=onkeypress
@@ -406,7 +421,7 @@ impl Component for Model {
                         </span>
                         <input
                             id="command-line"
-                            class="p-2 border border-blue-500 bg-blue-100 font-mono rounded-lg pl-10 w-full"
+                            class=input_classes.join(" ")
                             oninput=oninput
                             onblur=onblur
                             disabled={ self.mode == Mode::Normal }

@@ -2077,3 +2077,8 @@ pub enum Multiplicity {
     Single,
     Repeated,
 }
+
+// TODO: Replace parser with validator fn that can return errors on the node itself or its children
+// via relative paths. In this way we don't need to validate literals when parsing, but we can do
+// another pass later and highlight errors (or in real time). For instance, fields with invalid
+// identifiers, or fields in a struct with duplicate names may be highlighted in this way.
