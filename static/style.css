@@ -24,7 +24,9 @@
 }
 
 .placeholder {
-  color: gray;
+  background-color: black;
+  color: white;
+  font-size: small;
 }
 
 .action {
