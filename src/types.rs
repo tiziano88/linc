@@ -1,4 +1,4 @@
-use crate::schema::{ParsedValue, SCHEMA};
+use crate::schema::{ParsedValue, ValidationError, SCHEMA};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
@@ -58,6 +58,8 @@ pub struct Model {
     pub raw_command: String,
     pub parsed_commands: Vec<ParsedValue>,
     pub selected_command_index: usize,
+
+    pub errors: Vec<ValidationError>,
 }
 
 impl Model {
@@ -467,6 +469,7 @@ impl Component for Model {
             .into(),
             hover: vec![].into(),
             link,
+            errors: vec![],
         }
     }
 
