@@ -2040,7 +2040,9 @@ type Parser = fn(&str) -> Vec<Result<String, String>>;
 type Renderer = fn(&Model, &Node, &Path) -> Html;
 type Validator = fn(&Node) -> Vec<ValidationError>;
 
+#[derive(Debug)]
 pub struct ValidationError {
+    // TODO: Path vs Ref?????
     path: Path,
     message: String,
 }
@@ -2076,7 +2078,7 @@ pub struct Kind {
      * TODO: create list of elements, and then have validator function to filter them and
      * provide feedback if not matching, without hiding the entry. Or return one of three values
      * from parse: ok, hide, invalid */
-    value: KindValue,
+    pub value: KindValue,
 }
 
 pub enum KindValue {

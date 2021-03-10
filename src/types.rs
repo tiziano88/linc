@@ -217,6 +217,33 @@ impl Model {
                 .scroll_into_view_with_bool(false)
         }
     }
+
+    pub fn update_errors(&mut self) {
+        let reference = self
+            .lookup_path(&self.file.root, self.cursor.clone())
+            .unwrap();
+        self.update_errors_node(&reference);
+    }
+
+    pub fn update_errors_node(&mut self, reference: &Ref) {
+        let node = match self.lookup(reference) {
+            Some(node) => node.clone(),
+            None => return,
+        };
+        let kind = &node.kind;
+
+        if let Some(kind) = SCHEMA.get_kind(kind) {
+            if let crate::schema::KindValue::Struct { validator, .. } = kind.value {
+                let errors = validator(&node);
+                log::info!("errors: {:?} {:?}", reference, errors);
+            }
+        }
+        for (_, children) in node.children.iter() {
+            for child in children {
+                self.update_errors_node(child);
+            }
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -637,6 +664,7 @@ impl Component for Model {
             }
         };
         self.focus_command_line();
+        self.update_errors();
         true
     }
 }
