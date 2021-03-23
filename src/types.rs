@@ -272,6 +272,7 @@ pub enum Msg {
     EscapeCommand,
 
     ReplaceCurrentNode(Node),
+    SetNodeValue(Ref, String),
     CommandKey(KeyboardEvent),
 }
 
@@ -563,6 +564,11 @@ impl Component for Model {
                 self.file.replace_node(&self.current_ref().unwrap(), n);
                 self.parsed_commands = self.parse_commands();
                 self.selected_command_index = 0;
+            }
+            Msg::SetNodeValue(reference, value) => {
+                let mut node = self.file.lookup(&reference).unwrap().clone();
+                node.value = value;
+                self.file.replace_node(&reference, node);
             }
             Msg::AddItem => {
                 let selector = self.cursor.back().unwrap().clone();

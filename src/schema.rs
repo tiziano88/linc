@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::types::{Model, Node, Path, Ref};
 use itertools::Itertools;
-use yew::{html, Html};
+use yew::{html, Html, InputData};
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
 //the kind field of Inner, and we then try to parse each element with all of them until one
@@ -1964,9 +1964,17 @@ pub const SCHEMA: Schema = Schema {
                 },
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
+                    let reference = model
+                        .lookup_path(&model.file.root, path.clone())
+                        .unwrap()
+                        .clone();
+                    let oninput = model.link.callback(move |e: InputData| {
+                        crate::types::Msg::SetNodeValue(reference.clone(), e.value.clone())
+                    });
                     html! {
                         <span>
-                        { node.value.clone() }
+                        // { node.value.clone() }
+                        <input type="text" value=node.value.clone() oninput=oninput />
                         </span>
                     }
                 },
