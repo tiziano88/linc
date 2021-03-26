@@ -987,11 +987,7 @@ pub const SCHEMA: Schema = Schema {
                     }]
                 },
                 validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    html! {
-                        <span class="identifier">{ node.value.clone() }</span>
-                    }
-                },
+                renderer: textbox,
             },
         },
         Kind {
@@ -1963,21 +1959,7 @@ pub const SCHEMA: Schema = Schema {
                     }]
                 },
                 validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let reference = model
-                        .lookup_path(&model.file.root, path.clone())
-                        .unwrap()
-                        .clone();
-                    let oninput = model.link.callback(move |e: InputData| {
-                        crate::types::Msg::SetNodeValue(reference.clone(), e.value.clone())
-                    });
-                    html! {
-                        <span>
-                        // { node.value.clone() }
-                        <input type="text" value=node.value.clone() oninput=oninput />
-                        </span>
-                    }
-                },
+                renderer: textbox,
             },
         },
         Kind {
@@ -2072,6 +2054,44 @@ pub struct ValidationError {
 
 pub struct Schema {
     pub kinds: &'static [Kind],
+}
+
+fn textbox(model: &Model, node: &Node, path: &Path) -> Html {
+    let reference = model
+        .lookup_path(&model.file.root, path.clone())
+        .unwrap()
+        .clone();
+    let oninput = model.link.callback(move |e: InputData| {
+        crate::types::Msg::SetNodeValue(reference.clone(), e.value.clone())
+    });
+    html! {
+        <span>
+            // <input type="text" value=node.value.clone() oninput=oninput />
+            <span oninput=oninput contenteditable=true>{node.value.clone()}</span>
+        </span>
+    }
+}
+
+fn hole(model: &Model, node: &Node, path: &Path) -> Html {
+    let reference = model
+        .lookup_path(&model.file.root, path.clone())
+        .unwrap()
+        .clone();
+    let oninput = model.link.callback(move |e: InputData| {
+        crate::types::Msg::SetNodeValue(reference.clone(), e.value.clone())
+    });
+    let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
+    let classes_item = vec!["block", "border"];
+    html! {
+        <span>
+            <input type="text" value=node.value.clone() oninput=oninput />
+            <div class=classes_dropdown.join(" ")>
+              <a href="#" class=classes_item.join(" ")>{"link 1"}</a>
+              <a href="#" class=classes_item.join(" ")>{"link 2"}</a>
+              <a href="#" class=classes_item.join(" ")>{"link 3"}</a>
+            </div>
+        </span>
+    }
 }
 
 impl Schema {
