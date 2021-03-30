@@ -2057,26 +2057,20 @@ pub struct Schema {
 }
 
 fn textbox(model: &Model, node: &Node, path: &Path) -> Html {
-    let reference = model
-        .lookup_path(&model.file.root, path.clone())
-        .unwrap()
-        .clone();
+    let reference = model.lookup_path(&model.file.root, path).unwrap().clone();
     let oninput = model.link.callback(move |e: InputData| {
         crate::types::Msg::SetNodeValue(reference.clone(), e.value.clone())
     });
     html! {
         <span>
-            // <input type="text" value=node.value.clone() oninput=oninput />
-            <span oninput=oninput contenteditable=true>{node.value.clone()}</span>
+            <input type="text" value=node.value.clone() oninput=oninput />
+            // <span oninput=oninput contenteditable=true>{node.value.clone()}</span>
         </span>
     }
 }
 
 fn hole(model: &Model, node: &Node, path: &Path) -> Html {
-    let reference = model
-        .lookup_path(&model.file.root, path.clone())
-        .unwrap()
-        .clone();
+    let reference = model.lookup_path(&model.file.root, path).unwrap().clone();
     let oninput = model.link.callback(move |e: InputData| {
         crate::types::Msg::SetNodeValue(reference.clone(), e.value.clone())
     });
@@ -2186,6 +2180,7 @@ impl Kind {
     }
 }
 
+#[derive(Clone)]
 pub struct ParsedValue {
     pub kind_hierarchy: Vec<String>,
     pub value: Result<String, String>,

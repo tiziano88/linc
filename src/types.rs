@@ -17,13 +17,11 @@ use yew::{
 
 pub type Ref = String;
 
-pub const INVALID_REF: &str = "-";
-
 pub fn new_ref() -> Ref {
     uuid::Uuid::new_v4().to_hyphenated().to_string()
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Selector {
     pub field: String,
     pub index: usize,
@@ -59,52 +57,69 @@ pub struct Model {
     pub parsed_commands: Vec<ParsedValue>,
     pub selected_command_index: usize,
 
+    pub node_state: HashMap<Path, NodeState>,
+
     pub errors: Vec<ValidationError>,
+}
+
+#[derive(Default)]
+pub struct NodeState {
+    pub raw_command: String,
+    pub parsed_commands: Vec<ParsedValue>,
+    pub selected_command_index: usize,
+}
+
+pub fn parent(path: &Path) -> Path {
+    let mut parent_path = path.clone();
+    parent_path.pop_back().unwrap();
+    parent_path
 }
 
 impl Model {
     pub fn lookup(&self, reference: &Ref) -> Option<&Node> {
         self.file.lookup(reference)
     }
-    pub fn lookup_path(&self, reference: &Ref, relative_path: Path) -> Option<Ref> {
-        let mut path = relative_path;
+    pub fn lookup_path(&self, reference: &Ref, relative_path: &Path) -> Option<Ref> {
+        let mut path = relative_path.clone();
         match path.pop_front() {
             Some(head) => {
                 let base = self.lookup(reference).unwrap();
                 let children = &base.children.get(&head.field).cloned().unwrap_or_default();
-                let r = children
+                children
                     .get(head.index)
                     .cloned()
-                    .unwrap_or(INVALID_REF.to_string());
-                self.lookup_path(&r, path)
+                    .and_then(|r| self.lookup_path(&r, &path))
             }
             None => Some(reference.clone()),
         }
     }
 
     pub fn parent_ref(&self) -> Option<Ref> {
-        let mut parent_cursor = self.cursor.clone();
-        parent_cursor.pop_back().unwrap();
-        self.lookup_path(&self.file.root, parent_cursor)
+        let parent_cursor = parent(&self.cursor);
+        self.lookup_path(&self.file.root, &parent_cursor)
     }
 
     pub fn current_ref(&self) -> Option<Ref> {
-        self.lookup_path(&self.file.root, self.cursor.clone())
+        self.lookup_path(&self.file.root, &self.cursor)
     }
 
-    fn parse_commands(&mut self) -> Vec<ParsedValue> {
-        self.current_field()
+    fn parse_commands_current(&self) -> Vec<ParsedValue> {
+        self.parse_commands(&self.cursor, &self.raw_command)
+    }
+
+    fn parse_commands(&self, path: &Path, raw_command: &str) -> Vec<ParsedValue> {
+        self.field(path)
             .map(|field| {
                 field
                     .kind
                     .iter()
                     .filter_map(|kind| SCHEMA.get_kind(kind))
                     .flat_map(|kind| {
-                        kind.parse(&self.raw_command)
+                        kind.parse(raw_command)
                             .into_iter()
                             // TODO: Different matching logic (e.g. fuzzy).
                             .filter(|v| match &v.value {
-                                Ok(v) => v.starts_with(&self.raw_command),
+                                Ok(v) => v.starts_with(raw_command),
                                 Err(_) => true,
                             })
                     })
@@ -153,10 +168,8 @@ impl Model {
         if let (Some(current_ref), Some(inner_field)) =
             (current_ref, node_kind.and_then(|k| k.inner()))
         {
-            if current_ref != INVALID_REF {
-                node.children
-                    .insert(inner_field.to_string(), vec![current_ref.clone()]);
-            }
+            node.children
+                .insert(inner_field.to_string(), vec![current_ref.clone()]);
         };
 
         let new_ref = self.file.add_node(node);
@@ -177,13 +190,20 @@ impl Model {
     }
 
     fn replace_node(&mut self, node: Node) {
-        if let Some(current_ref) = self.current_ref() {
-            if current_ref != INVALID_REF {
+        let path = self.cursor.clone();
+        self.replace_node_path(&path, node)
+    }
+
+    fn replace_node_path(&mut self, path: &Path, node: Node) {
+        match self.lookup_path(&self.file.root, path) {
+            Some(current_ref) => {
                 self.file.replace_node(&current_ref, node);
-            } else {
+            }
+            None => {
                 let new_ref = self.file.add_node(node);
-                let selector = self.cursor.back().unwrap().clone();
-                let parent_ref = self.parent_ref().unwrap();
+                let selector = path.back().unwrap().clone();
+                let parent_path = parent(path);
+                let parent_ref = self.lookup_path(&self.file.root, &parent_path).unwrap();
                 log::info!("parent ref: {:?}", parent_ref);
                 let mut parent = self.file.lookup(&parent_ref).unwrap().clone();
                 log::info!("parent: {:?}", parent);
@@ -219,10 +239,9 @@ impl Model {
     }
 
     pub fn update_errors(&mut self) {
-        let reference = self
-            .lookup_path(&self.file.root, self.cursor.clone())
-            .unwrap();
-        self.update_errors_node(&reference);
+        if let Some(reference) = self.lookup_path(&self.file.root, &self.cursor) {
+            self.update_errors_node(&reference);
+        }
     }
 
     pub fn update_errors_node(&mut self, reference: &Ref) {
@@ -273,6 +292,8 @@ pub enum Msg {
 
     ReplaceCurrentNode(Node),
     SetNodeValue(Ref, String),
+    ReplaceNode(Path, Node),
+    SetNodeCommand(Path, String),
     CommandKey(KeyboardEvent),
 }
 
@@ -441,7 +462,7 @@ impl Component for Model {
                     <div class="column">
                         <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
                         <div>{ display_cursor(&self.cursor) }</div>
-                        <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, self.cursor.clone())) }</div>
+                        <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, &self.cursor)) }</div>
                     </div>
 
                     <div>{ self.view_actions() }</div>
@@ -497,6 +518,7 @@ impl Component for Model {
             .into(),
             hover: vec![].into(),
             link,
+            node_state: HashMap::new(),
             errors: vec![],
         }
     }
@@ -515,7 +537,7 @@ impl Component for Model {
             let current_node = model.current_ref().and_then(|r| model.lookup(&r)).cloned();
             let current_kind = current_node.clone().map(|n| n.kind.clone());
             model.raw_command = current_node.map(|n| n.value.clone()).unwrap_or_default();
-            model.parsed_commands = model.parse_commands();
+            model.parsed_commands = model.parse_commands_current();
             model.selected_command_index = model
                 .parsed_commands
                 .iter()
@@ -560,15 +582,25 @@ impl Component for Model {
             Msg::SetMode(mode) => {
                 self.mode = mode;
             }
-            Msg::ReplaceCurrentNode(n) => {
-                self.file.replace_node(&self.current_ref().unwrap(), n);
-                self.parsed_commands = self.parse_commands();
+            Msg::ReplaceCurrentNode(node) => {
+                self.file.replace_node(&self.current_ref().unwrap(), node);
+                self.parsed_commands = self.parse_commands_current();
                 self.selected_command_index = 0;
+            }
+            Msg::ReplaceNode(path, node) => {
+                log::info!("replace node {:?}", path);
+                self.replace_node_path(&path, node);
             }
             Msg::SetNodeValue(reference, value) => {
                 let mut node = self.file.lookup(&reference).unwrap().clone();
                 node.value = value;
                 self.file.replace_node(&reference, node);
+            }
+            Msg::SetNodeCommand(path, raw_command) => {
+                let parsed_commands = self.parse_commands(&path, &raw_command);
+                let node_state = self.node_state.entry(path).or_default();
+                node_state.raw_command = raw_command;
+                node_state.parsed_commands = parsed_commands;
             }
             Msg::AddItem => {
                 let selector = self.cursor.back().unwrap().clone();
@@ -598,7 +630,7 @@ impl Component for Model {
             }
             Msg::SetCommand(v) => {
                 self.raw_command = v;
-                self.parsed_commands = self.parse_commands();
+                self.parsed_commands = self.parse_commands_current();
                 self.selected_command_index = 0;
             }
             Msg::NextCommand => {
@@ -628,7 +660,7 @@ impl Component for Model {
                                 self.replace_node(node.clone());
                                 self.next();
                                 self.raw_command = "".to_string();
-                                self.parsed_commands = self.parse_commands();
+                                self.parsed_commands = self.parse_commands_current();
                                 self.selected_command_index = 0;
                             }
                             None => {}
@@ -639,7 +671,7 @@ impl Component for Model {
             }
             Msg::EscapeCommand => {
                 self.raw_command = "".to_string();
-                self.parsed_commands = self.parse_commands();
+                self.parsed_commands = self.parse_commands_current();
                 self.selected_command_index = 0;
                 self.mode = Mode::Normal;
             }
@@ -651,8 +683,10 @@ impl Component for Model {
                     "Escape" => self.link.send_message(Msg::EscapeCommand),
                     "ArrowUp" => self.link.send_message(Msg::PrevCommand),
                     "ArrowDown" => self.link.send_message(Msg::NextCommand),
-                    "ArrowLeft" if self.mode == Mode::Normal => self.link.send_message(Msg::Prev),
-                    "ArrowRight" if self.mode == Mode::Normal => self.link.send_message(Msg::Next),
+                    // "ArrowLeft" if self.mode == Mode::Normal =>
+                    // self.link.send_message(Msg::Prev), "ArrowRight" if
+                    // self.mode == Mode::Normal => self.link.send_message(Msg::Next),
+                    /*
                     "i" if self.mode == Mode::Normal => {
                         e.prevent_default();
                         self.link.send_message(Msg::SetMode(Mode::Edit))
@@ -665,11 +699,12 @@ impl Component for Model {
                         e.prevent_default();
                         self.link.send_message(Msg::SetMode(Mode::Edit))
                     }
+                    */
                     _ => {}
                 }
             }
         };
-        self.focus_command_line();
+        // self.focus_command_line();
         self.update_errors();
         true
     }

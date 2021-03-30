@@ -67,9 +67,16 @@ impl Model {
     }
 
     pub fn current_field(&self) -> Option<Field> {
-        match self.cursor.back() {
+        self.field(&self.cursor)
+    }
+
+    pub fn field(&self, path: &Path) -> Option<Field> {
+        let parent_path = parent(&self.cursor);
+
+        match path.back() {
             Some(selector) => {
-                let parent = self.lookup(&self.parent_ref().unwrap()).unwrap();
+                let parent_ref = self.lookup_path(&self.file.root, &parent_path).unwrap();
+                let parent = self.lookup(&parent_ref).unwrap();
                 SCHEMA
                     .get_kind(&parent.kind)
                     .unwrap()
@@ -101,7 +108,7 @@ impl Model {
     }
 
     pub fn view_file(&self, file: &File) -> Html {
-        let node = self.view_node(&file.root, &Path::new());
+        let node = self.view_node(Some(file.root.clone()), &Path::new());
         html! {
             <pre>{ node }</pre>
         }
@@ -171,11 +178,16 @@ impl Model {
         }
     }
 
-    fn view_node(&self, reference: &Ref, path: &Path) -> Html {
+    fn view_node(&self, reference: Option<Ref>, path: &Path) -> Html {
         self.view_node_with_placeholder(reference, path, "◆")
     }
 
-    fn view_node_with_placeholder(&self, reference: &Ref, path: &Path, placeholder: &str) -> Html {
+    fn view_node_with_placeholder(
+        &self,
+        reference: Option<Ref>,
+        path: &Path,
+        placeholder: &str,
+    ) -> Html {
         let mut classes = vec!["node".to_string()];
         if path == &self.cursor {
             classes.push("selected".to_string());
@@ -196,17 +208,55 @@ impl Model {
             Msg::Hover(path_clone.clone())
         });
 
-        let value = if reference == INVALID_REF {
-            html! {
-                <span class="placeholder">{ placeholder }</span>
-            }
-        } else {
-            match self.lookup(reference) {
+        let path_clone = path.clone();
+        let oninput = self.link.callback(move |e: InputData| {
+            crate::types::Msg::SetNodeCommand(path_clone.clone(), e.value.clone())
+        });
+
+        let node_state = self.node_state.get(&path);
+
+        let suggestions: Vec<_> = node_state
+            .map(|v| v.parsed_commands.clone())
+            .unwrap_or_default()
+            .iter()
+            .map(|v| {
+                let path_clone = path.clone();
+                let value_string = v.value.clone().unwrap_or_default();
+                let node = v.to_node().unwrap();
+                let onclick = self.link.callback(move |e: MouseEvent| {
+                    Msg::ReplaceNode(path_clone.clone(), node.clone())
+                });
+                let classes_item = vec!["block", "border"];
+                html! {
+                    <span class=classes_item.join(" ") onclick=onclick>{value_string}</span>
+                }
+            })
+            .collect();
+
+        let value = match reference {
+            Some(reference) => match self.lookup(&reference) {
                 Some(node) => self.view_value(&node, &path),
                 None => {
                     html! {
                         <span>{ format!("invalid: {}", reference) }</span>
                     }
+                }
+            },
+            None => {
+                let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
+                html! {
+                    <span>
+                        <div class="placeholder">{ placeholder }</div>
+                        <span>
+                            <span class="inline-block w-full" contenteditable=true oninput=oninput>{""}</span>
+                            <div class=classes_dropdown.join(" ")>
+                                {for suggestions}
+                                // <span class=classes_item.join(" ")>{"link 1"}</span>
+                                // <span class=classes_item.join(" ")>{"link 2"}</span>
+                                // <span class=classes_item.join(" ")>{"link 3"}</span>
+                            </div>
+                        </span>
+                    </span>
                 }
             }
         };
@@ -235,12 +285,14 @@ impl Model {
                 index: 0,
             },
         );
-        match node.children.get(field_name).and_then(|v| v.get(0)) {
-            Some(n) => self.view_node_with_placeholder(n, &path, placeholder),
-            // Empty list vs hole vs special value?
-            // TODO: How to traverse nested lists in preorder?
-            None => self.view_node_with_placeholder(&"-".to_string(), &path, placeholder),
-        }
+        let reference = node
+            .children
+            .get(field_name)
+            .and_then(|v| v.get(0))
+            .cloned();
+        // Empty list vs hole vs special value?
+        // TODO: How to traverse nested lists in preorder?
+        self.view_node_with_placeholder(reference, &path, placeholder)
     }
 
     /// Returns the head and children, separately.
@@ -293,7 +345,7 @@ impl Model {
                         index: i,
                     },
                 );
-                self.view_node(n, &path)
+                self.view_node(Some(n.clone()), &path)
             })
             .collect::<Vec<_>>();
         (head, nodes)
