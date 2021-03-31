@@ -551,8 +551,11 @@ impl Component for Model {
         match msg {
             Msg::Noop => {}
             Msg::Select(path) => {
-                self.cursor = path;
+                self.cursor = path.clone();
                 update_from_selected(self);
+                let parsed_commands = self.parse_commands(&path, "");
+                let node_state = self.node_state.entry(path.clone()).or_default();
+                node_state.parsed_commands = parsed_commands;
             }
             Msg::Hover(path) => {
                 self.hover = path;
