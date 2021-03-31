@@ -215,24 +215,6 @@ impl Model {
 
         let node_state = self.node_state.get(&path);
 
-        let suggestions: Vec<_> = node_state
-            .map(|v| v.parsed_commands.clone())
-            .unwrap_or_default()
-            .iter()
-            .map(|v| {
-                let path_clone = path.clone();
-                let value_string = v.value.clone().unwrap_or_default();
-                let node = v.to_node().unwrap();
-                let onclick = self.link.callback(move |e: MouseEvent| {
-                    Msg::ReplaceNode(path_clone.clone(), node.clone())
-                });
-                let classes_item = vec!["block", "border"];
-                html! {
-                    <span class=classes_item.join(" ") onclick=onclick>{value_string}</span>
-                }
-            })
-            .collect();
-
         let value = match reference {
             Some(reference) => match self.lookup(&reference) {
                 Some(node) => self.view_value(&node, &path),
@@ -243,6 +225,24 @@ impl Model {
                 }
             },
             None => {
+                let suggestions: Vec<_> = node_state
+                    .map(|v| v.parsed_commands.clone())
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|v| {
+                        let path_clone = path.clone();
+                        let value_string = v.value.clone().unwrap_or_default();
+                        let node = v.to_node();
+                        let onclick = self.link.callback(move |e: MouseEvent| match node.clone() {
+                            Some(node) => Msg::ReplaceNode(path_clone.clone(), node.clone()),
+                            None => Msg::Noop,
+                        });
+                        let classes_item = vec!["block", "border"];
+                        html! {
+                            <span class=classes_item.join(" ") onclick=onclick>{value_string}</span>
+                        }
+                    })
+                    .collect();
                 let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
                 html! {
                     <span>
@@ -250,10 +250,7 @@ impl Model {
                         <span>
                             <span class="inline-block w-full" contenteditable=true oninput=oninput>{""}</span>
                             <div class=classes_dropdown.join(" ")>
-                                {for suggestions}
-                                // <span class=classes_item.join(" ")>{"link 1"}</span>
-                                // <span class=classes_item.join(" ")>{"link 2"}</span>
-                                // <span class=classes_item.join(" ")>{"link 3"}</span>
+                                { for suggestions }
                             </div>
                         </span>
                     </span>
@@ -329,8 +326,11 @@ impl Model {
                 Msg::Hover(path_clone.clone())
             });
 
+            // html! {
+            //     <div onclick=onclick onmouseover=onmouseover class=classes.join(" ")>{ field_name
+            // }{ "▷" }</div> }
             html! {
-                <div onclick=onclick onmouseover=onmouseover class=classes.join(" ")>{ field_name }{ "▷" }</div>
+                <div></div>
             }
         };
 
@@ -347,6 +347,16 @@ impl Model {
                 );
                 self.view_node(Some(n.clone()), &path)
             })
+            .chain(std::iter::once({
+                let path = append(
+                    &path,
+                    Selector {
+                        field: field_name.to_string(),
+                        index: children.len(),
+                    },
+                );
+                self.view_node_with_placeholder(None, &path, &format!("{}▷", field_name))
+            }))
             .collect::<Vec<_>>();
         (head, nodes)
     }
