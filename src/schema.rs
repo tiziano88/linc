@@ -1257,7 +1257,7 @@ pub const SCHEMA: Schema = Schema {
 
                     let identifier = model.view_child(node, "identifier", path);
                     let generic = model.view_child(node, "generic", path);
-                    let (parameters_head, parameters) =
+                    let (_parameters_head, parameters) =
                         model.view_children(node, "parameters", path);
                     let parameters = parameters.into_iter().intersperse(html! {{ "," }});
                     let body = model.view_child(node, "body", path);
@@ -1269,7 +1269,7 @@ pub const SCHEMA: Schema = Schema {
                             <div>
                               { const_ }{ async_ }{ unsafe_ }{ extern_ }
                               <span class="keyword">{ "fn" }</span>{ identifier }{ generic }
-                              { "(" }{ for parameters }{ parameters_head }{ ")" }
+                              { "(" }{ for parameters }{ ")" }
                               { "->" }{ return_type }
                               <div class="indent">{ body }</div>
                             </div>
@@ -1380,12 +1380,12 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("generic".to_string())],
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (parameters_head, parameters) =
+                    let (_parameters_head, parameters) =
                         model.view_children(node, "parameters", path);
                     let parameters = parameters.into_iter().intersperse(html! {{ "," }});
                     html! {
                         <span>
-                        { "<" }{ for parameters }{ parameters_head }{ ">" }
+                        { "<" }{ for parameters }{ ">" }
                         </span>
                     }
                 },
@@ -1503,11 +1503,11 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("where".to_string())],
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (items_head, items) = model.view_children(node, "items", path);
+                    let (_items_head, items) = model.view_children(node, "items", path);
                     let items = items.into_iter().intersperse(html! {{ "," }});
                     html! {
                         <span>
-                        { "where" }{ for items }{ items_head }{ ">" }
+                        { "where" }{ for items }
                         </span>
                     }
                 },
@@ -1633,12 +1633,12 @@ pub const SCHEMA: Schema = Schema {
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let expression = model.view_child(node, "expression", path);
-                    let (args_head, args) = model.view_children(node, "arguments", path);
+                    let (_args_head, args) = model.view_children(node, "arguments", path);
                     let args = args.into_iter().intersperse(html! {{ "," }});
                     html! {
                         <span>
                         { expression }
-                        { "(" }{ for args }{ args_head }{ ")" }
+                        { "(" }{ for args }{ ")" }
                         </span>
                     }
                 },
@@ -1656,11 +1656,11 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("(".to_string())],
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (elements_head, elements) = model.view_children(node, "elements", path);
+                    let (_elements_head, elements) = model.view_children(node, "elements", path);
                     let elements = elements.into_iter().intersperse(html! {{ "," }});
                     html! {
                         <span>
-                        { "(" }{ for elements }{ elements_head }{ ")" }
+                        { "(" }{ for elements }{ ")" }
                         </span>
                     }
                 },
@@ -1686,7 +1686,7 @@ pub const SCHEMA: Schema = Schema {
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let identifier = model.view_child(node, "identifier", path);
-                    let (fields_head, fields) = model.view_children(node, "fields", path);
+                    let (_fields_head, fields) = model.view_children(node, "fields", path);
                     let fields = fields.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ "," }</div>
@@ -1696,7 +1696,7 @@ pub const SCHEMA: Schema = Schema {
                     html! {
                         <span>
                         <span class="keyword">{ "struct" }</span>{ identifier }
-                        { "{" }{ for fields }{ fields_head }{ "}" }
+                        { "{" }{ for fields }{ "}" }
                         </span>
                     }
                 },
@@ -1771,7 +1771,7 @@ pub const SCHEMA: Schema = Schema {
                     let generic = model.view_child(node, "generic", path);
                     let where_ = model.view_child(node, "where", path);
 
-                    let (items_head, items) = model.view_children(node, "items", path);
+                    let (_items_head, items) = model.view_children(node, "items", path);
                     let items = items.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ "," }</div>
@@ -1781,7 +1781,7 @@ pub const SCHEMA: Schema = Schema {
                     html! {
                         <span>
                         <span class="keyword">{ "enum" }</span>{ identifier }{ generic }{ where_ }
-                        { "{" }{ for items }{ items_head }{ "}" }
+                        { "{" }{ for items }{ "}" }
                         </span>
                     }
                 },
@@ -1845,14 +1845,14 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("(".to_string())],
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (fields_head, fields) = model.view_children(node, "fields", path);
+                    let (_fields_head, fields) = model.view_children(node, "fields", path);
                     let fields = fields
                         .into_iter()
                         .intersperse(html! { <span>{ "," }</span>});
 
                     html! {
                         <span>
-                        { "(" }{ for fields }{ fields_head }{ ")" }
+                        { "(" }{ for fields }{ ")" }
                         </span>
                     }
                 },
@@ -1870,7 +1870,7 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("{".to_string())],
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (fields_head, fields) = model.view_children(node, "fields", path);
+                    let (_fields_head, fields) = model.view_children(node, "fields", path);
                     let fields = fields.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ "," }</div>
@@ -1879,7 +1879,7 @@ pub const SCHEMA: Schema = Schema {
 
                     html! {
                         <span>
-                        { "{" }{ for fields }{ fields_head }{ "}" }
+                        { "{" }{ for fields }{ "}" }
                         </span>
                     }
                 },
@@ -1918,7 +1918,7 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("markdown_fragment".to_string())],
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (items_head, items) = model.view_children(node, "items", path);
+                    let (_items_head, items) = model.view_children(node, "items", path);
                     let items = items.into_iter().map(|v| {
                         html! {
                             <div>{ v }</div>
@@ -1928,7 +1928,6 @@ pub const SCHEMA: Schema = Schema {
                         <div>
                             <div class="fragment-type">{ "markdown" }</div>
                             { for items }
-                            { items_head }
                         </div>
                     }
                 },
@@ -2005,7 +2004,7 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![Ok("-".to_string())],
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (items_head, items) = model.view_children(node, "items", path);
+                    let (_items_head, items) = model.view_children(node, "items", path);
                     let items = items.into_iter().map(|v| {
                         html! {
                             <li>{ v }</li>
@@ -2015,7 +2014,6 @@ pub const SCHEMA: Schema = Schema {
                         <span>
                             <ul class="list-disc">
                                 { for items }
-                                <li>{ items_head }</li>
                             </ul>
                         </span>
                     }

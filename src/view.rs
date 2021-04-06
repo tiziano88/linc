@@ -188,8 +188,9 @@ impl Model {
         path: &Path,
         placeholder: &str,
     ) -> Html {
+        let selected = path == &self.cursor;
         let mut classes = vec!["node".to_string()];
-        if path == &self.cursor {
+        if selected {
             classes.push("selected".to_string());
         }
         if path == &self.hover {
@@ -225,7 +226,8 @@ impl Model {
                 }
             },
             None => {
-                let suggestions: Vec<_> = node_state
+                let suggestions: Vec<_> = if selected {
+                    node_state
                     .map(|v| v.parsed_commands.clone())
                     .unwrap_or_default()
                     .iter()
@@ -242,7 +244,10 @@ impl Model {
                             <span class=classes_item.join(" ") onclick=onclick>{value_string}</span>
                         }
                     })
-                    .collect();
+                    .collect()
+                } else {
+                    vec![]
+                };
                 let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
                 html! {
                     <span>

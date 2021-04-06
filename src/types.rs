@@ -53,10 +53,6 @@ pub struct Model {
 
     pub link: ComponentLink<Self>,
 
-    pub raw_command: String,
-    pub parsed_commands: Vec<ParsedValue>,
-    pub selected_command_index: usize,
-
     pub node_state: HashMap<Path, NodeState>,
 
     pub errors: Vec<ValidationError>,
@@ -101,10 +97,6 @@ impl Model {
 
     pub fn current_ref(&self) -> Option<Ref> {
         self.lookup_path(&self.file.root, &self.cursor)
-    }
-
-    fn parse_commands_current(&self) -> Vec<ParsedValue> {
-        self.parse_commands(&self.cursor, &self.raw_command)
     }
 
     fn parse_commands(&self, path: &Path, raw_command: &str) -> Vec<ParsedValue> {
@@ -284,12 +276,6 @@ pub enum Msg {
 
     SetMode(Mode),
 
-    SetCommand(String),
-    NextCommand,
-    PrevCommand,
-    EnterCommand,
-    EscapeCommand,
-
     ReplaceCurrentNode(Node),
     SetNodeValue(Ref, String),
     ReplaceNode(Path, Node),
@@ -365,97 +351,17 @@ impl Component for Model {
     type Properties = ();
 
     fn view(&self) -> Html {
-        // let onkeypress = self
-        //     .link
-        //     .callback(move |e: KeyboardEvent| Msg::CommandKey(e));
-        let oninput = self
-            .link
-            .callback(move |e: InputData| Msg::SetCommand(e.value));
-        let onblur = self.link.callback(move |e: FocusEvent| Msg::Noop);
-        let values = self.parsed_commands.iter().enumerate().map(|(i, parsed_value)| {
-            // let callback = self.link.callback(move |_| Msg::ReplaceCurrentNode(v));
-            let mut classes = vec![
-                "border",
-                "border-gray-200",
-                "flex",
-                "group",
-                "block",
-                "rounded-lg",
-                "p-2",
-                "m-2",
-            ];
-            if self.selected_command_index == i {
-                classes.push("bg-blue-300");
-            } else {
-                classes.push("bg-gray-100");
-            }
-            let value = parsed_value.value.clone().ok().unwrap_or_default();
-            let (prefix, suffix) = match value.strip_prefix(&self.raw_command) {
-                Some(suffix) => (self.raw_command.clone(), suffix.to_string()),
-                None => ("".to_string(), value.clone()),
-            };
-            let kinds = parsed_value.kind_hierarchy.iter().map(|k| {
-                html!{
-                    <span class="kind bg-blue-200 p-1 px-2 rounded-md text-sm font-mono">
-                        <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                        { k }
-                    </span>
-                }
-            });
-            html! {
-                <div
-                //   onclick=callback
-                // XXX
-                  class=classes.join(" ")>
-                  <i class="gg-attachment m-5"></i>
-                  <div>
-                    <div class="font-mono">
-                        <span class="text-green-400 font-bold underline">
-                            { prefix }
-                        </span>
-                        <span class="">
-                            { suffix }
-                        </span>
-                    </div>
-                    <div>
-                        { for kinds }
-                    </div>
-                  </div>
-                </div>
-            }
-        });
-        // self.scroll_into_view(&format!(
-        //     "#values div:nth-child({})",
-        //     self.selected_command_index + 1,
-        // ));
         let onmouseover = self.link.callback(move |e: MouseEvent| {
             e.stop_propagation();
             Msg::Hover(vec![].into())
         });
-        let mut input_classes = vec![
-            "p-2",
-            "border",
-            "border-blue-500",
-            "font-mono",
-            "rounded-lg",
-            "pl-10",
-            "w-full",
-        ];
-
-        if self.parsed_commands.is_empty() {
-            input_classes.push("bg-red-400");
-        } else {
-            input_classes.push("bg-blue-100");
-        }
         html! {
             <div
             //   onkeydown=onkeypress
               onmouseover=onmouseover
               >
                 <div>{ "LINC" }</div>
-                <div>{ "left / right arrow keys (when command line is empty): move between existing nodes" }</div>
-                <div>{ "up / down arrow keys: select alternative completion result" }</div>
-                <div>{ "start typing in command line to filter available completion results" }</div>
+                <div>{ "click on an empty node to see list of possible completions" }</div>
                 <div class="">
                     <div class="column">{ self.view_file(&self.file) }</div>
 
@@ -466,25 +372,6 @@ impl Component for Model {
                     </div>
 
                     <div>{ self.view_actions() }</div>
-                    <div class="relative">
-                        <span class="inline-block absolute w-2 h-20 left-5 top-5">
-                            <i class="gg-terminal"></i>
-                        </span>
-                        <input
-                            id="command-line"
-                            class=input_classes.join(" ")
-                            oninput=oninput
-                            onblur=onblur
-                            disabled={ self.mode == Mode::Normal }
-                            value=self.raw_command
-                        />
-                        <div class="h-60">
-                            // <CommandLine values=allowed_kinds on_change=callback base_value=self.command.clone() state=state />
-                            <div id="values" class="overflow-y-scroll h-60 gap-4">
-                                { for values }
-                            </div>
-                        </div>
-                    </div>
                     <div class="h-40">
                         <div class="column">{ self.view_file_json(&self.file) }</div>
                     </div>
@@ -506,9 +393,6 @@ impl Component for Model {
         Model {
             store: StorageService::new(Area::Local).expect("could not create storage service"),
             key_listener,
-            raw_command: "".to_string(),
-            parsed_commands: vec![],
-            selected_command_index: 0,
             file: super::initial::initial(),
             mode: Mode::Normal,
             cursor: vec![Selector {
@@ -524,27 +408,15 @@ impl Component for Model {
     }
 
     fn change(&mut self, _props: ()) -> ShouldRender {
-        self.focus_command_line();
         false
     }
 
-    fn rendered(&mut self, _first_render: bool) {
-        self.focus_command_line();
-    }
+    fn rendered(&mut self, _first_render: bool) {}
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         fn update_from_selected(model: &mut Model) {
             let current_node = model.current_ref().and_then(|r| model.lookup(&r)).cloned();
             let current_kind = current_node.clone().map(|n| n.kind.clone());
-            model.raw_command = current_node.map(|n| n.value.clone()).unwrap_or_default();
-            model.parsed_commands = model.parse_commands_current();
-            model.selected_command_index = model
-                .parsed_commands
-                .iter()
-                .position(|parsed_value| {
-                    parsed_value.kind_hierarchy.last() == current_kind.as_ref()
-                })
-                .unwrap_or(0);
         }
 
         const KEY: &str = "linc_file";
@@ -587,8 +459,6 @@ impl Component for Model {
             }
             Msg::ReplaceCurrentNode(node) => {
                 self.file.replace_node(&self.current_ref().unwrap(), node);
-                self.parsed_commands = self.parse_commands_current();
-                self.selected_command_index = 0;
             }
             Msg::ReplaceNode(path, node) => {
                 log::info!("replace node {:?}", path);
@@ -631,56 +501,10 @@ impl Component for Model {
                 children.remove(selector.index);
                 self.file.replace_node(&parent_ref, parent);
             }
-            Msg::SetCommand(v) => {
-                self.raw_command = v;
-                self.parsed_commands = self.parse_commands_current();
-                self.selected_command_index = 0;
-            }
-            Msg::NextCommand => {
-                if self.selected_command_index < (self.parsed_commands.len() - 1) {
-                    self.selected_command_index += 1;
-                }
-            }
-            Msg::PrevCommand => {
-                if self.selected_command_index > 0 {
-                    self.selected_command_index -= 1;
-                }
-            }
-            Msg::EnterCommand => {
-                match self
-                    .parsed_commands
-                    .get(self.selected_command_index)
-                    .clone()
-                {
-                    Some(parsed_value) => {
-                        // Replace current node.
-                        // self.file
-                        //     .nodes
-                        //     .insert(self.current_ref().unwrap(), node.clone());
-                        match parsed_value.to_node() {
-                            Some(node) => {
-                                // self.set_node(node.clone());
-                                self.replace_node(node.clone());
-                                self.next();
-                                self.raw_command = "".to_string();
-                                self.parsed_commands = self.parse_commands_current();
-                                self.selected_command_index = 0;
-                            }
-                            None => {}
-                        }
-                    }
-                    None => log::info!("invalid command"),
-                }
-            }
-            Msg::EscapeCommand => {
-                self.raw_command = "".to_string();
-                self.parsed_commands = self.parse_commands_current();
-                self.selected_command_index = 0;
-                self.mode = Mode::Normal;
-            }
             Msg::CommandKey(e) => {
                 log::info!("key: {}", e.key());
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
+                /*
                 match e.key().as_ref() {
                     "Enter" if self.mode == Mode::Edit => self.link.send_message(Msg::EnterCommand),
                     "Escape" => self.link.send_message(Msg::EscapeCommand),
@@ -705,6 +529,7 @@ impl Component for Model {
                     */
                     _ => {}
                 }
+                */
             }
         };
         // self.focus_command_line();

@@ -23,7 +23,7 @@
   color: blue;
 }
 
-.placeholder {
+.fragment-type {
   background-color: black;
   color: white;
   font-size: small;
@@ -39,7 +39,7 @@
   flex: 1;
 }
 
-.fragment-type {
+.placeholder {
   border: solid 1px black;
   font-size: 0.8em;
   opacity: 0.4;
