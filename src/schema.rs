@@ -1125,7 +1125,7 @@ pub const SCHEMA: Schema = Schema {
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     html! {
-                        <span class="keyword">{ "==" }</span>
+                        <span class="keyword">{ "!=" }</span>
                     }
                 },
             },
