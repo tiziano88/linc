@@ -683,26 +683,37 @@ pub const SCHEMA: Schema = Schema {
         Kind {
             name: "rust_block",
             value: KindValue::Struct {
-                fields: &[Field {
-                    name: "statements",
-                    kind: &["rust_expression"],
-                    multiplicity: Multiplicity::Repeated,
-                }],
+                fields: &[
+                    Field {
+                        name: "statements",
+                        kind: &["rust_statement"],
+                        multiplicity: Multiplicity::Repeated,
+                    },
+                    Field {
+                        name: "expression",
+                        kind: &["rust_expression"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
                 inner: Some("statements"),
                 parser: |v: &str| vec![Ok("{".to_string())],
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (statements_head, statements) =
+                    let (_statements_head, statements) =
                         model.view_children(node, "statements", path);
                     let statements = statements.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ ";" }</div>
                         }
                     });
+                    let expression = model.view_child(node, "expression", path);
 
                     html! {
                         <span>
-                        { "{" }{ for statements }{ statements_head }{ "}" }
+                        { "{" }
+                          { for statements }
+                          <div class="indent">{ expression }</div>
+                        { "}" }
                         </span>
                     }
                 },

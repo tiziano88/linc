@@ -1,5 +1,5 @@
 .node {
-  padding: 5px;
+  padding: 1px;
   display: inline-block;
   border: 1px dotted;
   border-color: gray;
@@ -41,7 +41,7 @@
 
 .placeholder {
   border: solid 1px black;
-  font-size: 0.8em;
+  font-size: 0.5em;
   opacity: 0.4;
   background-color: black;
   color: white;
