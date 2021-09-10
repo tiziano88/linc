@@ -73,10 +73,9 @@ impl Model {
     pub fn field(&self, path: &Path) -> Option<Field> {
         let parent_path = parent(&self.cursor);
 
-        match path.back() {
+        match path.last() {
             Some(selector) => {
-                let parent_ref = self.lookup_path(&self.file.root, &parent_path).unwrap();
-                let parent = self.lookup(&parent_ref).unwrap();
+                let parent = self.file.lookup(&parent_path).unwrap();
                 SCHEMA
                     .get_kind(&parent.kind)
                     .unwrap()
@@ -115,7 +114,9 @@ impl Model {
     }
 
     pub fn view_file_json(&self, file: &File) -> Html {
-        let serialized = serde_json::to_string_pretty(file).expect("could not serialize to JSON");
+        // let serialized = serde_json::to_string_pretty(file).expect("could not serialize to
+        // JSON");
+        let serialized = format!("root: {:#?}", file);
         html! {
             <pre>{ serialized }</pre>
         }
@@ -129,9 +130,9 @@ impl Model {
         }
     }
 
-    pub fn flatten_paths(&self, reference: &Ref, base: Path) -> Vec<Path> {
-        log::info!("flatten: {:?} {:?}", reference, base);
-        match &self.lookup(reference) {
+    pub fn flatten_paths(&self, path: &[Selector]) -> Vec<Path> {
+        log::info!("flatten: {:?}", path);
+        match &self.file.lookup(path) {
             Some(node) => {
                 let mut paths = vec![];
                 for field in Model::traverse_fields(&node) {
@@ -139,28 +140,28 @@ impl Model {
                     match field.multiplicity {
                         Multiplicity::Single => {
                             if children.is_empty() {
-                                children.push("dummy".to_string());
+                                children.push(EMPTY_HASH);
                             }
                         }
                         Multiplicity::Repeated => {}
                     };
                     for (n, child) in children.iter().enumerate() {
-                        let new_base = append(
-                            &base,
+                        let new_path = append(
+                            path,
                             Selector {
                                 field: field.name.to_string(),
                                 index: n,
                             },
                         );
-                        paths.push(new_base.clone());
-                        log::info!("child: {:?}[{:?}]->{:?}", reference, field.name, child);
-                        paths.extend(self.flatten_paths(child, new_base));
+                        paths.push(new_path.clone());
+                        log::info!("child: {:?}[{:?}]->{:?}", path, field.name, child);
+                        paths.extend(self.flatten_paths(&new_path));
                     }
                     match field.multiplicity {
                         // If repeated field, stay on the parent.
                         Multiplicity::Repeated => {
                             let new_base = append(
-                                &base,
+                                path,
                                 Selector {
                                     field: field.name.to_string(),
                                     index: children.len(),
@@ -178,14 +179,14 @@ impl Model {
         }
     }
 
-    fn view_node(&self, reference: Option<Ref>, path: &Path) -> Html {
-        self.view_node_with_placeholder(reference, path, "◆")
+    fn view_node(&self, hash: Option<Hash>, path: &[Selector]) -> Html {
+        self.view_node_with_placeholder(hash, path, "◆")
     }
 
     fn view_node_with_placeholder(
         &self,
-        reference: Option<Ref>,
-        path: &Path,
+        hash: Option<Hash>,
+        path: &[Selector],
         placeholder: &str,
     ) -> Html {
         let selected = path == &self.cursor;
@@ -197,27 +198,37 @@ impl Model {
             classes.push("hover".to_string());
         }
 
-        let path_clone = path.clone();
+        let path_clone = path.to_vec();
         let onclick = self.link.callback(move |e: MouseEvent| {
             e.stop_propagation();
             Msg::Select(path_clone.clone())
         });
 
-        let path_clone = path.clone();
+        let path_clone = path.to_vec();
         let onmouseover = self.link.callback(move |e: MouseEvent| {
             e.stop_propagation();
             Msg::Hover(path_clone.clone())
         });
 
-        let path_clone = path.clone();
+        let path_clone = path.to_vec();
         let oninput = self.link.callback(move |e: InputData| {
             crate::types::Msg::SetNodeCommand(path_clone.clone(), e.value.clone())
         });
 
-        let node_state = self.node_state.get(&path);
+        let node_state = self.node_state.get(&path.to_vec());
 
+        let value = match self.file.lookup(path) {
+            Some(node) => self.view_value(&node, &path),
+            None => {
+                html! {
+                    <span>{ format!("invalid: {:?}", path) }</span>
+                }
+            }
+        };
+
+        /*
         let value = match reference {
-            Some(reference) => match self.lookup(&reference) {
+            Some(reference) => match self.lookup(path) {
                 Some(node) => self.view_value(&node, &path),
                 None => {
                     html! {
@@ -262,6 +273,7 @@ impl Model {
                 }
             }
         };
+        */
         html! {
             <div class=classes.join(" ") onclick=onclick onmouseover=onmouseover>
                 { value }
@@ -287,14 +299,14 @@ impl Model {
                 index: 0,
             },
         );
-        let reference = node
+        let hash = node
             .children
             .get(field_name)
             .and_then(|v| v.get(0))
             .cloned();
         // Empty list vs hole vs special value?
         // TODO: How to traverse nested lists in preorder?
-        self.view_node_with_placeholder(reference, &path, placeholder)
+        self.view_node_with_placeholder(hash, &path, placeholder)
     }
 
     /// Returns the head and children, separately.
@@ -342,7 +354,7 @@ impl Model {
         let nodes = children
             .iter()
             .enumerate()
-            .map(|(i, n)| {
+            .map(|(i, h)| {
                 let path = append(
                     &path,
                     Selector {
@@ -350,7 +362,7 @@ impl Model {
                         index: i,
                     },
                 );
-                self.view_node(Some(n.clone()), &path)
+                self.view_node(Some(h.clone()), &path)
             })
             .chain(std::iter::once({
                 let path = append(
@@ -366,7 +378,7 @@ impl Model {
         (head, nodes)
     }
 
-    fn view_value(&self, node: &Node, path: &Path) -> Html {
+    fn view_value(&self, node: &Node, path: &[Selector]) -> Html {
         match SCHEMA.get_kind(&node.kind) {
             Some(kind) => kind.render(self, node, path),
             None => html! { <span>{ "unknown kind: " }{ node.kind.clone() }</span> },

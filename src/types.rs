@@ -1,7 +1,10 @@
 use crate::schema::{ParsedValue, ValidationError, SCHEMA};
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use sha2::{Digest, Sha256};
+use std::{
+    collections::{HashMap, VecDeque},
+    convert::TryInto,
+};
 use wasm_bindgen::JsCast;
 use yew::{
     html,
@@ -17,21 +20,31 @@ use yew::{
 
 pub type Ref = String;
 
+pub type Hash = [u8; 32];
+pub const EMPTY_HASH: Hash = [0; 32];
+// pub type Value = Vec<u8>;
+
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
+pub struct Link {
+    root: Option<Hash>,
+    path: Path,
+}
+
 pub fn new_ref() -> Ref {
     uuid::Uuid::new_v4().to_hyphenated().to_string()
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
 pub struct Selector {
     pub field: String,
     pub index: usize,
 }
 
-pub type Path = VecDeque<Selector>;
+pub type Path = Vec<Selector>;
 
-pub fn append(path: &Path, selector: Selector) -> Path {
-    let mut new_path = path.clone();
-    new_path.push_back(selector);
+pub fn append(path: &[Selector], selector: Selector) -> Path {
+    let mut new_path = path.to_vec();
+    new_path.push(selector);
     new_path
 }
 
@@ -39,6 +52,16 @@ pub fn append(path: &Path, selector: Selector) -> Path {
 pub enum Mode {
     Normal,
     Edit,
+}
+
+pub fn hash(value: &[u8]) -> Hash {
+    Sha256::digest(&value).try_into().unwrap()
+}
+
+pub fn hash_node(node: &Node) -> Hash {
+    let node_json = serde_json::to_string_pretty(node).unwrap();
+    let node_bytes = node_json.as_bytes();
+    hash(node_bytes)
 }
 
 pub struct Model {
@@ -65,40 +88,15 @@ pub struct NodeState {
     pub selected_command_index: usize,
 }
 
-pub fn parent(path: &Path) -> Path {
-    let mut parent_path = path.clone();
-    parent_path.pop_back().unwrap();
-    parent_path
+pub fn parent(path: &[Selector]) -> &[Selector] {
+    if path.is_empty() {
+        path
+    } else {
+        path.split_last().unwrap().1
+    }
 }
 
 impl Model {
-    pub fn lookup(&self, reference: &Ref) -> Option<&Node> {
-        self.file.lookup(reference)
-    }
-    pub fn lookup_path(&self, reference: &Ref, relative_path: &Path) -> Option<Ref> {
-        let mut path = relative_path.clone();
-        match path.pop_front() {
-            Some(head) => {
-                let base = self.lookup(reference).unwrap();
-                let children = &base.children.get(&head.field).cloned().unwrap_or_default();
-                children
-                    .get(head.index)
-                    .cloned()
-                    .and_then(|r| self.lookup_path(&r, &path))
-            }
-            None => Some(reference.clone()),
-        }
-    }
-
-    pub fn parent_ref(&self) -> Option<Ref> {
-        let parent_cursor = parent(&self.cursor);
-        self.lookup_path(&self.file.root, &parent_cursor)
-    }
-
-    pub fn current_ref(&self) -> Option<Ref> {
-        self.lookup_path(&self.file.root, &self.cursor)
-    }
-
     fn parse_commands(&self, path: &Path, raw_command: &str) -> Vec<ParsedValue> {
         self.field(path)
             .map(|field| {
@@ -122,7 +120,7 @@ impl Model {
     }
 
     fn prev(&mut self) {
-        let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
+        let flattened_paths = self.flatten_paths(&[]);
         log::info!("paths: {:?}", flattened_paths);
         let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
         log::info!("current: {:?}", current_path_index);
@@ -136,7 +134,7 @@ impl Model {
     }
 
     fn next(&mut self) {
-        let flattened_paths = self.flatten_paths(&self.file.root, Path::new());
+        let flattened_paths = self.flatten_paths(&[]);
         log::info!("paths: {:?}", flattened_paths);
         let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
         log::info!("current: {:?}", current_path_index);
@@ -151,6 +149,7 @@ impl Model {
         }
     }
 
+    /*
     fn set_node(&mut self, node: Node) {
         let mut node = node;
 
@@ -180,21 +179,22 @@ impl Model {
         };
         self.file.replace_node(&parent_ref, parent);
     }
+    */
 
+    /*
     fn replace_node(&mut self, node: Node) {
         let path = self.cursor.clone();
         self.replace_node_path(&path, node)
     }
 
-    fn replace_node_path(&mut self, path: &Path, node: Node) {
-        match self.lookup_path(&self.file.root, path) {
+    fn replace_node_path(&mut self, path: &[Selector], node: Node) {
+        match self.file.lookup(path) {
             Some(current_ref) => {
                 self.file.replace_node(&current_ref, node);
             }
             None => {
                 let new_ref = self.file.add_node(node);
-                let selector = path.back().unwrap().clone();
-                let parent_path = parent(path);
+                let (selector, parent_path) = path.split_last().unwrap().clone();
                 let parent_ref = self.lookup_path(&self.file.root, &parent_path).unwrap();
                 log::info!("parent ref: {:?}", parent_ref);
                 let mut parent = self.file.lookup(&parent_ref).unwrap().clone();
@@ -209,6 +209,7 @@ impl Model {
             }
         }
     }
+    */
 
     pub fn focus_command_line(&self) {
         yew::utils::document()
@@ -231,13 +232,11 @@ impl Model {
     }
 
     pub fn update_errors(&mut self) {
-        if let Some(reference) = self.lookup_path(&self.file.root, &self.cursor) {
-            self.update_errors_node(&reference);
-        }
+        self.update_errors_node(&self.cursor.clone());
     }
 
-    pub fn update_errors_node(&mut self, reference: &Ref) {
-        let node = match self.lookup(reference) {
+    pub fn update_errors_node(&mut self, path: &[Selector]) {
+        let node = match self.file.lookup(path) {
             Some(node) => node.clone(),
             None => return,
         };
@@ -246,12 +245,13 @@ impl Model {
         if let Some(kind) = SCHEMA.get_kind(kind) {
             if let crate::schema::KindValue::Struct { validator, .. } = kind.value {
                 let errors = validator(&node);
-                log::info!("errors: {:?} {:?}", reference, errors);
+                log::info!("errors: {:?} {:?}", path, errors);
             }
         }
         for (_, children) in node.children.iter() {
             for child in children {
-                self.update_errors_node(child);
+                // TODO
+                // self.update_errors_node(child);
             }
         }
     }
@@ -277,37 +277,57 @@ pub enum Msg {
     SetMode(Mode),
 
     ReplaceCurrentNode(Node),
-    SetNodeValue(Ref, String),
+    SetNodeValue(Path, String),
     ReplaceNode(Path, Node),
     SetNodeCommand(Path, String),
     CommandKey(KeyboardEvent),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct File {
-    pub nodes: HashMap<Ref, Node>,
-    pub root: Ref,
+    pub nodes: HashMap<Hash, Node>,
+    pub root: Hash,
     pub log: Vec<(Ref, Node)>,
 }
 
 impl File {
-    pub fn lookup(&self, reference: &Ref) -> Option<&Node> {
-        self.nodes.get(reference)
+    pub fn lookup(&self, path: &[Selector]) -> Option<&Node> {
+        self.lookup_from(&self.root, path)
     }
 
-    // fn lookup_mut(&mut self, reference: &Ref) -> Option<&mut Node> {
-    //     self.nodes.get_mut(reference)
-    // }
-
-    fn add_node(&mut self, node: Node) -> Ref {
-        let reference = new_ref();
-        self.replace_node(&reference, node);
-        reference
+    fn lookup_from(&self, base: &Hash, path: &[Selector]) -> Option<&Node> {
+        let base = self.nodes.get(base)?;
+        if path.is_empty() {
+            Some(base)
+        } else {
+            let (selector, rest) = path.split_first().unwrap().clone();
+            let children = base.children.get(&selector.field)?;
+            let child = children.get(selector.index)?;
+            self.lookup_from(child, &rest)
+        }
     }
 
-    fn replace_node(&mut self, reference: &Ref, node: Node) {
-        self.log.push((reference.clone(), node.clone()));
-        self.nodes.insert(reference.clone(), node);
+    pub fn add_node(&mut self, node: &Node) -> Hash {
+        let h = hash_node(node);
+        self.nodes.insert(h, node.clone());
+        h
+    }
+
+    pub fn replace_node(&mut self, path: &[Selector], node: Node) -> Option<Hash> {
+        self.replace_node_from(&self.root.clone(), path, node)
+    }
+
+    fn replace_node_from(&mut self, base: &Hash, path: &[Selector], node: Node) -> Option<Hash> {
+        if path.is_empty() {
+            Some(self.add_node(&node))
+        } else {
+            let mut base = self.nodes.get(base)?.clone();
+            let selector = path[0].clone();
+            let old_child_hash = base.children.get(&selector.field)?.get(selector.index)?;
+            let new_child_hash = self.replace_node_from(old_child_hash, &path[1..], node)?;
+            base.children.get_mut(&selector.field)?[selector.index] = new_child_hash;
+            Some(self.add_node(&base))
+        }
     }
 }
 
@@ -317,7 +337,7 @@ impl File {
 pub struct Node {
     pub kind: String,
     pub value: String,
-    pub children: HashMap<String, Vec<Ref>>,
+    pub children: HashMap<String, Vec<Hash>>,
 }
 
 fn display_selector(selector: &Selector) -> Vec<Html> {
@@ -368,7 +388,7 @@ impl Component for Model {
                     <div class="column">
                         <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
                         <div>{ display_cursor(&self.cursor) }</div>
-                        <div>{ format!("Ref: {:?}", self.lookup_path(&self.file.root, &self.cursor)) }</div>
+                        <div>{ format!("Ref: {:?}", self.file.lookup(&self.cursor)) }</div>
                     </div>
 
                     <div>{ self.view_actions() }</div>
@@ -395,11 +415,7 @@ impl Component for Model {
             key_listener,
             file: super::initial::initial(),
             mode: Mode::Normal,
-            cursor: vec![Selector {
-                field: "items".to_string(),
-                index: 0,
-            }]
-            .into(),
+            cursor: vec![].into(),
             hover: vec![].into(),
             link,
             node_state: HashMap::new(),
@@ -415,7 +431,7 @@ impl Component for Model {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         fn update_from_selected(model: &mut Model) {
-            let current_node = model.current_ref().and_then(|r| model.lookup(&r)).cloned();
+            let current_node = model.file.lookup(&model.cursor);
             let current_kind = current_node.clone().map(|n| n.kind.clone());
         }
 
@@ -443,7 +459,7 @@ impl Component for Model {
                 update_from_selected(self);
             }
             Msg::Parent => {
-                self.cursor.pop_back();
+                self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
                 update_from_selected(self);
             }
             Msg::Store => {
@@ -458,16 +474,16 @@ impl Component for Model {
                 self.mode = mode;
             }
             Msg::ReplaceCurrentNode(node) => {
-                self.file.replace_node(&self.current_ref().unwrap(), node);
+                self.file.root = self.file.replace_node(&self.cursor, node).unwrap();
             }
             Msg::ReplaceNode(path, node) => {
                 log::info!("replace node {:?}", path);
-                self.replace_node_path(&path, node);
+                self.file.replace_node(&path, node);
             }
-            Msg::SetNodeValue(reference, value) => {
-                let mut node = self.file.lookup(&reference).unwrap().clone();
+            Msg::SetNodeValue(path, value) => {
+                let mut node = self.file.lookup(&path).unwrap().clone();
                 node.value = value;
-                self.file.replace_node(&reference, node);
+                self.file.replace_node(&path, node);
             }
             Msg::SetNodeCommand(path, raw_command) => {
                 let parsed_commands = self.parse_commands(&path, &raw_command);
@@ -476,30 +492,28 @@ impl Component for Model {
                 node_state.parsed_commands = parsed_commands;
             }
             Msg::AddItem => {
-                let selector = self.cursor.back().unwrap().clone();
-                let parent_ref = self.parent_ref().unwrap();
-                let new_ref = self.file.add_node(Node {
+                let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
+                let new_ref = self.file.add_node(&Node {
                     kind: "invalid".to_string(),
                     value: "invalid".to_string(),
                     children: HashMap::new(),
                 });
-                let mut parent = self.file.lookup(&parent_ref).unwrap().clone();
+                let mut parent = self.file.lookup(parent_path).unwrap().clone();
                 // If the field does not exist, create a default one.
-                let children = parent.children.entry(selector.field).or_default();
+                let children = parent.children.entry(selector.field.clone()).or_default();
                 let new_index = selector.index + 1;
                 children.insert(new_index, new_ref);
-                self.file.replace_node(&parent_ref, parent);
+                self.file.replace_node(parent_path, parent);
                 // Select newly created element.
-                self.cursor.back_mut().unwrap().index = new_index;
+                self.cursor.last_mut().unwrap().index = new_index;
             }
             Msg::DeleteItem => {
-                let selector = self.cursor.back().unwrap().clone();
-                let parent_ref = self.parent_ref().unwrap();
-                let mut parent = self.file.lookup(&parent_ref).unwrap().clone();
+                let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
+                let mut parent = self.file.lookup(parent_path).unwrap().clone();
                 // If the field does not exist, create a default one.
-                let children = parent.children.entry(selector.field).or_default();
+                let children = parent.children.entry(selector.field.clone()).or_default();
                 children.remove(selector.index);
-                self.file.replace_node(&parent_ref, parent);
+                self.file.replace_node(parent_path, parent);
             }
             Msg::CommandKey(e) => {
                 log::info!("key: {}", e.key());

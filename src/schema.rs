@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use crate::types::{Model, Node, Path, Ref};
-use itertools::Itertools;
+use crate::types::{Model, Node, Path, Ref, Selector};
 use yew::{html, Html, InputData};
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
@@ -2066,9 +2065,9 @@ pub struct Schema {
 }
 
 fn textbox(model: &Model, node: &Node, path: &Path) -> Html {
-    let reference = model.lookup_path(&model.file.root, path).unwrap().clone();
+    let path_clone = path.to_vec();
     let oninput = model.link.callback(move |e: InputData| {
-        crate::types::Msg::SetNodeValue(reference.clone(), e.value.clone())
+        crate::types::Msg::SetNodeValue(path_clone.clone(), e.value.clone())
     });
     html! {
         <span>
@@ -2079,9 +2078,9 @@ fn textbox(model: &Model, node: &Node, path: &Path) -> Html {
 }
 
 fn hole(model: &Model, node: &Node, path: &Path) -> Html {
-    let reference = model.lookup_path(&model.file.root, path).unwrap().clone();
+    let path_clone = path.to_vec();
     let oninput = model.link.callback(move |e: InputData| {
-        crate::types::Msg::SetNodeValue(reference.clone(), e.value.clone())
+        crate::types::Msg::SetNodeValue(path_clone.clone(), e.value.clone())
     });
     let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
     let classes_item = vec!["block", "border"];
@@ -2151,9 +2150,9 @@ impl Kind {
         }
     }
 
-    pub fn render(&self, model: &Model, node: &Node, path: &Path) -> Html {
+    pub fn render(&self, model: &Model, node: &Node, path: &[Selector]) -> Html {
         match self.value {
-            KindValue::Struct { renderer, .. } => renderer(model, node, path),
+            KindValue::Struct { renderer, .. } => renderer(model, node, &path.to_vec()),
             KindValue::Enum { .. } => {
                 // XXX
                 html! {

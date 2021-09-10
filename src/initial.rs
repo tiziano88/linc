@@ -1,15 +1,18 @@
 use super::types::*;
-use maplit::hashmap;
 use std::collections::HashMap;
 
 pub fn initial() -> File {
-    File {
-        nodes: hashmap!["101010".to_string() => Node {
-            kind: "rust_fragment".to_string(),
-            value: "".to_string(),
-            children: HashMap::new(),
-        }],
-        root: "101010".to_string(),
+    let node = Node {
+        kind: "rust_fragment".to_string(),
+        value: "".to_string(),
+        children: HashMap::new(),
+    };
+    let mut file = File {
+        nodes: HashMap::new(),
+        root: EMPTY_HASH,
         log: vec![],
-    }
+    };
+    let h = file.add_node(&node);
+    file.root = h;
+    file
 }
