@@ -323,9 +323,25 @@ impl File {
         } else {
             let mut base = self.nodes.get(base)?.clone();
             let selector = path[0].clone();
-            let old_child_hash = base.children.get(&selector.field)?.get(selector.index)?;
-            let new_child_hash = self.replace_node_from(old_child_hash, &path[1..], node)?;
-            base.children.get_mut(&selector.field)?[selector.index] = new_child_hash;
+            match base
+                .children
+                .get(&selector.field)
+                .and_then(|v| v.get(selector.index))
+            {
+                Some(old_child_hash) => {
+                    let new_child_hash =
+                        self.replace_node_from(old_child_hash, &path[1..], node)?;
+                    base.children.get_mut(&selector.field)?[selector.index] = new_child_hash;
+                }
+                None => {
+                    // WARN: Only works for one level of children.
+                    let new_child_hash = self.add_node(&node);
+                    base.children
+                        .entry(selector.field)
+                        .or_default()
+                        .push(new_child_hash);
+                }
+            };
             Some(self.add_node(&base))
         }
     }
@@ -474,16 +490,28 @@ impl Component for Model {
                 self.mode = mode;
             }
             Msg::ReplaceCurrentNode(node) => {
-                self.file.root = self.file.replace_node(&self.cursor, node).unwrap();
+                let new_root = self.file.replace_node(&self.cursor, node);
+                log::info!("new root: {:?}", new_root);
+                if let Some(new_root) = new_root {
+                    self.file.root = new_root;
+                }
             }
             Msg::ReplaceNode(path, node) => {
-                log::info!("replace node {:?}", path);
-                self.file.replace_node(&path, node);
+                log::info!("replace node {:?} {:?}", path, node);
+                let new_root = self.file.replace_node(&path, node);
+                log::info!("new root: {:?}", new_root);
+                if let Some(new_root) = new_root {
+                    self.file.root = new_root;
+                }
             }
             Msg::SetNodeValue(path, value) => {
                 let mut node = self.file.lookup(&path).unwrap().clone();
                 node.value = value;
-                self.file.replace_node(&path, node);
+                let new_root = self.file.replace_node(&path, node);
+                log::info!("new root: {:?}", new_root);
+                if let Some(new_root) = new_root {
+                    self.file.root = new_root;
+                }
             }
             Msg::SetNodeCommand(path, raw_command) => {
                 let parsed_commands = self.parse_commands(&path, &raw_command);

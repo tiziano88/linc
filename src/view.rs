@@ -116,7 +116,7 @@ impl Model {
     pub fn view_file_json(&self, file: &File) -> Html {
         // let serialized = serde_json::to_string_pretty(file).expect("could not serialize to
         // JSON");
-        let serialized = format!("root: {:#?}", file);
+        let serialized = format!("root: {:?}\nfile: {:#?}", file.root, file);
         html! {
             <pre>{ serialized }</pre>
         }
@@ -217,22 +217,21 @@ impl Model {
 
         let node_state = self.node_state.get(&path.to_vec());
 
-        let value = match self.file.lookup(path) {
-            Some(node) => self.view_value(&node, &path),
-            None => {
-                html! {
-                    <span>{ format!("invalid: {:?}", path) }</span>
-                }
-            }
-        };
+        // let value = match self.file.lookup(path) {
+        //     Some(node) => self.view_value(&node, &path),
+        //     None => {
+        //         html! {
+        //             <span>{ format!("invalid: {:?}", path) }</span>
+        //         }
+        //     }
+        // };
 
-        /*
-        let value = match reference {
-            Some(reference) => match self.lookup(path) {
+        let value = match hash {
+            Some(hash) => match self.file.lookup(path) {
                 Some(node) => self.view_value(&node, &path),
                 None => {
                     html! {
-                        <span>{ format!("invalid: {}", reference) }</span>
+                        <span>{ format!("invalid: {:?}", hash) }</span>
                     }
                 }
             },
@@ -243,7 +242,7 @@ impl Model {
                     .unwrap_or_default()
                     .iter()
                     .map(|v| {
-                        let path_clone = path.clone();
+                        let path_clone = path.to_vec();
                         let value_string = v.value.clone().unwrap_or_default();
                         let node = v.to_node();
                         let onclick = self.link.callback(move |e: MouseEvent| match node.clone() {
@@ -264,7 +263,7 @@ impl Model {
                     <span>
                         <div class="placeholder">{ placeholder }</div>
                         <span>
-                            <span class="inline-block w-full" contenteditable=true oninput=oninput>{""}</span>
+                            <span class="inline-block w-full" contenteditable="true" oninput=oninput>{""}</span>
                             <div class=classes_dropdown.join(" ")>
                                 { for suggestions }
                             </div>
@@ -273,7 +272,6 @@ impl Model {
                 }
             }
         };
-        */
         html! {
             <div class=classes.join(" ") onclick=onclick onmouseover=onmouseover>
                 { value }
