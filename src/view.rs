@@ -140,7 +140,7 @@ impl Model {
                     match field.multiplicity {
                         Multiplicity::Single => {
                             if children.is_empty() {
-                                children.push(EMPTY_HASH);
+                                children.push("".to_string());
                             }
                         }
                         Multiplicity::Repeated => {}

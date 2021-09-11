@@ -20,8 +20,8 @@ use yew::{
 
 pub type Ref = String;
 
-pub type Hash = [u8; 32];
-pub const EMPTY_HASH: Hash = [0; 32];
+pub type Hash = String;
+// pub const EMPTY_HASH: Hash = "".to_string();
 // pub type Value = Vec<u8>;
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
@@ -55,7 +55,8 @@ pub enum Mode {
 }
 
 pub fn hash(value: &[u8]) -> Hash {
-    Sha256::digest(&value).try_into().unwrap()
+    let bytes: [u8; 32] = Sha256::digest(&value).try_into().unwrap();
+    hex::encode(bytes)
 }
 
 pub fn hash_node(node: &Node) -> Hash {
@@ -309,7 +310,7 @@ impl File {
 
     pub fn add_node(&mut self, node: &Node) -> Hash {
         let h = hash_node(node);
-        self.nodes.insert(h, node.clone());
+        self.nodes.insert(h.clone(), node.clone());
         h
     }
 

@@ -9,7 +9,7 @@ pub fn initial() -> File {
     };
     let mut file = File {
         nodes: HashMap::new(),
-        root: EMPTY_HASH,
+        root: "".to_string(),
         log: vec![],
     };
     let h = file.add_node(&node);
