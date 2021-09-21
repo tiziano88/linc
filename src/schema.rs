@@ -2066,8 +2066,11 @@ pub struct Schema {
 
 fn textbox(model: &Model, node: &Node, path: &Path) -> Html {
     let path_clone = path.to_vec();
+    let node_clone = node.clone();
     let oninput = model.link.callback(move |e: InputData| {
-        crate::types::Msg::SetNodeValue(path_clone.clone(), e.value.clone())
+        let mut node = node_clone.clone();
+        node.value = e.value.clone();
+        crate::types::Msg::ReplaceNode(path_clone.clone(), node)
     });
     html! {
         <span>
@@ -2079,8 +2082,11 @@ fn textbox(model: &Model, node: &Node, path: &Path) -> Html {
 
 fn hole(model: &Model, node: &Node, path: &Path) -> Html {
     let path_clone = path.to_vec();
+    let node_clone = node.clone();
     let oninput = model.link.callback(move |e: InputData| {
-        crate::types::Msg::SetNodeValue(path_clone.clone(), e.value.clone())
+        let mut node = node_clone.clone();
+        node.value = e.value.clone();
+        crate::types::Msg::ReplaceNode(path_clone.clone(), node)
     });
     let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
     let classes_item = vec!["block", "border"];

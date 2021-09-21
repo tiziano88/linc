@@ -258,7 +258,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Noop,
 
@@ -277,8 +277,6 @@ pub enum Msg {
 
     SetMode(Mode),
 
-    ReplaceCurrentNode(Node),
-    SetNodeValue(Path, String),
     ReplaceNode(Path, Node),
     SetNodeCommand(Path, String),
     CommandKey(KeyboardEvent),
@@ -447,6 +445,7 @@ impl Component for Model {
     fn rendered(&mut self, _first_render: bool) {}
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        log::info!("update {:?}", msg);
         fn update_from_selected(model: &mut Model) {
             let current_node = model.file.lookup(&model.cursor);
             let current_kind = current_node.clone().map(|n| n.kind.clone());
@@ -490,13 +489,6 @@ impl Component for Model {
             Msg::SetMode(mode) => {
                 self.mode = mode;
             }
-            Msg::ReplaceCurrentNode(node) => {
-                let new_root = self.file.replace_node(&self.cursor, node);
-                log::info!("new root: {:?}", new_root);
-                if let Some(new_root) = new_root {
-                    self.file.root = new_root;
-                }
-            }
             Msg::ReplaceNode(path, node) => {
                 log::info!("replace node {:?} {:?}", path, node);
                 let new_root = self.file.replace_node(&path, node);
@@ -504,15 +496,7 @@ impl Component for Model {
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
                 }
-            }
-            Msg::SetNodeValue(path, value) => {
-                let mut node = self.file.lookup(&path).unwrap().clone();
-                node.value = value;
-                let new_root = self.file.replace_node(&path, node);
-                log::info!("new root: {:?}", new_root);
-                if let Some(new_root) = new_root {
-                    self.file.root = new_root;
-                }
+                self.next();
             }
             Msg::SetNodeCommand(path, raw_command) => {
                 let parsed_commands = self.parse_commands(&path, &raw_command);
@@ -535,6 +519,7 @@ impl Component for Model {
                 self.file.replace_node(parent_path, parent);
                 // Select newly created element.
                 self.cursor.last_mut().unwrap().index = new_index;
+                self.next();
             }
             Msg::DeleteItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
