@@ -546,6 +546,12 @@ impl Component for Model {
             }
             Msg::CommandKey(e) => {
                 log::info!("key: {}", e.key());
+                let selection = yew::utils::window().get_selection().unwrap().unwrap();
+                let anchor_node = selection.anchor_node().unwrap();
+                let anchor_offset = selection.anchor_offset();
+                let anchor_node_value = anchor_node.node_value().unwrap_or_default();
+                log::info!("selection: {:?} {} {}", selection, selection.anchor_offset(), anchor_node_value);
+
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match e.key().as_ref() {
                     "Enter" => {
@@ -564,10 +570,9 @@ impl Component for Model {
                     // self.link.send_message(Msg::EnterCommand), "Escape" =>
                     // self.link.send_message(Msg::EscapeCommand), "ArrowUp" =>
                     // self.link.send_message(Msg::PrevCommand), "ArrowDown" =>
-                    // self.link.send_message(Msg::NextCommand), "ArrowLeft" if
-                    // self.mode == Mode::Normal => self.link.send_message(Msg::
-                    // Prev), "ArrowRight" if self.mode == Mode::Normal =>
-                    // self.link.send_message(Msg::Next),
+                    // self.link.send_message(Msg::NextCommand),
+                    "ArrowLeft" if self.mode == Mode::Normal => self.link.send_message(Msg::Prev),
+                    "ArrowRight" if self.mode == Mode::Normal => self.link.send_message(Msg::Next),
                     /*
                     "i" if self.mode == Mode::Normal => {
                         e.prevent_default();

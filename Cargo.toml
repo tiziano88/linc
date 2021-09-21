@@ -19,4 +19,5 @@ sha2 = "*"
 uuid = { version = "*", features = ["wasm-bindgen", "v4"] }
 wasm-bindgen = "*"
 wasm-logger = "*"
+web-sys = { version = "*", features = ["Selection"]}
 yew = "*"

@@ -275,6 +275,7 @@ dependencies = [
  "uuid",
  "wasm-bindgen",
  "wasm-logger",
+ "web-sys",
  "yew",
 ]
 
