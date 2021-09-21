@@ -214,14 +214,16 @@ impl Model {
     */
 
     pub fn focus_command_line(&self) {
-        yew::utils::document()
-            .query_selector("#command-line")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<HtmlElement>()
-            .unwrap()
-            .focus()
-            .unwrap();
+        Self::focus_element("#command-line");
+    }
+
+    pub fn focus_element(selector: &str) {
+        log::info!("select {}", selector);
+        if let Some(element) = yew::utils::document().query_selector(selector).unwrap() {
+            element.dyn_into::<HtmlElement>().unwrap().focus().unwrap();
+        } else {
+            log::warn!("not found");
+        }
     }
 
     pub fn scroll_into_view(&self, selector: &str) {
@@ -279,8 +281,13 @@ pub enum Msg {
     SetMode(Mode),
 
     ReplaceNode(Path, Node),
+
     SetNodeCommand(Path, String),
     CommandKey(KeyboardEvent),
+    /* EnterCommand,
+     * EscapeCommand,
+     * PrevCommand,
+     * NextCommand, */
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -446,10 +453,20 @@ impl Component for Model {
     fn rendered(&mut self, _first_render: bool) {}
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        if let Msg::Hover(_) = msg {
+            return false;
+        }
         log::info!("update {:?}", msg);
         fn update_from_selected(model: &mut Model) {
             let current_node = model.file.lookup(&model.cursor);
             let current_kind = current_node.clone().map(|n| n.kind.clone());
+
+            let parsed_commands = model.parse_commands(&model.cursor, "");
+            let node_state = model.node_state.entry(model.cursor.clone()).or_default();
+            node_state.parsed_commands = parsed_commands;
+
+            let command_input_id = crate::view::command_input_id(&model.cursor);
+            Model::focus_element(&format!("#{}", command_input_id));
         }
 
         const KEY: &str = "linc_file";
@@ -458,9 +475,6 @@ impl Component for Model {
             Msg::Select(path) => {
                 self.cursor = path.clone();
                 update_from_selected(self);
-                let parsed_commands = self.parse_commands(&path, "");
-                let node_state = self.node_state.entry(path.clone()).or_default();
-                node_state.parsed_commands = parsed_commands;
             }
             Msg::Hover(path) => {
                 self.hover = path;
@@ -497,8 +511,7 @@ impl Component for Model {
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
                 }
-                self.next();
-                update_from_selected(self);
+                self.link.send_message(Msg::Next);
             }
             Msg::SetNodeCommand(path, raw_command) => {
                 let parsed_commands = self.parse_commands(&path, &raw_command);
@@ -534,15 +547,27 @@ impl Component for Model {
             Msg::CommandKey(e) => {
                 log::info!("key: {}", e.key());
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
-                /*
                 match e.key().as_ref() {
-                    "Enter" if self.mode == Mode::Edit => self.link.send_message(Msg::EnterCommand),
-                    "Escape" => self.link.send_message(Msg::EscapeCommand),
-                    "ArrowUp" => self.link.send_message(Msg::PrevCommand),
-                    "ArrowDown" => self.link.send_message(Msg::NextCommand),
-                    // "ArrowLeft" if self.mode == Mode::Normal =>
-                    // self.link.send_message(Msg::Prev), "ArrowRight" if
-                    // self.mode == Mode::Normal => self.link.send_message(Msg::Next),
+                    "Enter" => {
+                        e.prevent_default();
+                        let node_state = self.node_state.get(&self.cursor).unwrap();
+                        if let Some(selected_command) = node_state
+                            .parsed_commands
+                            .get(node_state.selected_command_index)
+                        {
+                            let node = selected_command.to_node().unwrap();
+                            self.link
+                                .send_message(Msg::ReplaceNode(self.cursor.clone(), node));
+                        }
+                    }
+                    // "Enter" if self.mode == Mode::Edit =>
+                    // self.link.send_message(Msg::EnterCommand), "Escape" =>
+                    // self.link.send_message(Msg::EscapeCommand), "ArrowUp" =>
+                    // self.link.send_message(Msg::PrevCommand), "ArrowDown" =>
+                    // self.link.send_message(Msg::NextCommand), "ArrowLeft" if
+                    // self.mode == Mode::Normal => self.link.send_message(Msg::
+                    // Prev), "ArrowRight" if self.mode == Mode::Normal =>
+                    // self.link.send_message(Msg::Next),
                     /*
                     "i" if self.mode == Mode::Normal => {
                         e.prevent_default();
@@ -559,7 +584,6 @@ impl Component for Model {
                     */
                     _ => {}
                 }
-                */
             }
         };
         // self.focus_command_line();

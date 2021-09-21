@@ -259,11 +259,12 @@ impl Model {
                     vec![]
                 };
                 let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
+                let id = command_input_id(&path);
                 html! {
                     <span>
                         <div class="placeholder">{ placeholder }</div>
                         <span>
-                            <span class="inline-block w-full" contenteditable="true" oninput=oninput>{""}</span>
+                            <span id=id class="inline-block w-full" contenteditable="true" oninput=oninput>{""}</span>
                             <div class=classes_dropdown.join(" ")>
                                 { for suggestions }
                             </div>
@@ -383,4 +384,13 @@ impl Model {
             None => html! { <span>{ "unknown kind: " }{ node.kind.clone() }</span> },
         }
     }
+}
+
+pub fn command_input_id(path: &[Selector]) -> String {
+    let mut id = String::new();
+    for selector in path {
+        id.push_str(&selector.field);
+        id.push_str(&selector.index.to_string());
+    }
+    id
 }
