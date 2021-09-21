@@ -141,6 +141,7 @@ impl Model {
         log::info!("current: {:?}", current_path_index);
         if let Some(current_path_index) = current_path_index {
             if let Some(path) = flattened_paths.get(current_path_index + 1) {
+                log::info!("new path: {:?}", path);
                 self.cursor = path.clone();
             }
         } else {
@@ -497,6 +498,7 @@ impl Component for Model {
                     self.file.root = new_root;
                 }
                 self.next();
+                update_from_selected(self);
             }
             Msg::SetNodeCommand(path, raw_command) => {
                 let parsed_commands = self.parse_commands(&path, &raw_command);

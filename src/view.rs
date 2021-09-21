@@ -131,7 +131,7 @@ impl Model {
     }
 
     pub fn flatten_paths(&self, path: &[Selector]) -> Vec<Path> {
-        log::info!("flatten: {:?}", path);
+        // log::info!("flatten: {:?}", path);
         match &self.file.lookup(path) {
             Some(node) => {
                 let mut paths = vec![];
@@ -154,7 +154,7 @@ impl Model {
                             },
                         );
                         paths.push(new_path.clone());
-                        log::info!("child: {:?}[{:?}]->{:?}", path, field.name, child);
+                        // log::info!("child: {:?}[{:?}]->{:?}", path, field.name, child);
                         paths.extend(self.flatten_paths(&new_path));
                     }
                     match field.multiplicity {
@@ -272,8 +272,9 @@ impl Model {
                 }
             }
         };
+        // Use onmousedown to avoid re-selecting the node.
         html! {
-            <div class=classes.join(" ") onclick=onclick onmouseover=onmouseover>
+            <div class=classes.join(" ") onmousedown=onclick onmouseover=onmouseover>
                 { value }
             </div>
         }
