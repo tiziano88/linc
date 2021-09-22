@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use crate::types::{Model, Node, Path, Ref, Selector};
 use yew::{html, Html, InputData};
+    use yew::web_sys::HtmlElement;
+use wasm_bindgen::JsCast;
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
 //the kind field of Inner, and we then try to parse each element with all of them until one
@@ -2070,12 +2072,20 @@ fn textbox(model: &Model, node: &Node, path: &Path) -> Html {
     let oninput = model.link.callback(move |e: InputData| {
         let mut node = node_clone.clone();
         node.value = e.value.clone();
-        crate::types::Msg::ReplaceNode(path_clone.clone(), node)
+        crate::types::Msg::ReplaceNode(path_clone.clone(), node, false)
     });
+    // let onblur = model.link.callback(move |e: yew::FocusEvent| {
+    //     let target = e.related_target().unwrap().dyn_into::<HtmlElement>().unwrap();
+    //     let mut node = node_clone.clone();
+    //     node.value = target.inner_text();
+    //     crate::types::Msg::ReplaceNode(path_clone.clone(), node)
+    // });
+    let style = format!("width: {}ch;", node.value.len());
     html! {
         <span>
-            <input type="text" value=node.value.clone() oninput=oninput />
-            // <span oninput=oninput contenteditable=true>{node.value.clone()}</span>
+            <input type="text" value=node.value.clone() oninput=oninput style=style />
+            // <span oninput=oninput contenteditable="true">{node.value.clone()}</span>
+            // <span onfocusout=onblur contenteditable="true">{node.value.clone()}</span>
         </span>
     }
 }
@@ -2086,7 +2096,7 @@ fn hole(model: &Model, node: &Node, path: &Path) -> Html {
     let oninput = model.link.callback(move |e: InputData| {
         let mut node = node_clone.clone();
         node.value = e.value.clone();
-        crate::types::Msg::ReplaceNode(path_clone.clone(), node)
+        crate::types::Msg::ReplaceNode(path_clone.clone(), node, false)
     });
     let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
     let classes_item = vec!["block", "border"];

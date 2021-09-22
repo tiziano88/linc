@@ -280,7 +280,7 @@ pub enum Msg {
 
     SetMode(Mode),
 
-    ReplaceNode(Path, Node),
+    ReplaceNode(Path, Node, bool),
 
     SetNodeCommand(Path, String),
     CommandKey(KeyboardEvent),
@@ -504,14 +504,16 @@ impl Component for Model {
             Msg::SetMode(mode) => {
                 self.mode = mode;
             }
-            Msg::ReplaceNode(path, node) => {
+            Msg::ReplaceNode(path, node, mv) => {
                 log::info!("replace node {:?} {:?}", path, node);
                 let new_root = self.file.replace_node(&path, node);
                 log::info!("new root: {:?}", new_root);
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
                 }
-                self.link.send_message(Msg::Next);
+                if mv {
+                    self.link.send_message(Msg::Next);
+                }
             }
             Msg::SetNodeCommand(path, raw_command) => {
                 let parsed_commands = self.parse_commands(&path, &raw_command);
@@ -563,7 +565,7 @@ impl Component for Model {
                         {
                             let node = selected_command.to_node().unwrap();
                             self.link
-                                .send_message(Msg::ReplaceNode(self.cursor.clone(), node));
+                                .send_message(Msg::ReplaceNode(self.cursor.clone(), node, true));
                         }
                     }
                     // "Enter" if self.mode == Mode::Edit =>

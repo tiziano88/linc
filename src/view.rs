@@ -246,7 +246,7 @@ impl Model {
                         let value_string = v.value.clone().unwrap_or_default();
                         let node = v.to_node();
                         let onclick = self.link.callback(move |e: MouseEvent| match node.clone() {
-                            Some(node) => Msg::ReplaceNode(path_clone.clone(), node.clone()),
+                            Some(node) => Msg::ReplaceNode(path_clone.clone(), node.clone(),true),
                             None => Msg::Noop,
                         });
                         let classes_item = vec!["block", "border"];
@@ -260,11 +260,14 @@ impl Model {
                 };
                 let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
                 let id = command_input_id(&path);
+                let command = node_state.map(|s| s.raw_command.clone()).unwrap_or_default();
+                let style = format!("width: {}ch;", std::cmp::max(command.len(), 1));
                 html! {
                     <span>
                         <div class="placeholder">{ placeholder }</div>
                         <span>
-                            <span id=id class="inline-block w-full" contenteditable="true" oninput=oninput>{""}</span>
+                            // <span id=id class="inline-block w-full" contenteditable="true" oninput=oninput>{""}</span>
+                            <input id=id class="inline-block w-full" type="text" oninput=oninput value=command style=style />
                             <div class=classes_dropdown.join(" ")>
                                 { for suggestions }
                             </div>
