@@ -236,12 +236,17 @@ impl Model {
                 }
             },
             None => {
+                let selected_command_index = node_state
+                    .as_ref()
+                    .map(|s| s.selected_command_index)
+                    .unwrap_or(0);
                 let suggestions: Vec<_> = if selected {
                     node_state
                     .map(|v| v.parsed_commands.clone())
                     .unwrap_or_default()
                     .iter()
-                    .map(|v| {
+                    .enumerate()
+                    .map(|(i, v)| {
                         let path_clone = path.to_vec();
                         let value_string = v.value.clone().unwrap_or_default();
                         let node = v.to_node();
@@ -249,7 +254,10 @@ impl Model {
                             Some(node) => Msg::ReplaceNode(path_clone.clone(), node.clone(),true),
                             None => Msg::Noop,
                         });
-                        let classes_item = vec!["block", "border"];
+                        let mut classes_item = vec!["block", "border"];
+                        if i == selected_command_index {
+                            classes_item.push("selected");
+                        }
                         html! {
                             <span class=classes_item.join(" ") onclick=onclick>{value_string}</span>
                         }
@@ -260,7 +268,9 @@ impl Model {
                 };
                 let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
                 let id = command_input_id(&path);
-                let command = node_state.map(|s| s.raw_command.clone()).unwrap_or_default();
+                let command = node_state
+                    .map(|s| s.raw_command.clone())
+                    .unwrap_or_default();
                 let style = format!("width: {}ch;", std::cmp::max(command.len(), 1));
                 html! {
                     <span>

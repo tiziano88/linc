@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use crate::types::{Model, Node, Path, Ref, Selector};
-use yew::{html, Html, InputData};
-    use yew::web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
+use yew::{html, web_sys::HtmlElement, Html, InputData};
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
 //the kind field of Inner, and we then try to parse each element with all of them until one

@@ -284,10 +284,11 @@ pub enum Msg {
 
     SetNodeCommand(Path, String),
     CommandKey(KeyboardEvent),
+    PrevCommand,
+    NextCommand,
     /* EnterCommand,
      * EscapeCommand,
-     * PrevCommand,
-     * NextCommand, */
+     */
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -520,6 +521,7 @@ impl Component for Model {
                 let node_state = self.node_state.entry(path).or_default();
                 node_state.raw_command = raw_command;
                 node_state.parsed_commands = parsed_commands;
+                node_state.selected_command_index = 0;
             }
             Msg::AddItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
@@ -546,13 +548,28 @@ impl Component for Model {
                 children.remove(selector.index);
                 self.file.replace_node(parent_path, parent);
             }
+            Msg::PrevCommand => {
+                let node_state = self.node_state.entry(self.cursor.clone()).or_default();
+                node_state.selected_command_index =
+                    node_state.selected_command_index.saturating_sub(1);
+            }
+            Msg::NextCommand => {
+                let node_state = self.node_state.entry(self.cursor.clone()).or_default();
+                node_state.selected_command_index =
+                    node_state.selected_command_index.saturating_add(1);
+            }
             Msg::CommandKey(e) => {
                 log::info!("key: {}", e.key());
                 let selection = yew::utils::window().get_selection().unwrap().unwrap();
                 let anchor_node = selection.anchor_node().unwrap();
                 let anchor_offset = selection.anchor_offset();
                 let anchor_node_value = anchor_node.node_value().unwrap_or_default();
-                log::info!("selection: {:?} {} {}", selection, selection.anchor_offset(), anchor_node_value);
+                log::info!(
+                    "selection: {:?} {} {}",
+                    selection,
+                    selection.anchor_offset(),
+                    anchor_node_value
+                );
 
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match e.key().as_ref() {
@@ -564,15 +581,18 @@ impl Component for Model {
                             .get(node_state.selected_command_index)
                         {
                             let node = selected_command.to_node().unwrap();
-                            self.link
-                                .send_message(Msg::ReplaceNode(self.cursor.clone(), node, true));
+                            self.link.send_message(Msg::ReplaceNode(
+                                self.cursor.clone(),
+                                node,
+                                true,
+                            ));
                         }
                     }
                     // "Enter" if self.mode == Mode::Edit =>
                     // self.link.send_message(Msg::EnterCommand), "Escape" =>
-                    // self.link.send_message(Msg::EscapeCommand), "ArrowUp" =>
-                    // self.link.send_message(Msg::PrevCommand), "ArrowDown" =>
-                    // self.link.send_message(Msg::NextCommand),
+                    // self.link.send_message(Msg::EscapeCommand),
+                    "ArrowUp" => self.link.send_message(Msg::PrevCommand),
+                    "ArrowDown" => self.link.send_message(Msg::NextCommand),
                     "ArrowLeft" if self.mode == Mode::Normal => self.link.send_message(Msg::Prev),
                     "ArrowRight" if self.mode == Mode::Normal => self.link.send_message(Msg::Next),
                     /*
