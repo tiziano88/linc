@@ -190,7 +190,7 @@ impl Model {
         placeholder: &str,
     ) -> Html {
         let selected = path == &self.cursor;
-        let mut classes = vec!["node".to_string()];
+        let mut classes = vec!["node".to_string(), "align-top".to_string()];
         if selected {
             classes.push("selected".to_string());
         }
@@ -286,9 +286,9 @@ impl Model {
                 }
             }
         };
-        // Use onmousedown to avoid re-selecting the node.
+        // Use onmousedown to avoid re-selecting the node?
         html! {
-            <div class=classes.join(" ") onmousedown=onclick onmouseover=onmouseover>
+            <div class=classes.join(" ") onclick=onclick onmouseover=onmouseover>
                 { value }
             </div>
         }
