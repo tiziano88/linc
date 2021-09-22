@@ -219,7 +219,7 @@ impl Model {
 
     pub fn focus_element(selector: &str) {
         log::info!("select {}", selector);
-        if let Some(element) = yew::utils::document().query_selector(selector).unwrap() {
+        if let Ok(Some(element)) = yew::utils::document().query_selector(selector) {
             element.dyn_into::<HtmlElement>().unwrap().focus().unwrap();
         } else {
             log::warn!("not found");
