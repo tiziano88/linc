@@ -45,6 +45,7 @@
   opacity: 0.4;
   background-color: black;
   color: white;
+  padding: 0.1em;
 }
 
 .indent {
@@ -53,6 +54,7 @@
 
 .keyword {
   color: fuchsia;
+  padding: 0.5em;
 }
 
 .kind {

@@ -674,7 +674,13 @@ pub const SCHEMA: Schema = Schema {
                     let expression = model.view_child(node, "expression", path);
                     html! {
                         <span>
-                        { "const" }{ identifier }{ ":" }{ type_ }{ "=" }{ expression }{ ";" }
+                            <span class="keyword">{ "const" }</span>
+                            { identifier }
+                            { ":" }
+                            { type_ }
+                            { "=" }
+                            { expression }
+                            { ";" }
                         </span>
                     }
                 },

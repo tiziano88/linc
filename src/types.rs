@@ -321,6 +321,7 @@ impl File {
         h
     }
 
+    #[must_use]
     pub fn replace_node(&mut self, path: &[Selector], node: Node) -> Option<Hash> {
         self.replace_node_from(&self.root.clone(), path, node)
     }
@@ -546,7 +547,9 @@ impl Component for Model {
                 // If the field does not exist, create a default one.
                 let children = parent.children.entry(selector.field.clone()).or_default();
                 children.remove(selector.index);
-                self.file.replace_node(parent_path, parent);
+                if let Some(new_root) = self.file.replace_node(parent_path, parent) {
+                    self.file.root = new_root;
+                }
             }
             Msg::PrevCommand => {
                 let node_state = self.node_state.entry(self.cursor.clone()).or_default();
@@ -558,8 +561,10 @@ impl Component for Model {
             }
             Msg::NextCommand => {
                 let node_state = self.node_state.entry(self.cursor.clone()).or_default();
-                node_state.selected_command_index =
-                    (node_state.selected_command_index + 1) % node_state.parsed_commands.len();
+                if node_state.parsed_commands.len() > 0 {
+                    node_state.selected_command_index =
+                        (node_state.selected_command_index + 1) % node_state.parsed_commands.len();
+                }
             }
             Msg::CommandKey(e) => {
                 log::info!("key: {}", e.key());
@@ -583,12 +588,13 @@ impl Component for Model {
                             .parsed_commands
                             .get(node_state.selected_command_index)
                         {
-                            let node = selected_command.to_node().unwrap();
-                            self.link.send_message(Msg::ReplaceNode(
-                                self.cursor.clone(),
-                                node,
-                                true,
-                            ));
+                            if let Some(node) = selected_command.to_node() {
+                                self.link.send_message(Msg::ReplaceNode(
+                                    self.cursor.clone(),
+                                    node,
+                                    true,
+                                ));
+                            }
                         }
                     }
                     // "Enter" if self.mode == Mode::Edit =>
