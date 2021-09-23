@@ -195,7 +195,7 @@ impl Model {
             classes.push("selected".to_string());
         }
         if path == &self.hover {
-            classes.push("hover".to_string());
+            // classes.push("hover".to_string());
         }
 
         let path_clone = path.to_vec();
