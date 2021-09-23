@@ -258,8 +258,9 @@ impl Model {
                         if i == selected_command_index {
                             classes_item.push("selected");
                         }
+                        // Avoid re-selecting the node, we want to move to next.
                         html! {
-                            <span class=classes_item.join(" ") onclick=onclick>{value_string}</span>
+                            <span class=classes_item.join(" ") onmousedown=onclick>{value_string}</span>
                         }
                     })
                     .collect()

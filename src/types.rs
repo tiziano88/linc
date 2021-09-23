@@ -550,13 +550,16 @@ impl Component for Model {
             }
             Msg::PrevCommand => {
                 let node_state = self.node_state.entry(self.cursor.clone()).or_default();
-                node_state.selected_command_index =
-                    node_state.selected_command_index.saturating_sub(1);
+                node_state.selected_command_index = if node_state.selected_command_index > 0 {
+                    node_state.selected_command_index - 1
+                } else {
+                    node_state.parsed_commands.len() - 1
+                };
             }
             Msg::NextCommand => {
                 let node_state = self.node_state.entry(self.cursor.clone()).or_default();
                 node_state.selected_command_index =
-                    node_state.selected_command_index.saturating_add(1);
+                    (node_state.selected_command_index + 1) % node_state.parsed_commands.len();
             }
             Msg::CommandKey(e) => {
                 log::info!("key: {}", e.key());
