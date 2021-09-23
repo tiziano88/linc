@@ -267,6 +267,7 @@ impl Model {
                     "".to_string()
                 };
                 let style = format!("width: {}ch;", std::cmp::max(command.len(), 1));
+                // XXX: Chrome inspector CSS color editor.
                 html! {
                     <span>
                         <div class="placeholder">{ placeholder }</div>

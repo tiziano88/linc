@@ -257,7 +257,13 @@ pub const SCHEMA: Schema = Schema {
 
                     html! {
                         <span>
-                            <div>{ "impl" }{ trait_ }{ "for" }{ type_ }{ "{" }</div>
+                            <div>
+                              <span class="keyword">{ "impl" }</span>
+                              { trait_ }
+                              <span class="keyword">{ "for" }</span>
+                              { type_ }
+                              { "{" }
+                            </div>
                             <div class="indent">
                               { for items }
                               { items_head }
@@ -443,7 +449,7 @@ pub const SCHEMA: Schema = Schema {
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     html! {
-                        <span class="keyword">{ node.value.clone() }</span>
+                        <span class="type">{ node.value.clone() }</span>
                     }
                 },
             },
