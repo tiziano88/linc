@@ -79,14 +79,18 @@ pub struct Model {
 
     pub node_state: HashMap<Path, NodeState>,
 
+    pub raw_command: String,
+    pub parsed_commands: Vec<ParsedValue>,
+    pub selected_command_index: usize,
+
     pub errors: Vec<ValidationError>,
 }
 
 #[derive(Default)]
 pub struct NodeState {
-    pub raw_command: String,
-    pub parsed_commands: Vec<ParsedValue>,
-    pub selected_command_index: usize,
+    // pub raw_command: String,
+// pub parsed_commands: Vec<ParsedValue>,
+// pub selected_command_index: usize,
 }
 
 pub fn parent(path: &[Selector]) -> &[Selector] {
@@ -315,6 +319,7 @@ impl File {
         }
     }
 
+    #[must_use]
     pub fn add_node(&mut self, node: &Node) -> Hash {
         let h = hash_node(node);
         self.nodes.insert(h.clone(), node.clone());
@@ -326,6 +331,7 @@ impl File {
         self.replace_node_from(&self.root.clone(), path, node)
     }
 
+    #[must_use]
     fn replace_node_from(&mut self, base: &Hash, path: &[Selector], node: Node) -> Option<Hash> {
         if path.is_empty() {
             Some(self.add_node(&node))
@@ -444,6 +450,9 @@ impl Component for Model {
             hover: vec![].into(),
             link,
             node_state: HashMap::new(),
+            raw_command: String::new(),
+            parsed_commands: Vec::new(),
+            selected_command_index: 0,
             errors: vec![],
         }
     }
@@ -463,9 +472,9 @@ impl Component for Model {
             let current_node = model.file.lookup(&model.cursor);
             let current_kind = current_node.clone().map(|n| n.kind.clone());
 
+            model.raw_command = "".to_string();
             let parsed_commands = model.parse_commands(&model.cursor, "");
-            let node_state = model.node_state.entry(model.cursor.clone()).or_default();
-            node_state.parsed_commands = parsed_commands;
+            model.parsed_commands = parsed_commands;
 
             let command_input_id = crate::view::command_input_id(&model.cursor);
             Model::focus_element(&format!("#{}", command_input_id));
@@ -518,11 +527,10 @@ impl Component for Model {
                 }
             }
             Msg::SetNodeCommand(path, raw_command) => {
+                self.raw_command = raw_command.clone();
                 let parsed_commands = self.parse_commands(&path, &raw_command);
-                let node_state = self.node_state.entry(path).or_default();
-                node_state.raw_command = raw_command;
-                node_state.parsed_commands = parsed_commands;
-                node_state.selected_command_index = 0;
+                self.parsed_commands = parsed_commands;
+                self.selected_command_index = 0;
             }
             Msg::AddItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
@@ -552,18 +560,16 @@ impl Component for Model {
                 }
             }
             Msg::PrevCommand => {
-                let node_state = self.node_state.entry(self.cursor.clone()).or_default();
-                node_state.selected_command_index = if node_state.selected_command_index > 0 {
-                    node_state.selected_command_index - 1
+                self.selected_command_index = if self.selected_command_index > 0 {
+                    self.selected_command_index - 1
                 } else {
-                    node_state.parsed_commands.len() - 1
+                    self.parsed_commands.len() - 1
                 };
             }
             Msg::NextCommand => {
-                let node_state = self.node_state.entry(self.cursor.clone()).or_default();
-                if node_state.parsed_commands.len() > 0 {
-                    node_state.selected_command_index =
-                        (node_state.selected_command_index + 1) % node_state.parsed_commands.len();
+                if self.parsed_commands.len() > 0 {
+                    self.selected_command_index =
+                        (self.selected_command_index + 1) % self.parsed_commands.len();
                 }
             }
             Msg::CommandKey(e) => {
@@ -583,10 +589,8 @@ impl Component for Model {
                 match e.key().as_ref() {
                     "Enter" => {
                         e.prevent_default();
-                        let node_state = self.node_state.get(&self.cursor).unwrap();
-                        if let Some(selected_command) = node_state
-                            .parsed_commands
-                            .get(node_state.selected_command_index)
+                        if let Some(selected_command) =
+                            self.parsed_commands.get(self.selected_command_index)
                         {
                             if let Some(node) = selected_command.to_node() {
                                 self.link.send_message(Msg::ReplaceNode(

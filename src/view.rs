@@ -215,8 +215,6 @@ impl Model {
             crate::types::Msg::SetNodeCommand(path_clone.clone(), e.value.clone())
         });
 
-        let node_state = self.node_state.get(&path.to_vec());
-
         // let value = match self.file.lookup(path) {
         //     Some(node) => self.view_value(&node, &path),
         //     None => {
@@ -236,14 +234,8 @@ impl Model {
                 }
             },
             None => {
-                let selected_command_index = node_state
-                    .as_ref()
-                    .map(|s| s.selected_command_index)
-                    .unwrap_or(0);
                 let suggestions: Vec<_> = if selected {
-                    node_state
-                    .map(|v| v.parsed_commands.clone())
-                    .unwrap_or_default()
+                    self.parsed_commands
                     .iter()
                     .enumerate()
                     .map(|(i, v)| {
@@ -255,7 +247,7 @@ impl Model {
                             None => Msg::Noop,
                         });
                         let mut classes_item = vec!["block", "border"];
-                        if i == selected_command_index {
+                        if i == self.selected_command_index {
                             classes_item.push("selected");
                         }
                         // Avoid re-selecting the node, we want to move to next.
@@ -269,9 +261,11 @@ impl Model {
                 };
                 let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
                 let id = command_input_id(&path);
-                let command = node_state
-                    .map(|s| s.raw_command.clone())
-                    .unwrap_or_default();
+                let command = if selected {
+                    self.raw_command.clone()
+                } else {
+                    "".to_string()
+                };
                 let style = format!("width: {}ch;", std::cmp::max(command.len(), 1));
                 html! {
                     <span>
