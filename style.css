@@ -1,9 +1,10 @@
 .node {
-  padding: 1px;
+  padding: 2px;
   display: inline-block;
-  border: 1px dotted;
+  border: 1px solid;
   border-color: gray;
   cursor: default;
+  font-family: monospace;
 }
 
 .row {
@@ -45,6 +46,7 @@
   opacity: 0.4;
   background-color: black;
   color: white;
+  padding: 0.1em;
 }
 
 .indent {
@@ -53,6 +55,12 @@
 
 .keyword {
   color: fuchsia;
+  padding: 0.5em;
+}
+
+.type {
+  color: orangered;
+  padding: 0.5em;
 }
 
 .kind {
