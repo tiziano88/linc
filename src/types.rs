@@ -87,9 +87,7 @@ pub struct Model {
 
 #[derive(Default)]
 pub struct NodeState {
-    // pub raw_command: String,
-// pub parsed_commands: Vec<ParsedValue>,
-// pub selected_command_index: usize,
+    // TODO: Errors.
 }
 
 pub fn parent(path: &[Selector]) -> &[Selector] {
