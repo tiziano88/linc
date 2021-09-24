@@ -2102,8 +2102,15 @@ pub fn textbox(
     //     node.value = target.inner_text();
     //     crate::types::Msg::ReplaceNode(path_clone.clone(), node)
     // });
-    // let style = format!("width: {}ch;", node.value.len());
     let selected = path == &model.cursor;
+    let selected_suggestion = suggestions
+        .get(model.selected_command_index)
+        .cloned()
+        .map(|v| v.value.unwrap_or_default().clone())
+        .unwrap_or_default()
+        .strip_prefix(&node.value)
+        .map(|v| v.to_string())
+        .unwrap_or_default();
     let suggestions: Vec<_> = if selected {
         suggestions
             .iter()
@@ -2134,7 +2141,12 @@ pub fn textbox(
     let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
     let id = view::command_input_id(&path);
     let value = node.value.clone();
-    let style = format!("width: {}ch;", std::cmp::max(value.len(), 1));
+    let style = if value.len() > 0 {
+        format!("width: {}ch;", value.len())
+    } else {
+        "width: 0.1ch;".to_string()
+    };
+    // XXX: Chrome inspector CSS color editor.
     let placeholder = if placeholder.is_empty() {
         None
     } else {
@@ -2142,17 +2154,25 @@ pub fn textbox(
             <div class="placeholder">{ placeholder }</div>
         })
     };
+    let completion = if selected {
+        selected_suggestion
+    } else {
+        "".to_string()
+    };
     html! {
-        // <span>
-            // <input type="text" value=node.value.clone() oninput=oninput style=style />
-            // <span oninput=oninput contenteditable="true">{node.value.clone()}</span>
-            // <span onfocusout=onblur contenteditable="true">{node.value.clone()}</span>
-        // </span>
         <span>
             { for placeholder }
             <span>
-                // <span id=id class="inline-block w-full" contenteditable="true" oninput=oninput>{""}</span>
-                <input id=id class="inline-block w-full" type="text" oninput=oninput value=value style=style />
+                <input
+                  id=id
+                  class="inline-block w-full"
+                  type="text"
+                  oninput=oninput
+                  value=value
+                  style=style
+                  autocomplete="off"
+                />
+                <span class="completion">{ completion }</span>
                 <div class=classes_dropdown.join(" ")>
                     { for suggestions }
                 </div>

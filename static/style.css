@@ -72,6 +72,10 @@
   color: red;
 }
 
+.completion {
+  color: lightpink;
+}
+
 input:focus, textarea:focus {
   outline: none;
 }

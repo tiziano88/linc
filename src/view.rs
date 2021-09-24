@@ -229,63 +229,13 @@ impl Model {
                     }
                 }
             },
-            None => {
-                crate::schema::textbox(
-                    self,
-                    &Node::default(),
-                    path,
-                    &self.parsed_commands,
-                    placeholder,
-                )
-                /*
-                let suggestions: Vec<_> = if selected {
-                    self.parsed_commands
-                    .iter()
-                    .enumerate()
-                    .map(|(i, v)| {
-                        let path_clone = path.to_vec();
-                        let value_string = v.value.clone().unwrap_or_default();
-                        let node = v.to_node();
-                        let onclick = self.link.callback(move |e: MouseEvent| match node.clone() {
-                            Some(node) => Msg::ReplaceNode(path_clone.clone(), node.clone(),true),
-                            None => Msg::Noop,
-                        });
-                        let mut classes_item = vec!["block", "border"];
-                        if i == self.selected_command_index {
-                            classes_item.push("selected");
-                        }
-                        // Avoid re-selecting the node, we want to move to next.
-                        html! {
-                            <span class=classes_item.join(" ") onmousedown=onclick>{value_string}</span>
-                        }
-                    })
-                    .collect()
-                } else {
-                    vec![]
-                };
-                let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
-                let id = command_input_id(&path);
-                let command = if selected {
-                    self.raw_command.clone()
-                } else {
-                    "".to_string()
-                };
-                let style = format!("width: {}ch;", std::cmp::max(command.len(), 1));
-                // XXX: Chrome inspector CSS color editor.
-                html! {
-                    <span>
-                        <div class="placeholder">{ placeholder }</div>
-                        <span>
-                            // <span id=id class="inline-block w-full" contenteditable="true" oninput=oninput>{""}</span>
-                            <input id=id class="inline-block w-full" type="text" oninput=oninput value=command style=style />
-                            <div class=classes_dropdown.join(" ")>
-                                { for suggestions }
-                            </div>
-                        </span>
-                    </span>
-                }
-                */
-            }
+            None => crate::schema::textbox(
+                self,
+                &Node::default(),
+                path,
+                &self.parsed_commands,
+                placeholder,
+            ),
         };
         // Use onmousedown to avoid re-selecting the node?
         html! {

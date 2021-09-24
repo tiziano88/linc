@@ -521,6 +521,8 @@ impl Component for Model {
                 }
                 if mv {
                     self.link.send_message(Msg::Next);
+                    self.parsed_commands = vec![];
+                    self.selected_command_index = 0;
                 }
             }
             Msg::SetNodeCommand(path, raw_command) => {
