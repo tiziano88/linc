@@ -215,25 +215,29 @@ impl Model {
             crate::types::Msg::SetNodeCommand(path_clone.clone(), e.value.clone())
         });
 
-        // let value = match self.file.lookup(path) {
-        //     Some(node) => self.view_value(&node, &path),
-        //     None => {
-        //         html! {
-        //             <span>{ format!("invalid: {:?}", path) }</span>
-        //         }
-        //     }
-        // };
-
         let value = match hash {
             Some(hash) => match self.file.lookup(path) {
-                Some(node) => self.view_value(&node, &path),
+                Some(node) => match SCHEMA.get_kind(&node.kind) {
+                    Some(kind) => kind.render(self, node, path),
+                    None => {
+                        crate::schema::textbox(self, node, path, &self.parsed_commands, placeholder)
+                    }
+                },
                 None => {
                     html! {
-                        <span>{ format!("invalid: {:?}", hash) }</span>
+                        <span>{ format!("invalid hash: {:?}", hash) }</span>
                     }
                 }
             },
             None => {
+                crate::schema::textbox(
+                    self,
+                    &Node::default(),
+                    path,
+                    &self.parsed_commands,
+                    placeholder,
+                )
+                /*
                 let suggestions: Vec<_> = if selected {
                     self.parsed_commands
                     .iter()
@@ -280,6 +284,7 @@ impl Model {
                         </span>
                     </span>
                 }
+                */
             }
         };
         // Use onmousedown to avoid re-selecting the node?
@@ -296,7 +301,7 @@ impl Model {
 
     pub fn view_child_with_placeholder(
         &self,
-        node: &Node,
+        parent: &Node,
         field_name: &str,
         path: &Path,
         placeholder: &str,
@@ -308,7 +313,7 @@ impl Model {
                 index: 0,
             },
         );
-        let hash = node
+        let hash = parent
             .children
             .get(field_name)
             .and_then(|v| v.get(0))
@@ -319,11 +324,11 @@ impl Model {
     }
 
     /// Returns the head and children, separately.
-    pub fn view_children(&self, node: &Node, field_name: &str, path: &Path) -> (Html, Vec<Html>) {
+    pub fn view_children(&self, parent: &Node, field_name: &str, path: &Path) -> (Html, Vec<Html>) {
         // let path = append(&path, field(field_name));
         // let cursor = sub_cursor(&cursor, field(field_name));
         let empty = vec![];
-        let children = node.children.get(field_name).unwrap_or(&empty);
+        let children = parent.children.get(field_name).unwrap_or(&empty);
         let head = {
             let path = append(
                 &path,
@@ -385,13 +390,6 @@ impl Model {
             }))
             .collect::<Vec<_>>();
         (head, nodes)
-    }
-
-    fn view_value(&self, node: &Node, path: &[Selector]) -> Html {
-        match SCHEMA.get_kind(&node.kind) {
-            Some(kind) => kind.render(self, node, path),
-            None => html! { <span>{ "unknown kind: " }{ node.kind.clone() }</span> },
-        }
     }
 }
 

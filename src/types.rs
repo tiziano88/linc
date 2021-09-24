@@ -79,7 +79,6 @@ pub struct Model {
 
     pub node_state: HashMap<Path, NodeState>,
 
-    pub raw_command: String,
     pub parsed_commands: Vec<ParsedValue>,
     pub selected_command_index: usize,
 
@@ -364,7 +363,7 @@ impl File {
 
 // TODO: Navigate to children directly, but use :var to navigate to variables, otherwise skip them
 // when navigating.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Node {
     pub kind: String,
     pub value: String,
@@ -450,7 +449,6 @@ impl Component for Model {
             hover: vec![].into(),
             link,
             node_state: HashMap::new(),
-            raw_command: String::new(),
             parsed_commands: Vec::new(),
             selected_command_index: 0,
             errors: vec![],
@@ -472,7 +470,6 @@ impl Component for Model {
             let current_node = model.file.lookup(&model.cursor);
             let current_kind = current_node.clone().map(|n| n.kind.clone());
 
-            model.raw_command = "".to_string();
             let parsed_commands = model.parse_commands(&model.cursor, "");
             model.parsed_commands = parsed_commands;
 
@@ -527,10 +524,15 @@ impl Component for Model {
                 }
             }
             Msg::SetNodeCommand(path, raw_command) => {
-                self.raw_command = raw_command.clone();
+                let mut node = self.file.lookup(&path).cloned().unwrap_or_default();
+                node.value = raw_command.clone();
+                let new_root = self.file.replace_node(&path, node);
                 let parsed_commands = self.parse_commands(&path, &raw_command);
                 self.parsed_commands = parsed_commands;
                 self.selected_command_index = 0;
+                if let Some(new_root) = new_root {
+                    self.file.root = new_root;
+                }
             }
             Msg::AddItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap().clone();

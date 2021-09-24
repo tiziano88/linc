@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
-use crate::types::{Model, Node, Path, Ref, Selector};
+use crate::{
+    types::{Model, Msg, Node, Path, Ref, Selector},
+    view,
+};
 use wasm_bindgen::JsCast;
-use yew::{html, web_sys::HtmlElement, Html, InputData};
+use yew::{html, prelude::*, web_sys::HtmlElement, Html, InputData};
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
 //the kind field of Inner, and we then try to parse each element with all of them until one
@@ -1010,7 +1013,9 @@ pub const SCHEMA: Schema = Schema {
                     }]
                 },
                 validator: |node: &Node| vec![],
-                renderer: textbox,
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    textbox(model, node, path, &[], "")
+                },
             },
         },
         Kind {
@@ -1981,7 +1986,9 @@ pub const SCHEMA: Schema = Schema {
                     }]
                 },
                 validator: |node: &Node| vec![],
-                renderer: textbox,
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    textbox(model, node, path, &[], "")
+                },
             },
         },
         Kind {
@@ -2077,26 +2084,79 @@ pub struct Schema {
     pub kinds: &'static [Kind],
 }
 
-fn textbox(model: &Model, node: &Node, path: &Path) -> Html {
+pub fn textbox(
+    model: &Model,
+    node: &Node,
+    path: &[Selector],
+    suggestions: &[ParsedValue],
+    placeholder: &str,
+) -> Html {
     let path_clone = path.to_vec();
     let node_clone = node.clone();
-    let oninput = model.link.callback(move |e: InputData| {
-        let mut node = node_clone.clone();
-        node.value = e.value.clone();
-        crate::types::Msg::ReplaceNode(path_clone.clone(), node, false)
-    });
+    let oninput = model
+        .link
+        .callback(move |e: InputData| Msg::SetNodeCommand(path_clone.clone(), e.value.clone()));
     // let onblur = model.link.callback(move |e: yew::FocusEvent| {
     //     let target = e.related_target().unwrap().dyn_into::<HtmlElement>().unwrap();
     //     let mut node = node_clone.clone();
     //     node.value = target.inner_text();
     //     crate::types::Msg::ReplaceNode(path_clone.clone(), node)
     // });
-    let style = format!("width: {}ch;", node.value.len());
+    // let style = format!("width: {}ch;", node.value.len());
+    let selected = path == &model.cursor;
+    let suggestions: Vec<_> = if selected {
+        suggestions
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                let path_clone = path.to_vec();
+                let value_string = v.value.clone().unwrap_or_default();
+                let node = v.to_node();
+                let onclick = model
+                    .link
+                    .callback(move |e: MouseEvent| match node.clone() {
+                        Some(node) => Msg::ReplaceNode(path_clone.clone(), node.clone(), true),
+                        None => Msg::Noop,
+                    });
+                let mut classes_item = vec!["block", "border"];
+                if i == model.selected_command_index {
+                    classes_item.push("selected");
+                }
+                // Avoid re-selecting the node, we want to move to next.
+                html! {
+                    <span class=classes_item.join(" ") onmousedown=onclick>{value_string}</span>
+                }
+            })
+            .collect()
+    } else {
+        vec![]
+    };
+    let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
+    let id = view::command_input_id(&path);
+    let value = node.value.clone();
+    let style = format!("width: {}ch;", std::cmp::max(value.len(), 1));
+    let placeholder = if placeholder.is_empty() {
+        None
+    } else {
+        Some(html! {
+            <div class="placeholder">{ placeholder }</div>
+        })
+    };
     html! {
-        <span>
-            <input type="text" value=node.value.clone() oninput=oninput style=style />
+        // <span>
+            // <input type="text" value=node.value.clone() oninput=oninput style=style />
             // <span oninput=oninput contenteditable="true">{node.value.clone()}</span>
             // <span onfocusout=onblur contenteditable="true">{node.value.clone()}</span>
+        // </span>
+        <span>
+            { for placeholder }
+            <span>
+                // <span id=id class="inline-block w-full" contenteditable="true" oninput=oninput>{""}</span>
+                <input id=id class="inline-block w-full" type="text" oninput=oninput value=value style=style />
+                <div class=classes_dropdown.join(" ")>
+                    { for suggestions }
+                </div>
+            </span>
         </span>
     }
 }
