@@ -122,8 +122,8 @@ pub const SCHEMA: Schema = Schema {
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: None,
-                parser: |v: &str| vec![Ok("".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let (items_head, items) = model.view_children(node, "items", path);
                     let items = items.into_iter().map(|b| {
@@ -164,8 +164,8 @@ pub const SCHEMA: Schema = Schema {
                     },
                 ],
                 inner: None,
-                parser: |v: &str| vec![Ok("vis_item".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("vis_item".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let visibility = model.view_child(node, "visibility", path);
                     let inner = model.view_child(node, "item", path);
@@ -245,8 +245,8 @@ pub const SCHEMA: Schema = Schema {
                     },
                 ],
                 inner: None,
-                parser: |v: &str| vec![Ok("impl_trait".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("impl_trait".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let trait_ = model.view_child(node, "trait", path);
                     let type_ = model.view_child(node, "type", path);
@@ -328,9 +328,9 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| vec![Ok("_".to_string())],
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                parser: |_v: &str| vec![Ok("wildcard".to_string())],
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                       <span>{ "_" }</span>
                     }
@@ -402,8 +402,8 @@ pub const SCHEMA: Schema = Schema {
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("components"),
-                parser: |v: &str| vec![Ok("tuple".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("tuple".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let (components_head, components) =
                         model.view_children(node, "components", path);
@@ -425,7 +425,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| {
+                parser: |_v: &str| {
                     vec![
                         "bool".to_string(),
                         "char".to_string(),
@@ -449,8 +449,8 @@ pub const SCHEMA: Schema = Schema {
                     .map(Ok)
                     .collect()
                 },
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, node: &Node, _path: &Path| {
                     html! {
                         <span class="type">{ node.value.clone() }</span>
                     }
@@ -462,8 +462,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| vec![Ok("super".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("super".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     html! {
                         <span class="keyword">{ "super" }</span>
@@ -477,8 +477,8 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[],
                 inner: None,
                 parser: |v: &str| vec![Ok("self".to_string())],
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="keyword">{ "self" }</span>
                     }
@@ -490,9 +490,9 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| vec![Ok("Self".to_string())],
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                parser: |_v: &str| vec![Ok("Self".to_string())],
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="keyword">{ "Self" }</span>
                     }
@@ -504,9 +504,9 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| vec![Ok("crate".to_string())],
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                parser: |_v: &str| vec![Ok("crate".to_string())],
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="keyword">{ "crate" }</span>
                     }
@@ -518,9 +518,9 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| vec![Ok("$crate".to_string())],
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                parser: |_v: &str| vec![Ok("$crate".to_string())],
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="keyword">{ "$crate" }</span>
                     }
@@ -532,9 +532,9 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| vec![Ok("pub".to_string())],
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                parser: |_v: &str| vec![Ok("pub".to_string())],
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="keyword">{ "pub" }</span>
                     }
@@ -546,9 +546,9 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| vec![Ok("pub_crate".to_string())],
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                parser: |_v: &str| vec![Ok("pub_crate".to_string())],
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="keyword">{ "pub(crate)" }</span>
                     }
@@ -560,9 +560,9 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| vec![Ok("pub_self".to_string())],
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                parser: |_v: &str| vec![Ok("pub_self".to_string())],
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="keyword">{ "pub(self)" }</span>
                     }
@@ -578,8 +578,8 @@ pub const SCHEMA: Schema = Schema {
                     multiplicity: Multiplicity::Single,
                 }],
                 inner: None,
-                parser: |v: &str| vec![Ok("pub_in".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("pub_in".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let path = model.view_child(node, "path", &path);
                     html! {
@@ -603,8 +603,8 @@ pub const SCHEMA: Schema = Schema {
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("segments"),
-                parser: |v: &str| vec![Ok("type_path".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("type_path".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let (segments_head, segments) = model.view_children(node, "segments", path);
                     let segments = segments
@@ -640,8 +640,8 @@ pub const SCHEMA: Schema = Schema {
                     },
                 ],
                 inner: Some("type"),
-                parser: |v: &str| vec![Ok("reference".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("reference".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let lifetime = model.view_child(node, "lifetime", path);
                     let mutable = model.view_child(node, "mutable", path);
@@ -675,8 +675,8 @@ pub const SCHEMA: Schema = Schema {
                     },
                 ],
                 inner: Some("statements"),
-                parser: |v: &str| vec![Ok("const".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("const".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let identifier = model.view_child(node, "identifier", path);
                     let type_ = model.view_child(node, "type", path);
@@ -711,8 +711,8 @@ pub const SCHEMA: Schema = Schema {
                     },
                 ],
                 inner: Some("statements"),
-                parser: |v: &str| vec![Ok("block".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("block".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let (_statements_head, statements) =
                         model.view_children(node, "statements", path);
@@ -869,11 +869,8 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_string_literal",
-            value: KindValue::Struct {
-                fields: &[],
-                inner: None,
-                parser: |v: &str| vec![Ok("string".to_string())],
-                validator: |node: &Node| vec![],
+            value: KindValue::Literal {
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let inner = textbox(model, node, path, &[], "");
                     html! {
@@ -886,11 +883,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_number_literal",
-            value: KindValue::Struct {
-                fields: &[],
-                inner: None,
-                // TODO: regex
-                parser: |v: &str| vec![Ok("number".to_string())],
+            value: KindValue::Literal {
                 validator: |node: &Node| {
                     if node.value.parse::<i32>().is_ok() {
                         vec![]
@@ -903,6 +896,7 @@ pub const SCHEMA: Schema = Schema {
                 },
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let inner = textbox(model, node, path, &[], "");
+                    // let value = model.view_child(node, "value", path);
                     html! {
                         <span>
                         { "#" }
@@ -923,9 +917,9 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[],
                 inner: None,
-                parser: |v: &str| vec![Ok("false".to_string())],
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                parser: |_v: &str| vec![Ok("false".to_string())],
+                validator: |_node: &Node| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="literal">{ "false" }</span>
                     }
@@ -939,7 +933,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 parser: |v: &str| vec![Ok("true".to_string())],
                 validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="literal">{ "true" }</span>
                     }
@@ -962,8 +956,8 @@ pub const SCHEMA: Schema = Schema {
                     },
                 ],
                 inner: Some("object"),
-                parser: |v: &str| vec![Ok("field_access".to_string())],
-                validator: |node: &Node| vec![],
+                parser: |_v: &str| vec![Ok("field_access".to_string())],
+                validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let object = model.view_child(node, "object", &path);
                     let field = model.view_child(node, "field", &path);
@@ -1107,13 +1101,13 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[
                     Field {
-                        name: "operator",
-                        kind: &["rust_comparison_operator"],
+                        name: "left",
+                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
-                        name: "left",
-                        kind: &["rust_expression"],
+                        name: "operator",
+                        kind: &["rust_comparison_operator"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -2243,12 +2237,16 @@ pub enum KindValue {
     Struct {
         fields: &'static [Field],
         inner: Option<&'static str>,
-        renderer: Renderer,
         parser: Parser,
         validator: Validator,
+        renderer: Renderer,
     },
     Enum {
         variants: &'static [&'static str],
+    },
+    Literal {
+        validator: Validator,
+        renderer: Renderer,
     },
 }
 
@@ -2265,6 +2263,7 @@ impl Kind {
                 .filter_map(|n| SCHEMA.get_kind(n))
                 .flat_map(|k| k.get_fields())
                 .collect(),
+            KindValue::Literal { .. } => vec![],
         }
     }
 
@@ -2272,6 +2271,10 @@ impl Kind {
         match self.value {
             KindValue::Struct { inner, .. } => inner,
             KindValue::Enum { .. } => {
+                // XXX
+                None
+            }
+            KindValue::Literal { .. } => {
                 // XXX
                 None
             }
@@ -2287,6 +2290,7 @@ impl Kind {
                     <span>{"enum rendering error"}</span>
                 }
             }
+            KindValue::Literal { renderer, .. } => renderer(model, node, &path.to_vec()),
         }
     }
 
@@ -2312,6 +2316,22 @@ impl Kind {
                     }
                 })
                 .collect(),
+            KindValue::Literal { validator, .. } => {
+                let node = Node {
+                    kind: "".to_string(),
+                    value: v.to_string(),
+                    children: HashMap::new(),
+                };
+                if validator(&node).is_empty() {
+                    vec![ParsedValue {
+                        kind_hierarchy: vec![self.name.to_string()],
+                        value: Ok(v.to_string()),
+                    }]
+                } else {
+                    // TODO: Return validation error.
+                    vec![]
+                }
+            }
         }
     }
 }

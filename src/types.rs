@@ -253,12 +253,14 @@ impl Model {
                 log::info!("errors: {:?} {:?}", path, errors);
             }
         }
+        /*
         for (_, children) in node.children.iter() {
             for child in children {
                 // TODO
                 // self.update_errors_node(child);
             }
         }
+        */
     }
 }
 
