@@ -116,6 +116,12 @@ pub const SCHEMA: Schema = Schema {
         Kind {
             name: "literal",
             value: KindValue::Literal {
+                validator: |node: &Node| vec![],
+            },
+        },
+        Kind {
+            name: "rust_identifier_literal",
+            value: KindValue::Literal {
                 validator: |node: &Node| {
                     let v = &node.value;
                     if v.is_empty() {
@@ -136,18 +142,6 @@ pub const SCHEMA: Schema = Schema {
                     } else {
                         vec![]
                     }
-                },
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    textbox(model, node, path, &[], "")
-                },
-            },
-        },
-        Kind {
-            name: "rust_identifier_literal",
-            value: KindValue::Literal {
-                validator: |node: &Node| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    textbox(model, node, path, &[], "")
                 },
             },
         },
@@ -907,13 +901,21 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_string_literal",
-            value: KindValue::Literal {
-                validator: |_node: &Node| vec![],
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "value",
+                    kind: &["literal"],
+                    multiplicity: Multiplicity::Single,
+                }],
+                inner: None,
+                parser: |_v: &str| vec![Ok("number".to_string())],
+                validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let inner = textbox(model, node, path, &[], "");
+                    // let inner = textbox(model, node, path, &[], "", true);
+                    let value = model.view_child(node, "value", path);
                     html! {
                         <span>
-                        { "\"" }{ inner }{ "\"" }
+                        { "\"" }{ value }{ "\"" }
                         </span>
                     }
                 },
@@ -941,7 +943,7 @@ pub const SCHEMA: Schema = Schema {
                     }
                 },
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    // let inner = textbox(model, node, path, &[], "");
+                    // let inner = textbox(model, node, path, &[], "", true);
                     let value = model.view_child(node, "value", path);
                     html! {
                         <span>
@@ -1075,7 +1077,7 @@ pub const SCHEMA: Schema = Schema {
                     }
                 },
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    textbox(model, node, path, &[], "")
+                    textbox(model, node, path, &[], "", true)
                 },
             },
         },
@@ -1309,7 +1311,7 @@ pub const SCHEMA: Schema = Schema {
                     },
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
+                        kind: &["rust_identifier_literal"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -2048,7 +2050,7 @@ pub const SCHEMA: Schema = Schema {
                 },
                 validator: |node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    textbox(model, node, path, &[], "")
+                    textbox(model, node, path, &[], "", true)
                 },
             },
         },
@@ -2151,6 +2153,7 @@ pub fn textbox(
     path: &[Selector],
     suggestions: &[ParsedValue],
     placeholder: &str,
+    valid: bool,
 ) -> Html {
     let path_clone = path.to_vec();
     let node_clone = node.clone();
@@ -2220,13 +2223,17 @@ pub fn textbox(
     } else {
         "".to_string()
     };
+    let mut class = vec!["inline-block", "w-full"];
+    if !valid {
+        class.push("error");
+    }
     html! {
         <span>
             { for placeholder }
             <span>
                 <input
                   id=id
-                  class="inline-block w-full"
+                  class=class
                   type="text"
                   oninput=oninput
                   value=value
@@ -2292,7 +2299,6 @@ pub enum KindValue {
     },
     Literal {
         validator: Validator,
-        renderer: Renderer,
     },
 }
 
@@ -2336,7 +2342,10 @@ impl Kind {
                     <span>{"enum rendering error"}</span>
                 }
             }
-            KindValue::Literal { renderer, .. } => renderer(model, node, &path.to_vec()),
+            KindValue::Literal { validator, .. } => {
+                let errs = validator(node);
+                textbox(model, node, path, &[], "", errs.is_empty())
+            }
         }
     }
 

@@ -219,9 +219,14 @@ impl Model {
             Some(hash) => match self.file.lookup(path) {
                 Some(node) => match SCHEMA.get_kind(&node.kind) {
                     Some(kind) => kind.render(self, node, path),
-                    None => {
-                        crate::schema::textbox(self, node, path, &self.parsed_commands, placeholder)
-                    }
+                    None => crate::schema::textbox(
+                        self,
+                        node,
+                        path,
+                        &self.parsed_commands,
+                        placeholder,
+                        true,
+                    ),
                 },
                 None => {
                     html! {
@@ -235,6 +240,7 @@ impl Model {
                 path,
                 &self.parsed_commands,
                 placeholder,
+                true,
             ),
         };
         // Use onmousedown to avoid re-selecting the node?
