@@ -114,6 +114,44 @@ impl K for RustVisibility {
 pub const SCHEMA: Schema = Schema {
     kinds: &[
         Kind {
+            name: "literal",
+            value: KindValue::Literal {
+                validator: |node: &Node| {
+                    let v = &node.value;
+                    if v.is_empty() {
+                        vec![ValidationError {
+                            path: vec![].into(),
+                            message: "empty identifier".to_string(),
+                        }]
+                    } else if v.contains(' ') {
+                        vec![ValidationError {
+                            path: vec![].into(),
+                            message: "contains whitespace".to_string(),
+                        }]
+                    } else if !v.starts_with(|c: char| c.is_alphabetic()) {
+                        vec![ValidationError {
+                            path: vec![].into(),
+                            message: "must start with alphabetic character".to_string(),
+                        }]
+                    } else {
+                        vec![]
+                    }
+                },
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    textbox(model, node, path, &[], "")
+                },
+            },
+        },
+        Kind {
+            name: "rust_identifier_literal",
+            value: KindValue::Literal {
+                validator: |node: &Node| vec![],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    textbox(model, node, path, &[], "")
+                },
+            },
+        },
+        Kind {
             name: "rust_fragment",
             value: KindValue::Struct {
                 fields: &[Field {
@@ -883,8 +921,16 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_number_literal",
-            value: KindValue::Literal {
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "value",
+                    kind: &["literal"],
+                    multiplicity: Multiplicity::Single,
+                }],
+                inner: None,
+                parser: |_v: &str| vec![Ok("number".to_string())],
                 validator: |node: &Node| {
+                    // TODO: child.
                     if node.value.parse::<i32>().is_ok() {
                         vec![]
                     } else {
@@ -895,12 +941,12 @@ pub const SCHEMA: Schema = Schema {
                     }
                 },
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let inner = textbox(model, node, path, &[], "");
-                    // let value = model.view_child(node, "value", path);
+                    // let inner = textbox(model, node, path, &[], "");
+                    let value = model.view_child(node, "value", path);
                     html! {
                         <span>
                         { "#" }
-                        { inner }
+                        { value }
                         </span>
                     }
                 },
