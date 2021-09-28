@@ -21,6 +21,10 @@
   background-color: rgba(104, 104, 250, 0.431);
 }
 
+.error {
+  background-color: red
+}
+
 .target {
   color: blue;
 }
