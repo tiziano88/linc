@@ -99,22 +99,14 @@ pub fn parent(path: &[Selector]) -> &[Selector] {
 }
 
 impl Model {
-    fn parse_commands(&self, path: &Path, raw_command: &str) -> Vec<ParsedValue> {
+    fn parse_commands(&self, path: &Path) -> Vec<ParsedValue> {
         self.field(path)
             .map(|field| {
                 field
                     .kind
                     .iter()
                     .filter_map(|kind| SCHEMA.get_kind(kind))
-                    .flat_map(|kind| {
-                        kind.parse(raw_command)
-                            .into_iter()
-                            // TODO: Different matching logic (e.g. fuzzy).
-                            .filter(|v| match &v.value {
-                                Ok(v) => v.starts_with(raw_command),
-                                Err(_) => true,
-                            })
-                    })
+                    .flat_map(|kind| kind.parse().into_iter())
                     .collect::<Vec<_>>()
                 // TODO: Ranking.
             })
@@ -470,7 +462,7 @@ impl Component for Model {
             let current_node = model.file.lookup(&model.cursor);
             let current_kind = current_node.clone().map(|n| n.kind.clone());
 
-            let parsed_commands = model.parse_commands(&model.cursor, "");
+            let parsed_commands = model.parse_commands(&model.cursor);
             model.parsed_commands = parsed_commands;
 
             let command_input_id = crate::view::command_input_id(&model.cursor);
@@ -529,7 +521,15 @@ impl Component for Model {
                 let mut node = self.file.lookup(&path).cloned().unwrap_or_default();
                 node.value = raw_command.clone();
                 let new_root = self.file.replace_node(&path, node);
-                let parsed_commands = self.parse_commands(&path, &raw_command);
+                let parsed_commands = self
+                    .parse_commands(&path)
+                    .into_iter()
+                    // TODO: Fuzzy match.
+                    .filter(|c| match c.value {
+                        Ok(ref cmd) => cmd.starts_with(&raw_command),
+                        Err(_) => false,
+                    })
+                    .collect();
                 self.parsed_commands = parsed_commands;
                 self.selected_command_index = 0;
                 if let Some(new_root) = new_root {
