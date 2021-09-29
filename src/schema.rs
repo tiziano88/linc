@@ -176,7 +176,7 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/stable/reference/items.html
         Kind {
             name: "rust_item",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &["rust_vis_item", "rust_macro_item"],
             },
         },
@@ -209,7 +209,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_vis_item_inner",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_constant",
                     "rust_enum",
@@ -221,7 +221,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_visibility",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_visibility_pub",
                     "rust_visibility_pub_crate",
@@ -233,7 +233,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_path_ident_segment",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_path_ident_segment_super",
                     "rust_path_ident_segment_self",
@@ -247,7 +247,7 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/stable/reference/items/implementations.html
         Kind {
             name: "rust_impl",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &["rust_trait_impl", "rust_inherent_impl"],
             },
         },
@@ -313,7 +313,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_trait_impl_item",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_type_alias",
                     "rust_constant",
@@ -325,7 +325,7 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/stable/reference/patterns.html
         Kind {
             name: "rust_pattern",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_literal_pattern",
                     "rust_wildcard_pattern",
@@ -344,7 +344,7 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/stable/reference/patterns.html#literal-patterns
         Kind {
             name: "rust_literal_pattern",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_bool_literal",
                     "rust_char_literal",
@@ -369,9 +369,49 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        // https://doc.rust-lang.org/stable/reference/patterns.html#identifier-patterns
+        Kind {
+            name: "rust_identifier_pattern",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "ref",
+                        kind: &["rust_ref"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "mut",
+                        kind: &["rust_mut"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "identifier",
+                        kind: &["rust_identifier"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "pattern",
+                        kind: &["rust_pattern"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
+                inner: None,
+                parser: |_v: &str| vec!["identifier"],
+                validator: |_node: &Node| vec![],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let ref_ = model.view_child(node, "ref", path);
+                    let mut_ = model.view_child(node, "mut", path);
+                    let identifier = model.view_child(node, "identifier", path);
+                    let pattern = model.view_child(node, "pattern", path);
+                    html! {
+                      <span>{ ref_ }{ mut_ }{ identifier }{ "@" }{ pattern }</span>
+                    }
+                },
+            },
+        },
         Kind {
             name: "rust_comparison_operator",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_comparison_operator_==",
                     "rust_comparison_operator_!=",
@@ -385,11 +425,12 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/stable/reference/expressions.html
         Kind {
             name: "rust_expression",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_field_access",
                     "rust_function_call",
                     "rust_tuple_expression",
+                    "rust_struct_expr_struct",
                     "rust_if",
                     "rust_match",
                     "rust_operator",
@@ -404,14 +445,14 @@ pub const SCHEMA: Schema = Schema {
         // https://doc.rust-lang.org/stable/reference/statements.html
         Kind {
             name: "rust_statement",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &["rust_item", "rust_let", "rust_expression"],
             },
         },
         // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
         Kind {
             name: "rust_type",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_type_path",
                     "rust_tuple_type",
@@ -938,7 +979,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_bool_literal",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &["rust_bool_literal_false", "rust_bool_literal_true"],
             },
         },
@@ -1381,7 +1422,7 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "pattern",
-                        kind: &["rust_identifier"],
+                        kind: &["rust_pattern"],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
@@ -1429,7 +1470,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_generic_param",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &["rust_lifetime_param", "rust_type_param", "rust_const_param"],
             },
         },
@@ -1551,7 +1592,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_where_clause_item",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_lifetime_where_clause_item",
                     "rust_type_bound_where_clause_item",
@@ -1698,6 +1739,65 @@ pub const SCHEMA: Schema = Schema {
                     html! {
                         <span>
                         { "(" }{ for elements }{ ")" }
+                        </span>
+                    }
+                },
+            },
+        },
+        // https://doc.rust-lang.org/stable/reference/expressions/struct-expr.html
+        Kind {
+            name: "rust_struct_expr_struct",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "type",
+                        kind: &["rust_type"],
+                        multiplicity: Multiplicity::Repeated,
+                    },
+                    Field {
+                        name: "fields",
+                        kind: &["rust_struct_expr_field"],
+                        multiplicity: Multiplicity::Repeated,
+                    },
+                ],
+                inner: Some("elements"),
+                parser: |_v: &str| vec!["struct_expr_struct"],
+                validator: |node: &Node| vec![],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let identifier = model.view_child(node, "type", path);
+                    let (_fields_head, fields) = model.view_children(node, "fields", path);
+                    html! {
+                        <span>
+                        { identifier }{ "{" }{ for fields }{ "}" }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "rust_struct_expr_field",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "identifier",
+                        kind: &["rust_identifier"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                    Field {
+                        name: "value",
+                        kind: &["rust_expression"],
+                        multiplicity: Multiplicity::Single,
+                    },
+                ],
+                inner: Some("elements"),
+                parser: |_v: &str| vec!["struct_expr_field"],
+                validator: |node: &Node| vec![],
+                renderer: |model: &Model, node: &Node, path: &Path| {
+                    let identifier = model.view_child(node, "type", path);
+                    let value = model.view_child(node, "value", path);
+                    html! {
+                        <span>
+                        { identifier }{ ":" }{ value }
                         </span>
                     }
                 },
@@ -1862,7 +1962,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "rust_enum_item_inner",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "rust_enum_item_tuple",
                     "rust_enum_item_struct",
@@ -1972,7 +2072,7 @@ pub const SCHEMA: Schema = Schema {
         },
         Kind {
             name: "markdown_item",
-            value: KindValue::Enum {
+            value: KindValue::Union {
                 variants: &[
                     "markdown_paragraph",
                     "markdown_heading",
@@ -2232,7 +2332,7 @@ pub enum KindValue {
         validator: Validator,
         renderer: Renderer,
     },
-    Enum {
+    Union {
         variants: &'static [&'static str],
     },
     Literal {
@@ -2248,7 +2348,7 @@ impl Kind {
     pub fn get_fields(&self) -> Vec<Field> {
         match self.value {
             KindValue::Struct { fields, .. } => fields.iter().cloned().collect(),
-            KindValue::Enum { variants } => variants
+            KindValue::Union { variants } => variants
                 .iter()
                 .filter_map(|n| SCHEMA.get_kind(n))
                 .flat_map(|k| k.get_fields())
@@ -2260,7 +2360,7 @@ impl Kind {
     pub fn inner(&self) -> Option<&'static str> {
         match self.value {
             KindValue::Struct { inner, .. } => inner,
-            KindValue::Enum { .. } => {
+            KindValue::Union { .. } => {
                 // XXX
                 None
             }
@@ -2274,10 +2374,10 @@ impl Kind {
     pub fn render(&self, model: &Model, node: &Node, path: &[Selector]) -> Html {
         match self.value {
             KindValue::Struct { renderer, .. } => renderer(model, node, &path.to_vec()),
-            KindValue::Enum { .. } => {
+            KindValue::Union { .. } => {
                 // XXX
                 html! {
-                    <span>{"enum rendering error"}</span>
+                    <span>{"union rendering error"}</span>
                 }
             }
             KindValue::Literal { validator, .. } => {
@@ -2297,7 +2397,7 @@ impl Kind {
                     value: value.to_string(),
                 })
                 .collect(),
-            KindValue::Enum { variants } => variants
+            KindValue::Union { variants } => variants
                 .iter()
                 .filter_map(|n| SCHEMA.get_kind(n))
                 .flat_map(|k| k.parse())
