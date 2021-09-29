@@ -1093,7 +1093,7 @@ pub const SCHEMA: Schema = Schema {
                     }
                 },
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    textbox(model, node, path, &[], "", true)
+                    textbox(model, node, path, &[], "", &[])
                 },
             },
         },
@@ -1325,7 +1325,12 @@ pub const SCHEMA: Schema = Schema {
                 ],
                 inner: None,
                 parser: |_v: &str| vec!["fn"],
-                validator: |c: &ValidatorContext| vec![],
+                validator: |c: &ValidatorContext| {
+                    vec![ValidationError {
+                        path: vec![],
+                        message: "Function must have a body".to_string(),
+                    }]
+                },
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let comment = model.view_child(node, "comment", path);
 
@@ -2093,7 +2098,7 @@ pub const SCHEMA: Schema = Schema {
                 parser: |v: &str| vec![],
                 validator: |c: &ValidatorContext| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    textbox(model, node, path, &[], "", true)
+                    textbox(model, node, path, &[], "", &[])
                 },
             },
         },
@@ -2202,7 +2207,7 @@ pub fn textbox(
     path: &[Selector],
     suggestions: &[ParsedValue],
     placeholder: &str,
-    valid: bool,
+    errors: &[ValidationError],
 ) -> Html {
     let path_clone = path.to_vec();
     let node_clone = node.clone();
@@ -2270,7 +2275,7 @@ pub fn textbox(
         "".to_string()
     };
     let mut class = vec!["inline-block", "w-full"];
-    if !valid {
+    if !errors.is_empty() {
         class.push("error");
     }
     html! {
@@ -2381,7 +2386,14 @@ impl Kind {
 
     pub fn render(&self, model: &Model, node: &Node, path: &[Selector]) -> Html {
         match self.value {
-            KindValue::Struct { renderer, .. } => renderer(model, node, &path.to_vec()),
+            KindValue::Struct {
+                renderer,
+                validator,
+                ..
+            } => {
+                let errs = validator(&ValidatorContext { model, node, path });
+                renderer(model, node, &path.to_vec())
+            }
             KindValue::Union { .. } => {
                 // XXX
                 html! {
@@ -2389,8 +2401,8 @@ impl Kind {
                 }
             }
             KindValue::Literal { validator, .. } => {
-                let errs = validator(&ValidatorContext { model, node, path });
-                textbox(model, node, path, &[], "", errs.is_empty())
+                let errors = validator(&ValidatorContext { model, node, path });
+                textbox(model, node, path, &[], "", &errors)
             }
         }
     }

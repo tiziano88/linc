@@ -225,7 +225,7 @@ impl Model {
                         path,
                         &self.parsed_commands,
                         placeholder,
-                        true,
+                        &[],
                     ),
                 },
                 None => {
@@ -240,7 +240,7 @@ impl Model {
                 path,
                 &self.parsed_commands,
                 placeholder,
-                true,
+                &[],
             ),
         };
         // Use onmousedown to avoid re-selecting the node?
