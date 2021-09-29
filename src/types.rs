@@ -1,4 +1,4 @@
-use crate::schema::{ParsedValue, ValidationError, SCHEMA};
+use crate::schema::{ParsedValue, ValidationError, ValidatorContext, SCHEMA};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -241,7 +241,11 @@ impl Model {
 
         if let Some(kind) = SCHEMA.get_kind(kind) {
             if let crate::schema::KindValue::Struct { validator, .. } = kind.value {
-                let errors = validator(&node);
+                let errors = validator(&ValidatorContext {
+                    model: self,
+                    node: &node,
+                    path,
+                });
                 log::info!("errors: {:?} {:?}", path, errors);
             }
         }
