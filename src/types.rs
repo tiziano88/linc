@@ -525,10 +525,7 @@ impl Component for Model {
                     .parse_commands(&path)
                     .into_iter()
                     // TODO: Fuzzy match.
-                    .filter(|c| match c.value {
-                        Ok(ref cmd) => cmd.starts_with(&raw_command),
-                        Err(_) => false,
-                    })
+                    .filter(|c| c.label.starts_with(&raw_command))
                     .collect();
                 self.parsed_commands = parsed_commands;
                 self.selected_command_index = 0;
@@ -596,13 +593,12 @@ impl Component for Model {
                         if let Some(selected_command) =
                             self.parsed_commands.get(self.selected_command_index)
                         {
-                            if let Some(node) = selected_command.to_node() {
-                                self.link.send_message(Msg::ReplaceNode(
-                                    self.cursor.clone(),
-                                    node,
-                                    true,
-                                ));
-                            }
+                            let node = selected_command.to_node();
+                            self.link.send_message(Msg::ReplaceNode(
+                                self.cursor.clone(),
+                                node,
+                                true,
+                            ));
                         }
                     }
                     // "Enter" if self.mode == Mode::Edit =>
