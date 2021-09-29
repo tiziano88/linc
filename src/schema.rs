@@ -1016,7 +1016,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[
                     Field {
-                        name: "object",
+                        name: "container",
                         kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
                     },
@@ -1030,11 +1030,11 @@ pub const SCHEMA: Schema = Schema {
                 parser: |_v: &str| vec!["field_access"],
                 validator: |_node: &Node| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
-                    let object = model.view_child(node, "object", &path);
+                    let container = model.view_child(node, "container", &path);
                     let field = model.view_child(node, "field", &path);
                     html! {
                         <span>
-                        { object }
+                        { container }
                         { "." }
                         { field }
                         </span>
@@ -2387,7 +2387,7 @@ impl Kind {
         }
     }
 
-    pub fn parse(&self) -> Vec<ParsedValue> {
+    pub fn constructors(&self) -> Vec<ParsedValue> {
         match self.value {
             KindValue::Struct { parser, .. } => parser("")
                 .into_iter()
@@ -2400,7 +2400,7 @@ impl Kind {
             KindValue::Union { variants } => variants
                 .iter()
                 .filter_map(|n| SCHEMA.get_kind(n))
-                .flat_map(|k| k.parse())
+                .flat_map(|k| k.constructors())
                 .map(|v| {
                     let mut kind_hierarchy = v.kind_hierarchy;
                     kind_hierarchy.insert(0, self.name.to_string());

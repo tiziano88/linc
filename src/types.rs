@@ -106,7 +106,7 @@ impl Model {
                     .kind
                     .iter()
                     .filter_map(|kind| SCHEMA.get_kind(kind))
-                    .flat_map(|kind| kind.parse().into_iter())
+                    .flat_map(|kind| kind.constructors().into_iter())
                     .collect::<Vec<_>>()
                 // TODO: Ranking.
             })
