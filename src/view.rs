@@ -1,7 +1,7 @@
 use yew::prelude::*;
 
 use crate::{
-    schema::{Field, Multiplicity, SCHEMA},
+    schema::{Field, Multiplicity, ValidationError, SCHEMA},
     types::*,
 };
 
@@ -215,39 +215,56 @@ impl Model {
             crate::types::Msg::SetNodeCommand(path_clone.clone(), e.value.clone())
         });
 
-        let value = match hash {
+        let (value, errors) = match hash {
             Some(hash) => match self.file.lookup(path) {
                 Some(node) => match SCHEMA.get_kind(&node.kind) {
-                    Some(kind) => kind.render(self, node, path),
-                    None => crate::schema::textbox(
-                        self,
-                        node,
-                        path,
-                        &self.parsed_commands,
-                        placeholder,
-                        &[],
+                    Some(kind) => (
+                        kind.render(self, node, path),
+                        kind.validator(self, node, path),
+                    ),
+                    None => (
+                        crate::schema::textbox(
+                            self,
+                            node,
+                            path,
+                            &self.parsed_commands,
+                            placeholder,
+                            &[],
+                        ),
+                        vec![],
                     ),
                 },
-                None => {
+                None => (
                     html! {
                         <span>{ format!("invalid hash: {:?}", hash) }</span>
-                    }
-                }
+                    },
+                    vec![],
+                ),
             },
-            None => crate::schema::textbox(
-                self,
-                &Node::default(),
-                path,
-                &self.parsed_commands,
-                placeholder,
-                &[],
+            None => (
+                crate::schema::textbox(
+                    self,
+                    &Node::default(),
+                    path,
+                    &self.parsed_commands,
+                    placeholder,
+                    &[],
+                ),
+                vec![],
             ),
         };
         // Use onmousedown to avoid re-selecting the node?
         html! {
             <div class=classes.join(" ") onclick=onclick onmouseover=onmouseover>
                 { value }
+                { for errors.iter().map(|e| self.view_error(e)) }
             </div>
+        }
+    }
+
+    pub fn view_error(&self, error: &ValidationError) -> Html {
+        html! {
+            <div class="error">{ format!("error: {:?}", error.message) }</div>
         }
     }
 

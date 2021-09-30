@@ -1217,8 +1217,8 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[],
                 inner: None,
                 parser: |_v: &str| vec!["!="],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |_model: &Model, _node: &Node, _path: &Path| {
                     html! {
                         <span class="keyword">{ "!=" }</span>
                     }
@@ -1252,7 +1252,7 @@ pub const SCHEMA: Schema = Schema {
                         "==", "+", "+=", "-", "-=", "<<", ">>", "<", ">", "&&", "||", "&", "|", "^",
                     ]
                 },
-                validator: |c: &ValidatorContext| vec![],
+                validator: |_c: &ValidatorContext| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let operator = model.view_child(node, "operator", &path);
                     let left = model.view_child(node, "left", &path);
@@ -1325,12 +1325,7 @@ pub const SCHEMA: Schema = Schema {
                 ],
                 inner: None,
                 parser: |_v: &str| vec!["fn"],
-                validator: |c: &ValidatorContext| {
-                    vec![ValidationError {
-                        path: vec![],
-                        message: "Function must have a body".to_string(),
-                    }]
-                },
+                validator: |c: &ValidatorContext| vec![],
                 renderer: |model: &Model, node: &Node, path: &Path| {
                     let comment = model.view_child(node, "comment", path);
 
@@ -2179,7 +2174,7 @@ pub struct ValidatorContext<'a> {
 pub struct ValidationError {
     // TODO: Path vs Ref?????
     path: Path,
-    message: String,
+    pub message: String,
 }
 
 // Generators either have logic to generate suggestions, or can delegate to other kinds.
@@ -2403,6 +2398,20 @@ impl Kind {
             KindValue::Literal { validator, .. } => {
                 let errors = validator(&ValidatorContext { model, node, path });
                 textbox(model, node, path, &[], "", &errors)
+            }
+        }
+    }
+
+    pub fn validator(&self, model: &Model, node: &Node, path: &[Selector]) -> Vec<ValidationError> {
+        match self.value {
+            KindValue::Struct { validator, .. } => {
+                validator(&ValidatorContext { model, node, path })
+            }
+            KindValue::Union { .. } => {
+                vec![]
+            }
+            KindValue::Literal { validator, .. } => {
+                validator(&ValidatorContext { model, node, path })
             }
         }
     }

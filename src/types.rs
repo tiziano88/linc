@@ -1,10 +1,7 @@
 use crate::schema::{ParsedValue, ValidationError, ValidatorContext, SCHEMA};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{
-    collections::{HashMap, VecDeque},
-    convert::TryInto,
-};
+use std::{collections::HashMap, convert::TryInto};
 use wasm_bindgen::JsCast;
 use yew::{
     html,
