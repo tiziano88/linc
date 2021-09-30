@@ -1,7 +1,7 @@
 use yew::prelude::*;
 
 use crate::{
-    schema::{Field, Multiplicity, ValidationError, SCHEMA},
+    schema::{Field, Multiplicity, ValidationError, ValidatorContext, SCHEMA},
     types::*,
 };
 
@@ -217,23 +217,28 @@ impl Model {
 
         let (value, errors) = match hash {
             Some(hash) => match self.file.lookup(path) {
-                Some(node) => match SCHEMA.get_kind(&node.kind) {
-                    Some(kind) => (
-                        kind.render(self, node, path),
-                        kind.validator(self, node, path),
-                    ),
-                    None => (
-                        crate::schema::textbox(
-                            self,
-                            node,
-                            path,
-                            &self.parsed_commands,
-                            placeholder,
-                            &[],
+                Some(node) => {
+                    let context = ValidatorContext {
+                        model: self,
+                        path,
+                        node,
+                    };
+
+                    match SCHEMA.get_kind(&node.kind) {
+                        Some(kind) => (kind.render(&context), kind.validator(&context)),
+                        None => (
+                            crate::schema::textbox(
+                                self,
+                                node,
+                                path,
+                                &self.parsed_commands,
+                                placeholder,
+                                &[],
+                            ),
+                            vec![],
                         ),
-                        vec![],
-                    ),
-                },
+                    }
+                }
                 None => (
                     html! {
                         <span>{ format!("invalid hash: {:?}", hash) }</span>
@@ -268,7 +273,7 @@ impl Model {
         }
     }
 
-    pub fn view_child(&self, node: &Node, field_name: &str, path: &Path) -> Html {
+    pub fn view_child(&self, node: &Node, field_name: &str, path: &[Selector]) -> Html {
         self.view_child_with_placeholder(node, field_name, path, field_name)
     }
 
@@ -276,7 +281,7 @@ impl Model {
         &self,
         parent: &Node,
         field_name: &str,
-        path: &Path,
+        path: &[Selector],
         placeholder: &str,
     ) -> Html {
         let path = append(
@@ -297,7 +302,12 @@ impl Model {
     }
 
     /// Returns the head and children, separately.
-    pub fn view_children(&self, parent: &Node, field_name: &str, path: &Path) -> (Html, Vec<Html>) {
+    pub fn view_children(
+        &self,
+        parent: &Node,
+        field_name: &str,
+        path: &[Selector],
+    ) -> (Html, Vec<Html>) {
         // let path = append(&path, field(field_name));
         // let cursor = sub_cursor(&cursor, field(field_name));
         let empty = vec![];

@@ -156,8 +156,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["rust_fragment"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (items_head, items) = model.view_children(node, "items", path);
+                renderer: |c: &ValidatorContext| {
+                    let (items_head, items) = c.view_children("items");
                     let items = items.into_iter().map(|b| {
                         html! {
                             <div>{ b }</div>
@@ -198,9 +198,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["vis_item"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let visibility = model.view_child(node, "visibility", path);
-                    let inner = model.view_child(node, "item", path);
+                renderer: |c: &ValidatorContext| {
+                    let visibility = c.view_child("visibility");
+                    let inner = c.view_child("item");
                     html! {
                         <div>{ visibility }{ inner }</div>
                     }
@@ -279,11 +279,11 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["impl_trait"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let trait_ = model.view_child(node, "trait", path);
-                    let type_ = model.view_child(node, "type", path);
+                renderer: |c: &ValidatorContext| {
+                    let trait_ = c.model.view_child(c.node, "trait", c.path);
+                    let type_ = c.model.view_child(c.node, "type", c.path);
 
-                    let (items_head, items) = model.view_children(node, "items", path);
+                    let (items_head, items) = c.model.view_children(c.node, "items", c.path);
                     let items = items.into_iter().map(|b| {
                         html! {
                             <div>{ b }</div>
@@ -362,7 +362,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["wildcard"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                       <span>{ "_" }</span>
                     }
@@ -398,11 +398,11 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["identifier"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let ref_ = model.view_child(node, "ref", path);
-                    let mut_ = model.view_child(node, "mut", path);
-                    let identifier = model.view_child(node, "identifier", path);
-                    let pattern = model.view_child(node, "pattern", path);
+                renderer: |c: &ValidatorContext| {
+                    let ref_ = c.model.view_child(c.node, "ref", c.path);
+                    let mut_ = c.model.view_child(c.node, "mut", c.path);
+                    let identifier = c.model.view_child(c.node, "identifier", c.path);
+                    let pattern = c.model.view_child(c.node, "pattern", c.path);
                     html! {
                       <span>{ ref_ }{ mut_ }{ identifier }{ "@" }{ pattern }</span>
                     }
@@ -477,9 +477,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("components"),
                 constructors: &["tuple"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                renderer: |c: &ValidatorContext| {
                     let (components_head, components) =
-                        model.view_children(node, "components", path);
+                        c.model.view_children(c.node, "components", c.path);
                     let components = components
                         .into_iter()
                         .intersperse(html! { <span>{ "," }</span>});
@@ -503,9 +503,9 @@ pub const SCHEMA: Schema = Schema {
                     "i64", "i128", "f32", "f64", "usize", "isize",
                 ],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, node: &Node, _path: &Path| {
+                renderer: |c: &ValidatorContext| {
                     html! {
-                        <span class="type">{ node.value.clone() }</span>
+                        <span class="type">{ c.node.value.clone() }</span>
                     }
                 },
             },
@@ -517,7 +517,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["super"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "super" }</span>
                     }
@@ -531,7 +531,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["self"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "self" }</span>
                     }
@@ -545,7 +545,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["Self"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "Self" }</span>
                     }
@@ -559,7 +559,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["crate"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "crate" }</span>
                     }
@@ -573,7 +573,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["$crate"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "$crate" }</span>
                     }
@@ -587,7 +587,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["pub"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "pub" }</span>
                     }
@@ -601,7 +601,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["pub_crate"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "pub(crate)" }</span>
                     }
@@ -615,7 +615,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["pub_self"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "pub(self)" }</span>
                     }
@@ -633,8 +633,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["pub_in"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let path = model.view_child(node, "path", &path);
+                renderer: |c: &ValidatorContext| {
+                    let path = c.model.view_child(c.node, "path", c.path);
                     html! {
                         <span>
                             <span class="keyword">{ "pub" }</span>
@@ -658,8 +658,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("segments"),
                 constructors: &["type_path"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (segments_head, segments) = model.view_children(node, "segments", path);
+                renderer: |c: &ValidatorContext| {
+                    let (segments_head, segments) =
+                        c.model.view_children(c.node, "segments", c.path);
                     let segments = segments
                         .into_iter()
                         .intersperse(html! { <span>{ "::" }</span>});
@@ -695,10 +696,10 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("type"),
                 constructors: &["reference"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let lifetime = model.view_child(node, "lifetime", path);
-                    let mutable = model.view_child(node, "mutable", path);
-                    let type_ = model.view_child(node, "type", path);
+                renderer: |c: &ValidatorContext| {
+                    let lifetime = c.model.view_child(c.node, "lifetime", c.path);
+                    let mutable = c.model.view_child(c.node, "mutable", c.path);
+                    let type_ = c.model.view_child(c.node, "type", c.path);
                     html! {
                         <span>
                         { "&" }{ lifetime }{ mutable }{ type_ }
@@ -730,10 +731,10 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("statements"),
                 constructors: &["const"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let identifier = model.view_child(node, "identifier", path);
-                    let type_ = model.view_child(node, "type", path);
-                    let expression = model.view_child(node, "expression", path);
+                renderer: |c: &ValidatorContext| {
+                    let identifier = c.model.view_child(c.node, "identifier", c.path);
+                    let type_ = c.model.view_child(c.node, "type", c.path);
+                    let expression = c.model.view_child(c.node, "expression", c.path);
                     html! {
                         <span>
                             <span class="keyword">{ "const" }</span>
@@ -766,15 +767,15 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("statements"),
                 constructors: &["block"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                renderer: |c: &ValidatorContext| {
                     let (_statements_head, statements) =
-                        model.view_children(node, "statements", path);
+                        c.model.view_children(c.node, "statements", c.path);
                     let statements = statements.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ ";" }</div>
                         }
                     });
-                    let expression = model.view_child(node, "expression", path);
+                    let expression = c.model.view_child(c.node, "expression", c.path);
 
                     html! {
                         <span>
@@ -805,10 +806,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("match_arms"),
                 constructors: &["match"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let expression = model.view_child(node, "expression", path);
-                    let (match_arms_head, match_arms) =
-                        model.view_children(node, "match_arms", path);
+                renderer: |c: &ValidatorContext| {
+                    let expression = c.view_child("expression");
+                    let (match_arms_head, match_arms) = c.view_children("match_arms");
                     let match_arms = match_arms.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ "," }</div>
@@ -852,14 +852,14 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("match_arms"),
                 constructors: &["match_arm"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (patterns_head, patterns) = model.view_children(node, "patterns", path);
+                renderer: |c: &ValidatorContext| {
+                    let (patterns_head, patterns) = c.view_children("patterns");
                     let patterns = patterns.into_iter().intersperse(html! {
                             <span>{ "|" }</span>
 
                     });
-                    let guard = model.view_child(node, "guard", path);
-                    let expression = model.view_child(node, "expression", path);
+                    let guard = c.view_child("guard");
+                    let expression = c.view_child("expression");
                     html! {
                         <span>
                             <span>{ for patterns }{ patterns_head }</span>
@@ -894,10 +894,10 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("true_body"),
                 constructors: &["if"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let condition = model.view_child(node, "condition", path);
-                    let true_body = model.view_child(node, "true_body", path);
-                    let false_body = model.view_child(node, "false_body", path);
+                renderer: |c: &ValidatorContext| {
+                    let condition = c.view_child("condition");
+                    let true_body = c.view_child("true_body");
+                    let false_body = c.view_child("false_body");
                     html! {
                         <span>
                             <div>
@@ -931,9 +931,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["number"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                renderer: |c: &ValidatorContext| {
                     // let inner = textbox(model, node, path, &[], "", true);
-                    let value = model.view_child(node, "value", path);
+                    let value = c.view_child("value");
                     html! {
                         <span>
                         { "\"" }{ value }{ "\"" }
@@ -964,9 +964,9 @@ pub const SCHEMA: Schema = Schema {
                         }]
                     }
                 },
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                renderer: |c: &ValidatorContext| {
                     // let inner = textbox(model, node, path, &[], "", true);
-                    let value = model.view_child(node, "value", path);
+                    let value = c.view_child("value");
                     html! {
                         <span>
                         { "#" }
@@ -989,7 +989,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["false"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="literal">{ "false" }</span>
                     }
@@ -1003,7 +1003,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["true"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="literal">{ "true" }</span>
                     }
@@ -1028,9 +1028,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("object"),
                 constructors: &["field_access"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let container = model.view_child(node, "container", &path);
-                    let field = model.view_child(node, "field", &path);
+                renderer: |c: &ValidatorContext| {
+                    let container = c.view_child("container");
+                    let field = c.view_child("field");
                     html! {
                         <span>
                         { container }
@@ -1052,8 +1052,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("segments"),
                 constructors: &["::"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (segments_head, segments) = model.view_children(node, "segments", &path);
+                renderer: |c: &ValidatorContext| {
+                    let (segments_head, segments) = c.view_children("segments");
                     let segments = segments.into_iter().intersperse(html! {{ "::" }});
                     html! {
                         <span>{ for segments }{ segments_head }</span>
@@ -1090,9 +1090,7 @@ pub const SCHEMA: Schema = Schema {
                         vec![]
                     }
                 },
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    textbox(model, node, path, &[], "", &[])
-                },
+                renderer: |c: &ValidatorContext| textbox(c.model, c.node, c.path, &[], "", &[]),
             },
         },
         Kind {
@@ -1102,7 +1100,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["crate"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "crate" }</span>
                     }
@@ -1116,7 +1114,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["static"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span>{ "'static" }</span>
                     }
@@ -1130,7 +1128,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["_"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                renderer: |c: &ValidatorContext| {
                     html! {
                         <span>{ "'_" }</span>
                     }
@@ -1149,8 +1147,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["'"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let identifier = model.view_child(node, "identifier", &path);
+                renderer: |c: &ValidatorContext| {
+                    let identifier = c.view_child("identifier");
                     html! {
                         <span>{ "'" }{ identifier }</span>
                     }
@@ -1181,10 +1179,10 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("left"),
                 constructors: &["==", "!=", ">", "<", ">=", "<="],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let operator = model.view_child(node, "operator", &path);
-                    let left = model.view_child(node, "left", &path);
-                    let right = model.view_child(node, "right", &path);
+                renderer: |c: &ValidatorContext| {
+                    let operator = c.view_child("operator");
+                    let left = c.view_child("left");
+                    let right = c.view_child("right");
                     html! {
                         <span>
                         { left }
@@ -1202,7 +1200,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["=="],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "==" }</span>
                     }
@@ -1216,7 +1214,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["!="],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |_model: &Model, _node: &Node, _path: &Path| {
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span class="keyword">{ "!=" }</span>
                     }
@@ -1249,10 +1247,10 @@ pub const SCHEMA: Schema = Schema {
                     "==", "+", "+=", "-", "-=", "<<", ">>", "<", ">", "&&", "||", "&", "|", "^",
                 ],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let operator = model.view_child(node, "operator", &path);
-                    let left = model.view_child(node, "left", &path);
-                    let right = model.view_child(node, "right", &path);
+                renderer: |c: &ValidatorContext| {
+                    let operator = c.view_child("operator");
+                    let left = c.view_child("left");
+                    let right = c.view_child("right");
                     html! {
                         <span>
                         { left }
@@ -1322,21 +1320,20 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["fn"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let comment = model.view_child(node, "comment", path);
+                renderer: |c: &ValidatorContext| {
+                    let comment = c.view_child("comment");
 
-                    let const_ = model.view_child(node, "const", path);
-                    let async_ = model.view_child(node, "async", path);
-                    let unsafe_ = model.view_child(node, "unsafe", path);
-                    let extern_ = model.view_child(node, "extern", path);
+                    let const_ = c.view_child("const");
+                    let async_ = c.view_child("async");
+                    let unsafe_ = c.view_child("unsafe");
+                    let extern_ = c.view_child("extern");
 
-                    let identifier = model.view_child(node, "identifier", path);
-                    let generic = model.view_child(node, "generic", path);
-                    let (_parameters_head, parameters) =
-                        model.view_children(node, "parameters", path);
+                    let identifier = c.view_child("identifier");
+                    let generic = c.view_child("generic");
+                    let (_parameters_head, parameters) = c.view_children("parameters");
                     let parameters = parameters.into_iter().intersperse(html! {{ "," }});
-                    let body = model.view_child(node, "body", path);
-                    let return_type = model.view_child(node, "return_type", path);
+                    let body = c.view_child("body");
+                    let return_type = c.view_child("return_type");
 
                     html! {
                         <span>
@@ -1359,8 +1356,8 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[],
                 inner: None,
                 constructors: &["const"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span>{ "const" }</span>
                     }
@@ -1373,8 +1370,8 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[],
                 inner: None,
                 constructors: &["async"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span>{ "async" }</span>
                     }
@@ -1387,8 +1384,8 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[],
                 inner: None,
                 constructors: &["unsafe"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |_c: &ValidatorContext| {
                     html! {
                         <span>{ "unsafe" }</span>
                     }
@@ -1405,9 +1402,9 @@ pub const SCHEMA: Schema = Schema {
                 }],
                 inner: None,
                 constructors: &["extern"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let abi = model.view_child(node, "abi", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let abi = c.view_child("abi");
                     html! {
                         <span>{ "extern" }{ abi }</span>
                     }
@@ -1431,10 +1428,10 @@ pub const SCHEMA: Schema = Schema {
                 ],
                 inner: None,
                 constructors: &["param"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let pattern = model.view_child(node, "pattern", path);
-                    let type_ = model.view_child(node, "type", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let pattern = c.view_child("pattern");
+                    let type_ = c.view_child("type");
                     html! {
                         <span>
                         { pattern }{ ":" }{ type_ }
@@ -1453,10 +1450,9 @@ pub const SCHEMA: Schema = Schema {
                 }],
                 inner: None,
                 constructors: &["generic"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (_parameters_head, parameters) =
-                        model.view_children(node, "parameters", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let (_parameters_head, parameters) = c.view_children("parameters");
                     let parameters = parameters.into_iter().intersperse(html! {{ "," }});
                     html! {
                         <span>
@@ -1489,10 +1485,10 @@ pub const SCHEMA: Schema = Schema {
                 ],
                 inner: None,
                 constructors: &["'"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let lifetime = model.view_child(node, "lifetime", path);
-                    let bounds = model.view_child(node, "bounds", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let lifetime = c.view_child("lifetime");
+                    let bounds = c.view_child("bounds");
                     html! {
                         <span>
                         { lifetime }{ ":" }{ bounds }
@@ -1523,11 +1519,11 @@ pub const SCHEMA: Schema = Schema {
                 ],
                 inner: None,
                 constructors: &["type"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let identifier = model.view_child(node, "identifier", path);
-                    let bounds = model.view_child(node, "bounds", path);
-                    let type_ = model.view_child(node, "type", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let identifier = c.view_child("identifier");
+                    let bounds = c.view_child("bounds");
+                    let type_ = c.view_child("type");
                     html! {
                         <span>
                         { identifier }{ ":" }{ bounds }{ "=" }{ type_ }
@@ -1553,10 +1549,10 @@ pub const SCHEMA: Schema = Schema {
                 ],
                 inner: None,
                 constructors: &["const"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let identifier = model.view_child(node, "identifier", path);
-                    let type_ = model.view_child(node, "type", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let identifier = c.view_child("identifier");
+                    let type_ = c.view_child("type");
                     html! {
                         <span>
                         { "const" }{ identifier }{ ":" }{ type_ }
@@ -1576,9 +1572,9 @@ pub const SCHEMA: Schema = Schema {
                 }],
                 inner: None,
                 constructors: &["where"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (_items_head, items) = model.view_children(node, "items", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let (_items_head, items) = c.view_children("items");
                     let items = items.into_iter().intersperse(html! {{ "," }});
                     html! {
                         <span>
@@ -1614,10 +1610,10 @@ pub const SCHEMA: Schema = Schema {
                 ],
                 inner: None,
                 constructors: &["'"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let lifetime = model.view_child(node, "lifetime", path);
-                    let bounds = model.view_child(node, "bounds", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let lifetime = c.view_child("lifetime");
+                    let bounds = c.view_child("bounds");
                     html! {
                         <span>
                         { lifetime }{ ":" }{ bounds }
@@ -1643,10 +1639,10 @@ pub const SCHEMA: Schema = Schema {
                 ],
                 inner: None,
                 constructors: &["where"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let type_ = model.view_child(node, "type", path);
-                    let bounds = model.view_child(node, "bounds", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let type_ = c.view_child("type");
+                    let bounds = c.view_child("bounds");
                     html! {
                         <span>
                         { type_ }{ ":" }{ bounds }
@@ -1678,11 +1674,11 @@ pub const SCHEMA: Schema = Schema {
                 ],
                 inner: Some("value"),
                 constructors: &["let"],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let pattern = model.view_child(node, "pattern", path);
-                    let type_ = model.view_child(node, "type", path);
-                    let value = model.view_child(node, "value", path);
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let pattern = c.view_child("pattern");
+                    let type_ = c.view_child("type");
+                    let value = c.view_child("value");
                     html! {
                         <span>{ "let" }{ pattern }{ ":" }{ type_ }{ "=" }{ value }</span>
                     }
@@ -1707,9 +1703,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("expression"),
                 constructors: &["function_call"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let expression = model.view_child(node, "expression", path);
-                    let (_args_head, args) = model.view_children(node, "arguments", path);
+                renderer: |c: &ValidatorContext| {
+                    let expression = c.view_child("expression");
+                    let (_args_head, args) = c.view_children("arguments");
                     let args = args.into_iter().intersperse(html! {{ "," }});
                     html! {
                         <span>
@@ -1731,8 +1727,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("elements"),
                 constructors: &["tuple"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (_elements_head, elements) = model.view_children(node, "elements", path);
+                renderer: |c: &ValidatorContext| {
+                    let (_elements_head, elements) = c.view_children("elements");
                     let elements = elements.into_iter().intersperse(html! {{ "," }});
                     html! {
                         <span>
@@ -1761,9 +1757,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("elements"),
                 constructors: &["struct_expr_struct"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let identifier = model.view_child(node, "type", path);
-                    let (_fields_head, fields) = model.view_children(node, "fields", path);
+                renderer: |c: &ValidatorContext| {
+                    let identifier = c.view_child("type");
+                    let (_fields_head, fields) = c.view_children("fields");
                     html! {
                         <span>
                         { identifier }{ "{" }{ for fields }{ "}" }
@@ -1790,9 +1786,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("elements"),
                 constructors: &["struct_expr_field"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let identifier = model.view_child(node, "type", path);
-                    let value = model.view_child(node, "value", path);
+                renderer: |c: &ValidatorContext| {
+                    let identifier = c.view_child("type");
+                    let value = c.view_child("value");
                     html! {
                         <span>
                         { identifier }{ ":" }{ value }
@@ -1819,9 +1815,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["struct"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let identifier = model.view_child(node, "identifier", path);
-                    let (_fields_head, fields) = model.view_children(node, "fields", path);
+                renderer: |c: &ValidatorContext| {
+                    let identifier = c.view_child("identifier");
+                    let (_fields_head, fields) = c.view_children("fields");
                     let fields = fields.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ "," }</div>
@@ -1860,10 +1856,10 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["struct_field"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let visibility = model.view_child(node, "visibility", path);
-                    let identifier = model.view_child(node, "identifier", path);
-                    let type_ = model.view_child(node, "type", path);
+                renderer: |c: &ValidatorContext| {
+                    let visibility = c.view_child("visibility");
+                    let identifier = c.view_child("identifier");
+                    let type_ = c.view_child("type");
                     html! {
                         <span>
                         { visibility }{ identifier }{ ":" }{ type_ }
@@ -1901,12 +1897,12 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["enum"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let identifier = model.view_child(node, "identifier", path);
-                    let generic = model.view_child(node, "generic", path);
-                    let where_ = model.view_child(node, "where", path);
+                renderer: |c: &ValidatorContext| {
+                    let identifier = c.view_child("identifier");
+                    let generic = c.view_child("generic");
+                    let where_ = c.view_child("where");
 
-                    let (_items_head, items) = model.view_children(node, "items", path);
+                    let (_items_head, items) = c.view_children("items");
                     let items = items.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ "," }</div>
@@ -1945,10 +1941,10 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["enum_variant"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let visibility = model.view_child(node, "visibility", path);
-                    let identifier = model.view_child(node, "identifier", path);
-                    let inner = model.view_child(node, "inner", path);
+                renderer: |c: &ValidatorContext| {
+                    let visibility = c.view_child("visibility");
+                    let identifier = c.view_child("identifier");
+                    let inner = c.view_child("inner");
 
                     html! {
                         <span>
@@ -1979,8 +1975,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["tuple"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (_fields_head, fields) = model.view_children(node, "fields", path);
+                renderer: |c: &ValidatorContext| {
+                    let (_fields_head, fields) = c.view_children("fields");
                     let fields = fields
                         .into_iter()
                         .intersperse(html! { <span>{ "," }</span>});
@@ -2004,8 +2000,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["struct"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (_fields_head, fields) = model.view_children(node, "fields", path);
+                renderer: |c: &ValidatorContext| {
+                    let (_fields_head, fields) = c.view_children("fields");
                     let fields = fields.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ "," }</div>
@@ -2031,8 +2027,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["discriminant"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let value = model.view_child(node, "value", path);
+                renderer: |c: &ValidatorContext| {
+                    let value = c.view_child("value");
                     html! {
                         <span>
                         { "=" }{ value }
@@ -2052,8 +2048,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("items"),
                 constructors: &["markdown_fragment"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (_items_head, items) = model.view_children(node, "items", path);
+                renderer: |c: &ValidatorContext| {
+                    let (_items_head, items) = c.view_children("items");
                     let items = items.into_iter().map(|v| {
                         html! {
                             <div>{ v }</div>
@@ -2088,9 +2084,7 @@ pub const SCHEMA: Schema = Schema {
                 // TODO: Parser.
                 constructors: &[],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    textbox(model, node, path, &[], "", &[])
-                },
+                renderer: |c: &ValidatorContext| textbox(c.model, c.node, c.path, &[], "", &[]),
             },
         },
         Kind {
@@ -2113,9 +2107,9 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("text"),
                 constructors: &["heading"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let level = model.view_child(node, "level", path);
-                    let text = model.view_child(node, "text", path);
+                renderer: |c: &ValidatorContext| {
+                    let level = c.view_child("level");
+                    let text = c.view_child("text");
                     html! {
                         <span>
                         { "#" }{ level}{ text }
@@ -2135,8 +2129,8 @@ pub const SCHEMA: Schema = Schema {
                 inner: Some("items"),
                 constructors: &["list"],
                 validator: |c: &ValidatorContext| vec![],
-                renderer: |model: &Model, node: &Node, path: &Path| {
-                    let (_items_head, items) = model.view_children(node, "items", path);
+                renderer: |c: &ValidatorContext| {
+                    let (_items_head, items) = c.view_children("items");
                     let items = items.into_iter().map(|v| {
                         html! {
                             <li>{ v }</li>
@@ -2156,13 +2150,23 @@ pub const SCHEMA: Schema = Schema {
 };
 
 // Generate valid values.
-type Renderer = fn(&Model, &Node, &Path) -> Html;
+type Renderer = fn(&ValidatorContext) -> Html;
 type Validator = fn(&ValidatorContext) -> Vec<ValidationError>;
 
 pub struct ValidatorContext<'a> {
     pub model: &'a Model,
     pub node: &'a Node,
     pub path: &'a [Selector],
+}
+
+impl<'a> ValidatorContext<'a> {
+    pub fn view_child(&self, field_name: &str) -> Html {
+        self.model.view_child(self.node, field_name, self.path)
+    }
+    pub fn view_children(&self, field_name: &str) -> (Html, Vec<Html>) {
+        self.model.view_children(self.node, field_name, self.path)
+    }
+    // TODO: field / child.
 }
 
 #[derive(Debug)]
@@ -2360,16 +2364,13 @@ impl Kind {
         }
     }
 
-    pub fn render(&self, model: &Model, node: &Node, path: &[Selector]) -> Html {
+    pub fn render(&self, context: &ValidatorContext) -> Html {
         match self.value {
             KindValue::Struct {
                 renderer,
                 validator,
                 ..
-            } => {
-                let errs = validator(&ValidatorContext { model, node, path });
-                renderer(model, node, &path.to_vec())
-            }
+            } => renderer(context),
             KindValue::Union { .. } => {
                 // XXX
                 html! {
@@ -2377,23 +2378,19 @@ impl Kind {
                 }
             }
             KindValue::Literal { validator, .. } => {
-                let errors = validator(&ValidatorContext { model, node, path });
-                textbox(model, node, path, &[], "", &errors)
+                let errors = validator(context);
+                textbox(context.model, context.node, context.path, &[], "", &errors)
             }
         }
     }
 
-    pub fn validator(&self, model: &Model, node: &Node, path: &[Selector]) -> Vec<ValidationError> {
+    pub fn validator(&self, context: &ValidatorContext) -> Vec<ValidationError> {
         match self.value {
-            KindValue::Struct { validator, .. } => {
-                validator(&ValidatorContext { model, node, path })
-            }
+            KindValue::Struct { validator, .. } => validator(context),
             KindValue::Union { .. } => {
                 vec![]
             }
-            KindValue::Literal { validator, .. } => {
-                validator(&ValidatorContext { model, node, path })
-            }
+            KindValue::Literal { validator, .. } => validator(context),
         }
     }
 
