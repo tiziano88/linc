@@ -2360,20 +2360,6 @@ impl Kind {
         }
     }
 
-    pub fn inner(&self) -> Option<&'static str> {
-        match self.value {
-            KindValue::Struct { inner, .. } => inner,
-            KindValue::Union { .. } => {
-                // XXX
-                None
-            }
-            KindValue::Literal { .. } => {
-                // XXX
-                None
-            }
-        }
-    }
-
     pub fn render(&self, model: &Model, node: &Node, path: &[Selector]) -> Html {
         match self.value {
             KindValue::Struct {
