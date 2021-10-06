@@ -2267,6 +2267,10 @@ pub fn textbox(
             .map(|(i, v)| {
                 let path_clone = path.to_vec();
                 let value_string = v.label.clone();
+
+                let value_prefix = &node.value;
+                let value_suffix = value_string.strip_prefix(value_prefix).unwrap_or_default();
+
                 let node = v.to_node();
                 let onclick = model.link.callback(move |e: MouseEvent| {
                     Msg::ReplaceNode(path_clone.clone(), node.clone(), true)
@@ -2277,7 +2281,10 @@ pub fn textbox(
                 }
                 // Avoid re-selecting the node, we want to move to next.
                 html! {
-                    <span class=classes_item.join(" ") onmousedown=onclick>{value_string}</span>
+                    <span class=classes_item.join(" ") onmousedown=onclick>
+                      <span class="font-bold">{ value_prefix }</span>
+                      { value_suffix }
+                    </span>
                 }
             })
             .collect()
