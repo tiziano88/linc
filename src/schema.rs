@@ -111,47 +111,112 @@ impl K for RustVisibility {
 }
 */
 
+// https://doc.rust-lang.org/stable/reference/types.html#type-expressions
+const RUST_TYPE: &[FieldValidator] = &[
+    FieldValidator::Kind("rust_type_path"),
+    FieldValidator::Kind("rust_tuple_type"),
+    FieldValidator::Kind("rust_never_type"),
+    FieldValidator::Kind("rust_raw_pointer_type"),
+    FieldValidator::Kind("rust_reference_type"),
+    FieldValidator::Kind("rust_array_type"),
+    FieldValidator::Kind("rust_slice_type"),
+    FieldValidator::Kind("rust_primitive_type"),
+    FieldValidator::Kind("rust_inferred_type"),
+];
+
+// https://doc.rust-lang.org/stable/reference/patterns.html
+const RUST_PATTERN: &[FieldValidator] = &[
+    FieldValidator::Kind("rust_literal_pattern"),
+    FieldValidator::Kind("rust_wildcard_pattern"),
+    FieldValidator::Kind("rust_rest_pattern"),
+    FieldValidator::Kind("rust_reference_pattern"),
+    FieldValidator::Kind("rust_struct_pattern"),
+    FieldValidator::Kind("rust_tuple_struct_pattern"),
+    FieldValidator::Kind("rust_tuple_pattern"),
+    FieldValidator::Kind("rust_grouped_pattern"),
+    FieldValidator::Kind("rust_path_pattern"),
+    FieldValidator::Kind("rust_macro_invocation"),
+    FieldValidator::Kind("rust_identifier_pattern"),
+];
+
+// https://doc.rust-lang.org/stable/reference/expressions.html
+const RUST_EXPRESSION: &[FieldValidator] = &[
+    FieldValidator::Kind("rust_field_access"),
+    FieldValidator::Kind("rust_function_call"),
+    FieldValidator::Kind("rust_tuple_expression"),
+    FieldValidator::Kind("rust_struct_expr_struct"),
+    FieldValidator::Kind("rust_if"),
+    FieldValidator::Kind("rust_match"),
+    FieldValidator::Kind("rust_operator"),
+    FieldValidator::Kind("rust_comparison_expression"),
+    FieldValidator::Kind("rust_bool_literal"),
+    FieldValidator::Kind("rust_identifier"),
+    FieldValidator::Kind("rust_string_literal"),
+];
+
+// https://doc.rust-lang.org/stable/reference/expressions.html
+const RUST_STATEMENT: &[FieldValidator] = &[
+    FieldValidator::Kind("rust_field_access"),
+    FieldValidator::Kind("rust_function_call"),
+    FieldValidator::Kind("rust_tuple_expression"),
+    FieldValidator::Kind("rust_struct_expr_struct"),
+    FieldValidator::Kind("rust_if"),
+    FieldValidator::Kind("rust_match"),
+    FieldValidator::Kind("rust_operator"),
+    FieldValidator::Kind("rust_comparison_expression"),
+    FieldValidator::Kind("rust_bool_literal"),
+    FieldValidator::Kind("rust_identifier"),
+    FieldValidator::Kind("rust_string_literal"),
+    FieldValidator::Kind("rust_item"),
+    FieldValidator::Kind("rust_let"),
+];
+
+// https://doc.rust-lang.org/stable/reference/items.html
+const RUST_ITEM: &[FieldValidator] = &[
+    FieldValidator::Kind("rust_vis_item"),
+    FieldValidator::Kind("rust_macro_item"),
+];
+
+const RUST_IDENTIFIER: FieldValidator = FieldValidator::Literal(|v: &str| {
+    if v.is_empty() {
+        vec![ValidationError {
+            path: vec![].into(),
+            message: "empty identifier".to_string(),
+        }]
+    } else if v.contains(' ') {
+        vec![ValidationError {
+            path: vec![].into(),
+            message: "contains whitespace".to_string(),
+        }]
+    } else if !v.starts_with(|c: char| c.is_alphabetic()) {
+        vec![ValidationError {
+            path: vec![].into(),
+            message: "must start with alphabetic character".to_string(),
+        }]
+    } else {
+        vec![]
+    }
+});
+
+const MARKDOWN_ITEM: &[FieldValidator] = &[
+    MARKDOWN_PARAGRAPH,
+    FieldValidator::Kind("markdown_heading"),
+    FieldValidator::Kind("markdown_code"),
+    FieldValidator::Kind("markdown_quote"),
+    FieldValidator::Kind("markdown_list"),
+];
+
+const MARKDOWN_PARAGRAPH: FieldValidator = FieldValidator::Literal(|v: &str| vec![]);
+
 pub const SCHEMA: Schema = Schema {
     kinds: &[
-        Kind {
-            name: "literal",
-            value: KindValue::Literal {
-                validator: |_c: &ValidatorContext| vec![],
-            },
-        },
-        Kind {
-            name: "rust_identifier_literal",
-            value: KindValue::Literal {
-                validator: |c: &ValidatorContext| {
-                    let v = &c.node.value;
-                    if v.is_empty() {
-                        vec![ValidationError {
-                            path: vec![].into(),
-                            message: "empty identifier".to_string(),
-                        }]
-                    } else if v.contains(' ') {
-                        vec![ValidationError {
-                            path: vec![].into(),
-                            message: "contains whitespace".to_string(),
-                        }]
-                    } else if !v.starts_with(|c: char| c.is_alphabetic()) {
-                        vec![ValidationError {
-                            path: vec![].into(),
-                            message: "must start with alphabetic character".to_string(),
-                        }]
-                    } else {
-                        vec![]
-                    }
-                },
-            },
-        },
         Kind {
             name: "rust_fragment",
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "items",
-                    kind: &["rust_item"],
                     multiplicity: Multiplicity::Repeated,
+                    validators: RUST_ITEM,
                 }],
                 inner: None,
                 constructors: &["rust_fragment"],
@@ -173,26 +238,31 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
-        // https://doc.rust-lang.org/stable/reference/items.html
-        Kind {
-            name: "rust_item",
-            value: KindValue::Union {
-                variants: &["rust_vis_item", "rust_macro_item"],
-            },
-        },
         Kind {
             name: "rust_vis_item",
             value: KindValue::Struct {
                 fields: &[
                     Field {
                         name: "visibility",
-                        kind: &["rust_visibility"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[
+                            FieldValidator::Kind("rust_visibility_pub"),
+                            FieldValidator::Kind("rust_visibility_pub_crate"),
+                            FieldValidator::Kind("rust_visibility_pub_self"),
+                            FieldValidator::Kind("rust_visibility_pub_super"),
+                            FieldValidator::Kind("rust_visibility_pub_in"),
+                        ],
                     },
                     Field {
                         name: "item",
-                        kind: &["rust_vis_item_inner"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[
+                            FieldValidator::Kind("rust_constant"),
+                            FieldValidator::Kind("rust_enum"),
+                            FieldValidator::Kind("rust_function"),
+                            FieldValidator::Kind("rust_struct"),
+                            FieldValidator::Kind("rust_impl"),
+                        ],
                     },
                 ],
                 inner: None,
@@ -207,6 +277,7 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        /*
         Kind {
             name: "rust_vis_item_inner",
             value: KindValue::Union {
@@ -251,29 +322,30 @@ pub const SCHEMA: Schema = Schema {
                 variants: &["rust_trait_impl", "rust_inherent_impl"],
             },
         },
+        */
         Kind {
             name: "rust_trait_impl",
             value: KindValue::Struct {
                 fields: &[
                     Field {
                         name: "generics",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Repeated,
+                        validators: RUST_TYPE,
                     },
                     Field {
                         name: "trait",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                     Field {
                         name: "type",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                     Field {
                         name: "items",
-                        kind: &["rust_trait_impl_item"],
                         multiplicity: Multiplicity::Repeated,
+                        validators: &[FieldValidator::Kind("rust_trait_impl_item")],
                     },
                 ],
                 inner: None,
@@ -311,6 +383,7 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        /*
         Kind {
             name: "rust_trait_impl_item",
             value: KindValue::Union {
@@ -354,6 +427,7 @@ pub const SCHEMA: Schema = Schema {
                 ],
             },
         },
+        */
         // https://doc.rust-lang.org/stable/reference/patterns.html#wildcard-pattern
         Kind {
             name: "rust_wildcard_pattern",
@@ -376,23 +450,23 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "ref",
-                        kind: &["rust_ref"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_ref")],
                     },
                     Field {
                         name: "mut",
-                        kind: &["rust_mut"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_mut")],
                     },
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_identifier")],
                     },
                     Field {
                         name: "pattern",
-                        kind: &["rust_pattern"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_PATTERN,
                     },
                 ],
                 inner: None,
@@ -409,6 +483,7 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        /*
         Kind {
             name: "rust_comparison_operator",
             value: KindValue::Union {
@@ -466,13 +541,14 @@ pub const SCHEMA: Schema = Schema {
                 ],
             },
         },
+        */
         Kind {
             name: "rust_tuple_type",
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "components",
-                    kind: &["rust_type"],
                     multiplicity: Multiplicity::Repeated,
+                    validators: RUST_TYPE,
                 }],
                 inner: Some("components"),
                 constructors: &["tuple"],
@@ -627,8 +703,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "path",
-                    kind: &["rust_simple_path"],
                     multiplicity: Multiplicity::Single,
+                    validators: &[FieldValidator::Kind("rust_simple_path")],
                 }],
                 inner: None,
                 constructors: &["pub_in"],
@@ -652,8 +728,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "segments",
-                    kind: &["rust_path_ident_segment"],
                     multiplicity: Multiplicity::Repeated,
+                    validators: &[FieldValidator::Kind("rust_path_ident_segment")],
                 }],
                 inner: Some("segments"),
                 constructors: &["type_path"],
@@ -679,18 +755,18 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "lifetime",
-                        kind: &["rust_lifetime"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_lifetime")],
                     },
                     Field {
                         name: "mutable",
-                        kind: &["rust_bool"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_bool")],
                     },
                     Field {
                         name: "type",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                 ],
                 inner: Some("type"),
@@ -714,18 +790,18 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[RUST_IDENTIFIER],
                     },
                     Field {
                         name: "type",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                     Field {
                         name: "expression",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                 ],
                 inner: Some("statements"),
@@ -755,13 +831,13 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "statements",
-                        kind: &["rust_statement"],
                         multiplicity: Multiplicity::Repeated,
+                        validators: RUST_STATEMENT,
                     },
                     Field {
                         name: "expression",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                 ],
                 inner: Some("statements"),
@@ -794,13 +870,13 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "expression",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                     Field {
                         name: "match_arms",
-                        kind: &["rust_match_arm"],
                         multiplicity: Multiplicity::Repeated,
+                        validators: &[FieldValidator::Kind("rust_match_arm")],
                     },
                 ],
                 inner: Some("match_arms"),
@@ -835,18 +911,18 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "patterns",
-                        kind: &["rust_pattern"],
                         multiplicity: Multiplicity::Repeated,
+                        validators: RUST_PATTERN,
                     },
                     Field {
                         name: "guard",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                     Field {
                         name: "expression",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                 ],
                 inner: Some("match_arms"),
@@ -877,18 +953,18 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "condition",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                     Field {
                         name: "true_body",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                     Field {
                         name: "false_body",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                 ],
                 inner: Some("true_body"),
@@ -925,14 +1001,13 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "value",
-                    kind: &["literal"],
                     multiplicity: Multiplicity::Single,
+                    validators: &[FieldValidator::Kind("literal")],
                 }],
                 inner: None,
                 constructors: &["number"],
                 validator: |c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    // let inner = textbox(model, node, path, &[], "", true);
                     let value = c.view_child("value");
                     html! {
                         <span>
@@ -947,8 +1022,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "value",
-                    kind: &["literal"],
                     multiplicity: Multiplicity::Single,
+                    validators: &[FieldValidator::Kind("literal")],
                 }],
                 inner: None,
                 constructors: &["number"],
@@ -965,7 +1040,6 @@ pub const SCHEMA: Schema = Schema {
                     }
                 },
                 renderer: |c: &ValidatorContext| {
-                    // let inner = textbox(model, node, path, &[], "", true);
                     let value = c.view_child("value");
                     html! {
                         <span>
@@ -976,12 +1050,14 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        /*
         Kind {
             name: "rust_bool_literal",
             value: KindValue::Union {
                 variants: &["rust_bool_literal_false", "rust_bool_literal_true"],
             },
         },
+        */
         Kind {
             name: "rust_bool_literal_false",
             value: KindValue::Struct {
@@ -1016,13 +1092,13 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "container",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                     Field {
                         name: "field",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_identifier")],
                     },
                 ],
                 inner: Some("object"),
@@ -1046,8 +1122,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "segments",
-                    kind: &["rust_path_ident_segment"],
                     multiplicity: Multiplicity::Repeated,
+                    validators: &[FieldValidator::Kind("rust_path_ident_segment")],
                 }],
                 inner: Some("segments"),
                 constructors: &["::"],
@@ -1059,38 +1135,6 @@ pub const SCHEMA: Schema = Schema {
                         <span>{ for segments }{ segments_head }</span>
                     }
                 },
-            },
-        },
-        Kind {
-            name: "rust_identifier",
-            value: KindValue::Struct {
-                fields: &[],
-                inner: None,
-                // TODO: Parser.
-                constructors: &[],
-                validator: |c: &ValidatorContext| {
-                    let node = c.node;
-                    let v = &node.value;
-                    if v.is_empty() {
-                        vec![ValidationError {
-                            path: vec![].into(),
-                            message: "empty identifier".to_string(),
-                        }]
-                    } else if v.contains(' ') {
-                        vec![ValidationError {
-                            path: vec![].into(),
-                            message: "contains whitespace".to_string(),
-                        }]
-                    } else if !v.starts_with(|c: char| c.is_alphabetic()) {
-                        vec![ValidationError {
-                            path: vec![].into(),
-                            message: "must start with alphabetic character".to_string(),
-                        }]
-                    } else {
-                        vec![]
-                    }
-                },
-                renderer: |c: &ValidatorContext| textbox(c.model, c.node, c.path, &[], "", &[]),
             },
         },
         Kind {
@@ -1141,8 +1185,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "identifier",
-                    kind: &["rust_identifier"],
                     multiplicity: Multiplicity::Single,
+                    validators: &[RUST_IDENTIFIER],
                 }],
                 inner: None,
                 constructors: &["'"],
@@ -1162,17 +1206,17 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "left",
-                        kind: &["rust_expression"],
+                        validators: &[FieldValidator::Kind("rust_expression")],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "operator",
-                        kind: &["rust_comparison_operator"],
+                        validators: &[FieldValidator::Kind("rust_comparison_operator")],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "right",
-                        kind: &["rust_expression"],
+                        validators: &[FieldValidator::Kind("rust_expression")],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -1228,17 +1272,17 @@ pub const SCHEMA: Schema = Schema {
                     Field {
                         name: "operator",
                         // XXX
-                        kind: &["rust_expression"],
+                        validators: &[FieldValidator::Kind("rust_expression")],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "left",
-                        kind: &["rust_expression"],
+                        validators: &[FieldValidator::Kind("rust_expression")],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "right",
-                        kind: &["rust_expression"],
+                        validators: &[FieldValidator::Kind("rust_expression")],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -1268,53 +1312,53 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "comment",
-                        kind: &["markdown_fragment"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("markdown_fragment")],
                     },
                     Field {
                         name: "const",
-                        kind: &["rust_function_qualifier_const"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_function_qualifier_const")],
                     },
                     Field {
                         name: "async",
-                        kind: &["rust_function_qualifier_async"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_function_qualifier_async")],
                     },
                     Field {
                         name: "unsafe",
-                        kind: &["rust_function_qualifier_unsafe"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_function_qualifier_unsafe")],
                     },
                     Field {
                         name: "extern",
-                        kind: &["rust_function_qualifier_extern"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_function_qualifier_extern")],
                     },
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier_literal"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_identifier_literal")],
                     },
                     Field {
                         name: "generic",
-                        kind: &["rust_generic_params"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_generic_params")],
                     },
                     Field {
                         name: "parameters",
-                        kind: &["rust_function_parameter"],
                         multiplicity: Multiplicity::Repeated,
+                        validators: &[FieldValidator::Kind("rust_function_parameter")],
                     },
                     Field {
                         name: "return_type",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                     Field {
                         name: "body",
-                        kind: &["rust_block"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_block")],
                     },
                 ],
                 inner: None,
@@ -1397,7 +1441,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "abi",
-                    kind: &["rust_string_literal"],
+                    validators: &[FieldValidator::Kind("rust_string_literal")],
                     multiplicity: Multiplicity::Single,
                 }],
                 inner: None,
@@ -1417,13 +1461,13 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "pattern",
-                        kind: &["rust_pattern"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_PATTERN,
                     },
                     Field {
                         name: "type",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                 ],
                 inner: None,
@@ -1445,7 +1489,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "parameters",
-                    kind: &["rust_generic_param"],
+                    validators: &[FieldValidator::Kind("rust_generic_param")],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: None,
@@ -1462,25 +1506,27 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        /*
         Kind {
             name: "rust_generic_param",
             value: KindValue::Union {
                 variants: &["rust_lifetime_param", "rust_type_param", "rust_const_param"],
             },
         },
+        */
         Kind {
             name: "rust_lifetime_param",
             value: KindValue::Struct {
                 fields: &[
                     Field {
                         name: "lifetime",
-                        kind: &["rust_lifetime_or_label"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_lifetime_or_label")],
                     },
                     Field {
                         name: "bounds",
-                        kind: &["rust_lifetime_bounds"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_lifetime_bounds")],
                     },
                 ],
                 inner: None,
@@ -1503,18 +1549,18 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[RUST_IDENTIFIER],
                     },
                     Field {
                         name: "bounds",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[RUST_IDENTIFIER],
                     },
                     Field {
                         name: "type",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                 ],
                 inner: None,
@@ -1538,13 +1584,13 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[RUST_IDENTIFIER],
                     },
                     Field {
                         name: "type",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                 ],
                 inner: None,
@@ -1567,7 +1613,10 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "items",
-                    kind: &["rust_where_clause_item"],
+                    validators: &[
+                        FieldValidator::Kind("rust_lifetime_where_clause_item"),
+                        FieldValidator::Kind("rust_type_bound_where_clause_item"),
+                    ],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: None,
@@ -1585,26 +1634,17 @@ pub const SCHEMA: Schema = Schema {
             },
         },
         Kind {
-            name: "rust_where_clause_item",
-            value: KindValue::Union {
-                variants: &[
-                    "rust_lifetime_where_clause_item",
-                    "rust_type_bound_where_clause_item",
-                ],
-            },
-        },
-        Kind {
             name: "rust_lifetime_where_clause_item",
             value: KindValue::Struct {
                 fields: &[
                     Field {
                         name: "lifetime",
-                        kind: &["rust_lifetime"],
+                        validators: &[FieldValidator::Kind("rust_lifetime")],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "bounds",
-                        kind: &["rust_lifetime_bounds"],
+                        validators: &[FieldValidator::Kind("rust_lifetime_bounds")],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -1628,12 +1668,12 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "type",
-                        kind: &["rust_type"],
+                        validators: &[FieldValidator::Kind("rust_type")],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "bounds",
-                        kind: &["rust_type_param_bounds"],
+                        validators: &[FieldValidator::Kind("rust_type_param_bounds")],
                         multiplicity: Multiplicity::Single,
                     },
                 ],
@@ -1658,18 +1698,18 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "pattern",
-                        kind: &["rust_pattern"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_pattern")],
                     },
                     Field {
                         name: "type",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                     Field {
                         name: "value", // Expression
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_expression")],
                     },
                 ],
                 inner: Some("value"),
@@ -1691,12 +1731,12 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "expression",
-                        kind: &["rust_expression"],
+                        validators: &[FieldValidator::Kind("rust_expression")],
                         multiplicity: Multiplicity::Single,
                     },
                     Field {
                         name: "arguments",
-                        kind: &["rust_expression"],
+                        validators: &[FieldValidator::Kind("rust_expression")],
                         multiplicity: Multiplicity::Repeated,
                     },
                 ],
@@ -1721,7 +1761,7 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "elements",
-                    kind: &["rust_expression"],
+                    validators: &[FieldValidator::Kind("rust_expression")],
                     multiplicity: Multiplicity::Repeated,
                 }],
                 inner: Some("elements"),
@@ -1745,12 +1785,12 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "type",
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Repeated,
+                        validators: RUST_TYPE,
                     },
                     Field {
                         name: "fields",
-                        kind: &["rust_struct_expr_field"],
+                        validators: &[FieldValidator::Kind("rust_struct_expr_field")],
                         multiplicity: Multiplicity::Repeated,
                     },
                 ],
@@ -1774,13 +1814,13 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[RUST_IDENTIFIER],
                     },
                     Field {
                         name: "value",
-                        kind: &["rust_expression"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                 ],
                 inner: Some("elements"),
@@ -1803,13 +1843,13 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[RUST_IDENTIFIER],
                     },
                     Field {
                         name: "fields",
-                        kind: &["rust_struct_field"],
                         multiplicity: Multiplicity::Repeated,
+                        validators: &[FieldValidator::Kind("rust_struct_field")],
                     },
                 ],
                 inner: None,
@@ -1839,18 +1879,18 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "visibility",
-                        kind: &["rust_visibility"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_visibility")],
                     },
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[RUST_IDENTIFIER],
                     },
                     Field {
                         name: "type", // Type
-                        kind: &["rust_type"],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_TYPE,
                     },
                 ],
                 inner: None,
@@ -1875,23 +1915,23 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[RUST_IDENTIFIER],
                     },
                     Field {
                         name: "generic",
-                        kind: &["rust_generic_params"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_generic_params")],
                     },
                     Field {
                         name: "where",
-                        kind: &["rust_where_clause"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_where_clause")],
                     },
                     Field {
                         name: "items",
-                        kind: &["rust_enum_item"],
                         multiplicity: Multiplicity::Repeated,
+                        validators: &[FieldValidator::Kind("rust_enum_item")],
                     },
                 ],
                 inner: None,
@@ -1924,18 +1964,22 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "visibility",
-                        kind: &["rust_visibility"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Kind("rust_visibility")],
                     },
                     Field {
                         name: "identifier",
-                        kind: &["rust_identifier"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[RUST_IDENTIFIER],
                     },
                     Field {
                         name: "inner",
-                        kind: &["rust_enum_item_inner"],
                         multiplicity: Multiplicity::Single,
+                        validators: &[
+                            FieldValidator::Kind("rust_enum_item_tuple"),
+                            FieldValidator::Kind("rust_enum_item_struct"),
+                            FieldValidator::Kind("rust_enum_discriminant"),
+                        ],
                     },
                 ],
                 inner: None,
@@ -1954,6 +1998,7 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        /*
         Kind {
             name: "rust_enum_item_inner",
             value: KindValue::Union {
@@ -1964,13 +2009,14 @@ pub const SCHEMA: Schema = Schema {
                 ],
             },
         },
+        */
         Kind {
             name: "rust_enum_item_tuple",
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "fields",
-                    kind: &["rust_tuple_field"],
                     multiplicity: Multiplicity::Repeated,
+                    validators: &[FieldValidator::Kind("rust_tuple_field")],
                 }],
                 inner: None,
                 constructors: &["tuple"],
@@ -1994,8 +2040,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "fields",
-                    kind: &["rust_struct_field"],
                     multiplicity: Multiplicity::Repeated,
+                    validators: &[FieldValidator::Kind("rust_struct_field")],
                 }],
                 inner: None,
                 constructors: &["struct"],
@@ -2021,8 +2067,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "value",
-                    kind: &["rust_expression"],
                     multiplicity: Multiplicity::Single,
+                    validators: RUST_EXPRESSION,
                 }],
                 inner: None,
                 constructors: &["discriminant"],
@@ -2042,8 +2088,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "items",
-                    kind: &["markdown_item"],
                     multiplicity: Multiplicity::Repeated,
+                    validators: MARKDOWN_ITEM,
                 }],
                 inner: Some("items"),
                 constructors: &["markdown_fragment"],
@@ -2064,6 +2110,7 @@ pub const SCHEMA: Schema = Schema {
                 },
             },
         },
+        /*
         Kind {
             name: "markdown_item",
             value: KindValue::Union {
@@ -2076,32 +2123,22 @@ pub const SCHEMA: Schema = Schema {
                 ],
             },
         },
-        Kind {
-            name: "markdown_paragraph",
-            value: KindValue::Struct {
-                fields: &[],
-                inner: None,
-                // TODO: Parser.
-                constructors: &[],
-                validator: |c: &ValidatorContext| vec![],
-                renderer: |c: &ValidatorContext| textbox(c.model, c.node, c.path, &[], "", &[]),
-            },
-        },
+        */
         Kind {
             name: "markdown_heading",
             value: KindValue::Struct {
                 fields: &[
                     Field {
                         name: "level",
-                        // XXX
-                        kind: &[],
                         multiplicity: Multiplicity::Single,
+                        // XXX
+                        validators: &[],
                     },
                     Field {
                         name: "text",
-                        // XXX
-                        kind: &["markdown_paragraph"],
                         multiplicity: Multiplicity::Single,
+                        // XXX
+                        validators: &[MARKDOWN_PARAGRAPH],
                     },
                 ],
                 inner: Some("text"),
@@ -2123,8 +2160,8 @@ pub const SCHEMA: Schema = Schema {
             value: KindValue::Struct {
                 fields: &[Field {
                     name: "items",
-                    kind: &["markdown_paragraph"],
                     multiplicity: Multiplicity::Repeated,
+                    validators: &[FieldValidator::Kind("markdown_paragraph")],
                 }],
                 inner: Some("items"),
                 constructors: &["list"],
@@ -2229,7 +2266,7 @@ pub fn textbox(
             .enumerate()
             .map(|(i, v)| {
                 let path_clone = path.to_vec();
-                let value_string = v.value.clone();
+                let value_string = v.label.clone();
                 let node = v.to_node();
                 let onclick = model.link.callback(move |e: MouseEvent| {
                     Msg::ReplaceNode(path_clone.clone(), node.clone(), true)
@@ -2339,12 +2376,6 @@ pub enum KindValue {
         validator: Validator,
         renderer: Renderer,
     },
-    Union {
-        variants: &'static [&'static str],
-    },
-    Literal {
-        validator: Validator,
-    },
 }
 
 impl Kind {
@@ -2355,45 +2386,22 @@ impl Kind {
     pub fn get_fields(&self) -> Vec<Field> {
         match self.value {
             KindValue::Struct { fields, .. } => fields.iter().cloned().collect(),
-            KindValue::Union { variants } => variants
-                .iter()
-                .filter_map(|n| SCHEMA.get_kind(n))
-                .flat_map(|k| k.get_fields())
-                .collect(),
-            KindValue::Literal { .. } => vec![],
         }
     }
 
     pub fn render(&self, context: &ValidatorContext) -> Html {
         match self.value {
-            KindValue::Struct {
-                renderer,
-                validator,
-                ..
-            } => renderer(context),
-            KindValue::Union { .. } => {
-                // XXX
-                html! {
-                    <span>{"union rendering error"}</span>
-                }
-            }
-            KindValue::Literal { validator, .. } => {
-                let errors = validator(context);
-                textbox(context.model, context.node, context.path, &[], "", &errors)
-            }
+            KindValue::Struct { renderer, .. } => renderer(context),
         }
     }
 
     pub fn validator(&self, context: &ValidatorContext) -> Vec<ValidationError> {
         match self.value {
             KindValue::Struct { validator, .. } => validator(context),
-            KindValue::Union { .. } => {
-                vec![]
-            }
-            KindValue::Literal { validator, .. } => validator(context),
         }
     }
 
+    /*
     pub fn constructors(&self) -> Vec<ParsedValue> {
         match self.value {
             KindValue::Struct { constructors, .. } => constructors
@@ -2404,44 +2412,12 @@ impl Kind {
                     value: value.to_string(),
                 })
                 .collect(),
-            KindValue::Union { variants } => variants
-                .iter()
-                .filter_map(|n| SCHEMA.get_kind(n))
-                .flat_map(|k| k.constructors())
-                .map(|v| {
-                    let mut kind_hierarchy = v.kind_hierarchy;
-                    kind_hierarchy.insert(0, self.name.to_string());
-                    ParsedValue {
-                        kind_hierarchy,
-                        label: v.value.clone(),
-                        value: v.value,
-                    }
-                })
-                .collect(),
-            KindValue::Literal { validator, .. } => {
-                vec![]
-                /*
-                let node = Node {
-                    kind: "".to_string(),
-                    value: v.to_string(),
-                    children: HashMap::new(),
-                };
-                if validator(&node).is_empty() {
-                    vec![ParsedValue {
-                        kind_hierarchy: vec![self.name.to_string()],
-                        value: Ok(v.to_string()),
-                    }]
-                } else {
-                    // TODO: Return validation error.
-                    vec![]
-                }
-                */
-            }
         }
     }
+    */
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ParsedValue {
     pub kind_hierarchy: Vec<String>,
     pub label: String,
@@ -2461,8 +2437,9 @@ impl ParsedValue {
 #[derive(Clone)]
 pub struct Field {
     pub name: &'static str,
-    pub kind: &'static [&'static str],
+    // pub kind: &'static [&'static str],
     pub multiplicity: Multiplicity,
+    pub validators: &'static [FieldValidator],
 }
 
 #[derive(Clone)]
@@ -2471,6 +2448,11 @@ pub enum Multiplicity {
     // Optional -- hide if not present
     Single,
     Repeated,
+}
+
+pub enum FieldValidator {
+    Kind(&'static str),
+    Literal(fn(&str) -> Vec<ValidationError>),
 }
 
 // TODO: Replace parser with validator fn that can return errors on the node itself or its children

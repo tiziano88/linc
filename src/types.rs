@@ -1,4 +1,6 @@
-use crate::schema::{ParsedValue, ValidationError, ValidatorContext, SCHEMA};
+use crate::schema::{
+    FieldValidator, KindValue, ParsedValue, ValidationError, ValidatorContext, SCHEMA,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{collections::HashMap, convert::TryInto};
@@ -100,10 +102,20 @@ impl Model {
         self.field(path)
             .map(|field| {
                 field
-                    .kind
+                    .validators
                     .iter()
-                    .filter_map(|kind| SCHEMA.get_kind(kind))
-                    .flat_map(|kind| kind.constructors().into_iter())
+                    .filter_map(|validator| match validator {
+                        FieldValidator::Kind(kind) => SCHEMA.get_kind(kind),
+                        FieldValidator::Literal(_valid) => None,
+                    })
+                    .map(|kind| ParsedValue {
+                        kind_hierarchy: vec![kind.name.to_string()],
+                        label: match kind.value {
+                            KindValue::Struct { constructors, .. } => constructors[0].to_string(),
+                            _ => kind.name.to_string(),
+                        },
+                        value: "".to_string(),
+                    })
                     .collect::<Vec<_>>()
                 // TODO: Ranking.
             })
@@ -464,6 +476,7 @@ impl Component for Model {
             let current_kind = current_node.clone().map(|n| n.kind.clone());
 
             let parsed_commands = model.parse_commands(&model.cursor);
+            log::debug!("parsed commands {:?}", parsed_commands);
             model.parsed_commands = parsed_commands;
 
             let command_input_id = crate::view::command_input_id(&model.cursor);

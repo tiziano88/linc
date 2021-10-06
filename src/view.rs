@@ -71,18 +71,13 @@ impl Model {
     }
 
     pub fn field(&self, path: &Path) -> Option<Field> {
-        let parent_path = parent(&self.cursor);
-
-        match path.last() {
-            Some(selector) => {
-                let parent = self.file.lookup(&parent_path).unwrap();
-                SCHEMA
-                    .get_kind(&parent.kind)
-                    .unwrap()
-                    .get_field(&selector.field)
-            }
-            None => None,
-        }
+        path.split_last().and_then(|(selector, parent_path)| {
+            let parent = self.file.lookup(&parent_path).unwrap();
+            SCHEMA
+                .get_kind(&parent.kind)
+                .unwrap()
+                .get_field(&selector.field)
+        })
     }
 
     fn view_action(&self, action: &Action) -> Html {
