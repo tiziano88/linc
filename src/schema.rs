@@ -1005,7 +1005,7 @@ pub const SCHEMA: Schema = Schema {
                     validators: &[FieldValidator::Kind("literal")],
                 }],
                 inner: None,
-                constructors: &["number"],
+                constructors: &["string"],
                 validator: |c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
                     let value = c.view_child("value");
@@ -1731,13 +1731,13 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[
                     Field {
                         name: "expression",
-                        validators: &[FieldValidator::Kind("rust_expression")],
                         multiplicity: Multiplicity::Single,
+                        validators: RUST_EXPRESSION,
                     },
                     Field {
                         name: "arguments",
-                        validators: &[FieldValidator::Kind("rust_expression")],
                         multiplicity: Multiplicity::Repeated,
+                        validators: RUST_EXPRESSION,
                     },
                 ],
                 inner: Some("expression"),
