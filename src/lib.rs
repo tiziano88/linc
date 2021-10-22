@@ -1,4 +1,5 @@
 #![recursion_limit = "512"]
+#![feature(iter_intersperse)]
 
 use types::Model;
 use wasm_bindgen::prelude::*;

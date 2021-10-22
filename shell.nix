@@ -4,6 +4,12 @@ let
 in rec {
   lincEnv = stdenv.mkDerivation rec {
     name = "linc-env";
-    buildInputs = [ pkgs.protobuf3_0 ];
+    buildInputs = [
+      # pkgs.cargo
+      pkgs.glibc
+      pkgs.protobuf
+      # pkgs.rustc
+      # pkgs.rustfmt
+    ];
   };
 }
