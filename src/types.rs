@@ -14,7 +14,7 @@ use yew::{
         StorageService,
     },
     web_sys::HtmlElement,
-    Component, ComponentLink, FocusEvent, Html, InputData, KeyboardEvent, ShouldRender,
+    Component, ComponentLink, Html, KeyboardEvent, ShouldRender,
 };
 
 pub type Ref = String;
@@ -473,7 +473,7 @@ impl Component for Model {
         log::info!("update {:?}", msg);
         fn update_from_selected(model: &mut Model) {
             let current_node = model.file.lookup(&model.cursor);
-            let current_kind = current_node.clone().map(|n| n.kind.clone());
+            let _current_kind = current_node.clone().map(|n| n.kind.clone());
 
             let parsed_commands = model.parse_commands(&model.cursor);
             log::debug!("parsed commands {:?}", parsed_commands);
@@ -591,7 +591,7 @@ impl Component for Model {
                 log::info!("key: {}", e.key());
                 let selection = yew::utils::window().get_selection().unwrap().unwrap();
                 let anchor_node = selection.anchor_node().unwrap();
-                let anchor_offset = selection.anchor_offset();
+                let _anchor_offset = selection.anchor_offset();
                 let anchor_node_value = anchor_node.node_value().unwrap_or_default();
                 log::info!(
                     "selection: {:?} {} {}",

@@ -140,7 +140,7 @@ impl Model {
                         }
                         Multiplicity::Repeated => {}
                     };
-                    for (n, child) in children.iter().enumerate() {
+                    for (n, _child) in children.iter().enumerate() {
                         let new_path = append(
                             path,
                             Selector {
@@ -206,7 +206,7 @@ impl Model {
         });
 
         let path_clone = path.to_vec();
-        let oninput = self.link.callback(move |e: InputData| {
+        let _oninput = self.link.callback(move |e: InputData| {
             crate::types::Msg::SetNodeCommand(path_clone.clone(), e.value.clone())
         });
 
@@ -324,13 +324,13 @@ impl Model {
             }
 
             let path_clone = path.clone();
-            let onclick = self.link.callback(move |e: MouseEvent| {
+            let _onclick = self.link.callback(move |e: MouseEvent| {
                 e.stop_propagation();
                 Msg::Select(path_clone.clone())
             });
 
             let path_clone = path.clone();
-            let onmouseover = self.link.callback(move |e: MouseEvent| {
+            let _onmouseover = self.link.callback(move |e: MouseEvent| {
                 e.stop_propagation();
                 Msg::Hover(path_clone.clone())
             });
