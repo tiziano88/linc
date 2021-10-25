@@ -219,17 +219,56 @@ impl Model {
                         node,
                     };
 
-                    match SCHEMA.get_kind(&node.kind) {
+                    match SCHEMA.get_kind("&node.kind") {
                         Some(kind) => (kind.render(&context), kind.validator(&context)),
                         None => (
-                            crate::schema::textbox(
-                                self,
-                                node,
-                                path,
-                                &self.parsed_commands,
-                                placeholder,
-                                &[],
-                            ),
+                            {
+                                // https://codepen.io/xotonic/pen/JRLAOR
+                                let fields = node.children.iter().map(
+                                    (|(name, hashes)| {
+                                        let values = hashes.iter().enumerate().map(|(i, h)| {
+                                            let v = self.view_node(
+                                                Some(h.to_string()),
+                                                &append(
+                                                    path,
+                                                    Selector {
+                                                        field: name.to_string(),
+                                                        index: i,
+                                                    },
+                                                ),
+                                            );
+                                            html! {
+                                                <div class="px-5">{ v }</div>
+                                            }
+                                        });
+                                        html! {
+                                            <span class="px-1">
+                                                <div class="sticky bg-gray-300" style={ format!("top: {}rem; z-index: {};", (4. * (path.len() as f32)) + 2.5, 128-path.len()) }>
+                                                  { name }
+                                                </div>
+                                                <div>{ for values }</div>
+                                            </span>
+                                        }
+                                    }),
+                                );
+                                html! {
+                                    <div>
+                                        <div class="sticky bg-white" style={ format!("top: {}rem; z-index: {};", 4. * (path.len() as f32), 128-path.len()) }>
+                                            <div>{ "kind: " }{ &node.kind }</div>
+                                            <div>{ "value: " }{ &node.value }</div>
+                                        </div>
+                                        { for fields }
+                                    </div>
+                                }
+                            },
+                            // crate::schema::textbox(
+                            //     self,
+                            //     node,
+                            //     path,
+                            //     &self.parsed_commands,
+                            //     placeholder,
+                            //     &[],
+                            // ),
                             vec![],
                         ),
                     }
