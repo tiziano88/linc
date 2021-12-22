@@ -53,6 +53,11 @@ impl Model {
                 text: "delete".to_string(),
                 msg: Msg::DeleteItem,
             },
+            Action {
+                image: None,
+                text: "serialized".to_string(),
+                msg: Msg::ToggleSerialized,
+            },
         ];
         let actions = actions
             .iter()
@@ -75,8 +80,7 @@ impl Model {
             let parent = self.file.lookup(&parent_path).unwrap();
             SCHEMA
                 .get_kind(&parent.kind)
-                .unwrap()
-                .get_field(&selector.field)
+                .and_then(|f| f.get_field(&selector.field))
         })
     }
 

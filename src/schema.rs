@@ -208,8 +208,80 @@ const MARKDOWN_ITEM: &[FieldValidator] = &[
 
 const MARKDOWN_PARAGRAPH: FieldValidator = FieldValidator::Literal(|_v: &str| vec![]);
 
+fn any(_v: &str) -> Vec<ValidationError> {
+    vec![]
+}
+
 pub const SCHEMA: Schema = Schema {
     kinds: &[
+        Kind {
+            name: "git",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "command",
+                    multiplicity: Multiplicity::Repeated,
+                    validators: &[FieldValidator::Kind("git_commit")],
+                }],
+                inner: None,
+                constructors: &["git"],
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let (items_head, items) = c.view_children("items");
+                    let items = items.into_iter().map(|b| {
+                        html! {
+                            <div>{ b }</div>
+                        }
+                    });
+                    html! {
+                        <div>
+                        <div class="fragment-type">{ "rust" }</div>
+                        { for items }
+                        { items_head }
+                        </div>
+                    }
+                },
+            },
+        },
+        Kind {
+            name: "git_commit",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "message",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "author",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "date",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                ],
+                inner: None,
+                constructors: &["commit"],
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let (items_head, items) = c.view_children("items");
+                    let items = items.into_iter().map(|b| {
+                        html! {
+                            <div>{ b }</div>
+                        }
+                    });
+                    html! {
+                        <div>
+                        <div class="fragment-type">{ "rust" }</div>
+                        { for items }
+                        { items_head }
+                        </div>
+                    }
+                },
+            },
+        },
         Kind {
             name: "rust_fragment",
             value: KindValue::Struct {

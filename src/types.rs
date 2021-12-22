@@ -82,6 +82,8 @@ pub struct Model {
     pub selected_command_index: usize,
 
     pub errors: Vec<ValidationError>,
+
+    pub show_serialized: bool,
 }
 
 #[derive(Default)]
@@ -278,6 +280,7 @@ pub enum Msg {
 
     Store,
     Load,
+    Parse(String),
 
     Prev,
     Next,
@@ -294,6 +297,8 @@ pub enum Msg {
     CommandKey(KeyboardEvent),
     PrevCommand,
     NextCommand,
+
+    ToggleSerialized,
     /* EnterCommand,
      * EscapeCommand,
      */
@@ -410,6 +415,15 @@ impl Component for Model {
             e.stop_propagation();
             Msg::Hover(vec![].into())
         });
+        let parse = self.link.callback(move |e: InputData| Msg::Parse(e.value));
+
+        let serialized = if self.show_serialized {
+            html! {
+                <div class="column">{ self.view_file_json(&self.file) }</div>
+            }
+        } else {
+            html! {}
+        };
         html! {
             <div
             //   onkeydown=onkeypress
@@ -428,7 +442,8 @@ impl Component for Model {
 
                     <div>{ self.view_actions() }</div>
                     <div class="h-40">
-                        <div class="column">{ self.view_file_json(&self.file) }</div>
+                        <textarea type="text" class="border-solid border-black border" oninput=parse />
+                        { serialized }
                     </div>
                 </div>
             </div>
@@ -457,6 +472,7 @@ impl Component for Model {
             parsed_commands: Vec::new(),
             selected_command_index: 0,
             errors: vec![],
+            show_serialized: false,
         }
     }
 
@@ -486,6 +502,9 @@ impl Component for Model {
         const KEY: &str = "linc_file";
         match msg {
             Msg::Noop => {}
+            Msg::ToggleSerialized => {
+                self.show_serialized = !self.show_serialized;
+            }
             Msg::Select(path) => {
                 self.cursor = path.clone();
                 update_from_selected(self);
@@ -514,6 +533,59 @@ impl Component for Model {
                 if let yew::format::Json(Ok(file)) = self.store.restore(KEY) {
                     self.file = file;
                 }
+            }
+            Msg::Parse(v) => {
+                log::debug!("parse {:?}", v);
+                let html = html_parser::Dom::parse(&v).unwrap();
+                log::debug!("parsed {:?}", html);
+                fn add_string(model: &mut Model, value: &str) -> Hash {
+                    model.file.add_node(&Node {
+                        kind: "string".into(),
+                        value: value.into(),
+                        children: HashMap::new(),
+                    })
+                }
+                fn add_node(model: &mut Model, node: &html_parser::Node) -> Hash {
+                    match node {
+                        html_parser::Node::Element(e) => {
+                            let mut children: HashMap<String, Vec<String>> = HashMap::new();
+                            e.attributes.iter().for_each(|(k, v)| {
+                                children.entry(k.clone()).or_insert_with(Vec::new).push(
+                                    add_string(model, &v.as_ref().cloned().unwrap_or_default()),
+                                );
+                            });
+                            e.children.iter().for_each(|v| {
+                                children
+                                    .entry("children".to_string())
+                                    .or_insert_with(Vec::new)
+                                    .push(add_node(model, v));
+                            });
+                            model.file.add_node(&Node {
+                                kind: e.name.clone(),
+                                value: "".into(),
+                                children,
+                            })
+                        }
+                        html_parser::Node::Text(t) => add_string(model, t),
+                        html_parser::Node::Comment(c) => add_string(model, c),
+                    }
+                }
+                fn add_dom(model: &mut Model, e: &html_parser::Dom) -> Hash {
+                    let mut children: HashMap<String, Vec<String>> = HashMap::new();
+                    e.children.iter().for_each(|v| {
+                        children
+                            .entry("children".to_string())
+                            .or_insert_with(Vec::new)
+                            .push(add_node(model, v));
+                    });
+                    model.file.add_node(&Node {
+                        kind: "dom".into(),
+                        value: "".to_string(),
+                        children,
+                    })
+                }
+                let h = add_dom(self, &html);
+                self.file.root = h;
             }
             Msg::SetMode(mode) => {
                 self.mode = mode;
