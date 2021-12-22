@@ -1,0 +1,85 @@
+.node {
+  padding: 2px;
+  display: inline-block;
+  border: 1px solid;
+  border-color: lightgray;
+  cursor: default;
+  font-family: monospace;
+  margin: 1px;
+}
+
+.row {
+  display: block;
+}
+
+.selected {
+  outline: 2px solid;
+  outline-color: blue;
+}
+
+.hover {
+  background-color: rgba(104, 104, 250, 0.431);
+}
+
+.error {
+  background-color: red
+}
+
+.target {
+  color: blue;
+}
+
+.fragment-type {
+  background-color: black;
+  color: white;
+  font-size: small;
+}
+
+.action {
+  border: 1px solid;
+  padding: 5px;
+  display: inline-block;
+}
+
+.column {
+  flex: 1;
+}
+
+.placeholder {
+  border: solid 1px black;
+  font-size: 0.5em;
+  opacity: 0.4;
+  background-color: black;
+  color: white;
+  padding: 0.1em;
+}
+
+.indent {
+  margin-left: 40px;
+}
+
+.keyword {
+  color: fuchsia;
+  padding: 0.5em;
+}
+
+.type {
+  color: orangered;
+  padding: 0.5em;
+}
+
+.kind {
+  color: blue;
+}
+
+.literal {
+  color: red;
+}
+
+.completion {
+  color: lightpink;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+}
