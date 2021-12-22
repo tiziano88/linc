@@ -1,21 +1,13 @@
 use crate::schema::{
     FieldValidator, KindValue, ParsedValue, ValidationError, ValidatorContext, SCHEMA,
 };
+use gloo_storage::{LocalStorage, Storage};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{collections::HashMap, convert::TryInto};
-use wasm_bindgen::JsCast;
-use yew::{
-    html,
-    prelude::*,
-    services::{
-        keyboard::{KeyListenerHandle, KeyboardService},
-        storage::Area,
-        StorageService,
-    },
-    web_sys::HtmlElement,
-    Component, ComponentLink, Html, KeyboardEvent, ShouldRender,
-};
+use wasm_bindgen::{JsCast, UnwrapThrowExt};
+use web_sys::{window, HtmlElement, HtmlInputElement, InputEvent};
+use yew::{html, prelude::*, Component, Html, KeyboardEvent};
 
 pub type Ref = String;
 
@@ -67,14 +59,9 @@ pub fn hash_node(node: &Node) -> Hash {
 pub struct Model {
     pub file: File,
 
-    pub store: StorageService,
-    pub key_listener: KeyListenerHandle,
-
     pub cursor: Path,
     pub hover: Path,
     pub mode: Mode,
-
-    pub link: ComponentLink<Self>,
 
     pub node_state: HashMap<Path, NodeState>,
 
@@ -223,7 +210,12 @@ impl Model {
 
     pub fn focus_element(selector: &str) {
         log::info!("select {}", selector);
-        if let Ok(Some(element)) = yew::utils::document().query_selector(selector) {
+        if let Ok(Some(element)) = window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .query_selector(selector)
+        {
             element.dyn_into::<HtmlElement>().unwrap().focus().unwrap();
         } else {
             log::warn!("not found");
@@ -231,7 +223,13 @@ impl Model {
     }
 
     pub fn scroll_into_view(&self, selector: &str) {
-        if let Some(element) = yew::utils::document().query_selector(selector).unwrap() {
+        if let Some(element) = window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .query_selector(selector)
+            .unwrap()
+        {
             element
                 .dyn_into::<HtmlElement>()
                 .unwrap()
@@ -239,11 +237,11 @@ impl Model {
         }
     }
 
-    pub fn update_errors(&mut self) {
-        self.update_errors_node(&self.cursor.clone());
+    pub fn update_errors(&mut self, ctx: &Context<Self>) {
+        self.update_errors_node(ctx, &self.cursor.clone());
     }
 
-    pub fn update_errors_node(&mut self, path: &[Selector]) {
+    pub fn update_errors_node(&mut self, ctx: &Context<Self>, path: &[Selector]) {
         let node = match self.file.lookup(path) {
             Some(node) => node.clone(),
             None => return,
@@ -251,14 +249,14 @@ impl Model {
         let kind = &node.kind;
 
         if let Some(kind) = SCHEMA.get_kind(kind) {
-            if let crate::schema::KindValue::Struct { validator, .. } = kind.value {
-                let errors = validator(&ValidatorContext {
-                    model: self,
-                    node: &node,
-                    path,
-                });
-                log::info!("errors: {:?} {:?}", path, errors);
-            }
+            let crate::schema::KindValue::Struct { validator, .. } = kind.value;
+            let errors = validator(&ValidatorContext {
+                model: self,
+                ctx,
+                node: &node,
+                path,
+            });
+            log::info!("errors: {:?} {:?}", path, errors);
         }
         /*
         for (_, children) in node.children.iter() {
@@ -410,12 +408,14 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn view(&self) -> Html {
-        let onmouseover = self.link.callback(move |e: MouseEvent| {
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let onmouseover = ctx.link().callback(move |e: MouseEvent| {
             e.stop_propagation();
             Msg::Hover(vec![].into())
         });
-        let parse = self.link.callback(move |e: InputData| Msg::Parse(e.value));
+        let parse = ctx
+            .link()
+            .callback(move |e: InputEvent| Msg::Parse(get_value_from_input_event(e)));
 
         let serialized = if self.show_serialized {
             html! {
@@ -427,12 +427,12 @@ impl Component for Model {
         html! {
             <div
             //   onkeydown=onkeypress
-              onmouseover=onmouseover
+              onmouseover={ onmouseover }
               >
                 <div>{ "LINC" }</div>
                 <div>{ "click on an empty node to see list of possible completions" }</div>
                 <div class="">
-                    <div class="column">{ self.view_file(&self.file) }</div>
+                    <div class="column">{ self.view_file(ctx, &self.file) }</div>
 
                     <div class="column">
                         <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
@@ -440,9 +440,9 @@ impl Component for Model {
                         <div>{ format!("Ref: {:?}", self.file.lookup(&self.cursor)) }</div>
                     </div>
 
-                    <div>{ self.view_actions() }</div>
+                    <div>{ self.view_actions(ctx) }</div>
                     <div class="h-40">
-                        <textarea type="text" class="border-solid border-black border" oninput=parse />
+                        <textarea type="text" class="border-solid border-black border" oninput={ parse } />
                         { serialized }
                     </div>
                 </div>
@@ -450,24 +450,21 @@ impl Component for Model {
         }
     }
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let key_listener = KeyboardService::register_key_down(
-            &yew::utils::window(),
-            link.callback(move |e: KeyboardEvent| {
-                // e.stop_propagation();
-                // e.stop_immediate_propagation();
-                // e.prevent_default();
-                Msg::CommandKey(e)
-            }),
-        );
+    fn create(ctx: &Context<Self>) -> Self {
+        // let key_listener = KeyboardService::register_key_down(
+        //     &window().unwrap(),
+        //     ctx.link().callback(move |e: KeyboardEvent| {
+        //         // e.stop_propagation();
+        //         // e.stop_immediate_propagation();
+        //         // e.prevent_default();
+        //         Msg::CommandKey(e)
+        //     }),
+        // );
         Model {
-            store: StorageService::new(Area::Local).expect("could not create storage service"),
-            key_listener,
             file: super::initial::initial(),
             mode: Mode::Normal,
             cursor: vec![].into(),
             hover: vec![].into(),
-            link,
             node_state: HashMap::new(),
             parsed_commands: Vec::new(),
             selected_command_index: 0,
@@ -476,13 +473,13 @@ impl Component for Model {
         }
     }
 
-    fn change(&mut self, _props: ()) -> ShouldRender {
+    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
         false
     }
 
-    fn rendered(&mut self, _first_render: bool) {}
+    fn rendered(&mut self, _ctx: &Context<Self>, _first_render: bool) {}
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         if let Msg::Hover(_) = msg {
             return false;
         }
@@ -527,10 +524,10 @@ impl Component for Model {
                 update_from_selected(self);
             }
             Msg::Store => {
-                self.store.store(KEY, yew::format::Json(&self.file));
+                LocalStorage::set(KEY, &self.file);
             }
             Msg::Load => {
-                if let yew::format::Json(Ok(file)) = self.store.restore(KEY) {
+                if let Ok(file) = LocalStorage::get(KEY) {
                     self.file = file;
                 }
             }
@@ -598,7 +595,7 @@ impl Component for Model {
                     self.file.root = new_root;
                 }
                 if mv {
-                    self.link.send_message(Msg::Next);
+                    ctx.link().send_message(Msg::Next);
                     self.parsed_commands = vec![];
                     self.selected_command_index = 0;
                 }
@@ -661,7 +658,7 @@ impl Component for Model {
             }
             Msg::CommandKey(e) => {
                 log::info!("key: {}", e.key());
-                let selection = yew::utils::window().get_selection().unwrap().unwrap();
+                let selection = window().unwrap().get_selection().unwrap().unwrap();
                 let anchor_node = selection.anchor_node().unwrap();
                 let _anchor_offset = selection.anchor_offset();
                 let anchor_node_value = anchor_node.node_value().unwrap_or_default();
@@ -680,7 +677,7 @@ impl Component for Model {
                             self.parsed_commands.get(self.selected_command_index)
                         {
                             let node = selected_command.to_node();
-                            self.link.send_message(Msg::ReplaceNode(
+                            ctx.link().send_message(Msg::ReplaceNode(
                                 self.cursor.clone(),
                                 node,
                                 true,
@@ -690,10 +687,10 @@ impl Component for Model {
                     // "Enter" if self.mode == Mode::Edit =>
                     // self.link.send_message(Msg::EnterCommand), "Escape" =>
                     // self.link.send_message(Msg::EscapeCommand),
-                    "ArrowUp" => self.link.send_message(Msg::PrevCommand),
-                    "ArrowDown" => self.link.send_message(Msg::NextCommand),
-                    "ArrowLeft" if self.mode == Mode::Normal => self.link.send_message(Msg::Prev),
-                    "ArrowRight" if self.mode == Mode::Normal => self.link.send_message(Msg::Next),
+                    "ArrowUp" => ctx.link().send_message(Msg::PrevCommand),
+                    "ArrowDown" => ctx.link().send_message(Msg::NextCommand),
+                    "ArrowLeft" if self.mode == Mode::Normal => ctx.link().send_message(Msg::Prev),
+                    "ArrowRight" if self.mode == Mode::Normal => ctx.link().send_message(Msg::Next),
                     /*
                     "i" if self.mode == Mode::Normal => {
                         e.prevent_default();
@@ -713,7 +710,7 @@ impl Component for Model {
             }
         };
         // self.focus_command_line();
-        self.update_errors();
+        self.update_errors(ctx);
         true
     }
 }
@@ -722,4 +719,12 @@ pub struct Action {
     pub image: Option<String>,
     pub text: String,
     pub msg: Msg,
+}
+
+pub fn get_value_from_input_event(e: InputEvent) -> String {
+    let event: Event = e.dyn_into().unwrap_throw();
+    let event_target = event.target().unwrap_throw();
+    let target: HtmlInputElement = event_target.dyn_into().unwrap_throw();
+    // web_sys::console::log_1(&target.value().into());
+    target.value()
 }

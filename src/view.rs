@@ -1,12 +1,12 @@
-use yew::prelude::*;
-
 use crate::{
     schema::{Field, Multiplicity, ValidationError, ValidatorContext, SCHEMA},
     types::*,
 };
+use web_sys::MouseEvent;
+use yew::prelude::*;
 
 impl Model {
-    pub fn view_actions(&self) -> Html {
+    pub fn view_actions(&self, ctx: &Context<Self>) -> Html {
         let actions = vec![
             Action {
                 image: None,
@@ -62,7 +62,7 @@ impl Model {
         let actions = actions
             .iter()
             // .filter(|a| self.is_valid_action(a))
-            .map(|a| self.view_action(a));
+            .map(|a| self.view_action(ctx, a));
 
         html! {
             <div>
@@ -84,13 +84,13 @@ impl Model {
         })
     }
 
-    fn view_action(&self, action: &Action) -> Html {
+    fn view_action(&self, ctx: &Context<Self>, action: &Action) -> Html {
         let msg = action.msg.clone();
-        let callback = self.link.callback(move |_: MouseEvent| msg.clone());
+        let callback = ctx.link().callback(move |_: MouseEvent| msg.clone());
         let img = match &action.image {
             Some(image) => html! {
                 <div class="inline-block">
-                    <i class=image></i>
+                    <i class={ image }></i>
                 </div>
             },
             None => html! {<span></span>},
@@ -98,15 +98,15 @@ impl Model {
         html! {
             <button
               class="action hover:bg-blue-200 hover:text-blue-800 group flex items-center rounded-md bg-blue-100 text-blue-600 text-sm font-medium px-4 py-2"
-              onclick=callback>
+              onclick={ callback }>
                 { img }
                 { &action.text }
             </button>
         }
     }
 
-    pub fn view_file(&self, file: &File) -> Html {
-        let node = self.view_node(Some(file.root.clone()), &Path::new());
+    pub fn view_file(&self, ctx: &Context<Self>, file: &File) -> Html {
+        let node = self.view_node(ctx, Some(file.root.clone()), &Path::new());
         html! {
             <pre>{ node }</pre>
         }
@@ -178,12 +178,13 @@ impl Model {
         }
     }
 
-    fn view_node(&self, hash: Option<Hash>, path: &[Selector]) -> Html {
-        self.view_node_with_placeholder(hash, path, "◆")
+    fn view_node(&self, ctx: &Context<Self>, hash: Option<Hash>, path: &[Selector]) -> Html {
+        self.view_node_with_placeholder(ctx, hash, path, "◆")
     }
 
     fn view_node_with_placeholder(
         &self,
+        ctx: &Context<Self>,
         hash: Option<Hash>,
         path: &[Selector],
         placeholder: &str,
@@ -198,27 +199,28 @@ impl Model {
         }
 
         let path_clone = path.to_vec();
-        let onclick = self.link.callback(move |e: MouseEvent| {
+        let onclick = ctx.link().callback(move |e: MouseEvent| {
             e.stop_propagation();
             Msg::Select(path_clone.clone())
         });
 
         let path_clone = path.to_vec();
-        let onmouseover = self.link.callback(move |e: MouseEvent| {
+        let onmouseover = ctx.link().callback(move |e: MouseEvent| {
             e.stop_propagation();
             Msg::Hover(path_clone.clone())
         });
 
         let path_clone = path.to_vec();
-        let _oninput = self.link.callback(move |e: InputData| {
-            crate::types::Msg::SetNodeCommand(path_clone.clone(), e.value.clone())
-        });
+        // let _oninput = ctx.link().callback(move |e: InputEvent| {
+        //     crate::types::Msg::SetNodeCommand(path_clone.clone(), get_value_from_input_event(e))
+        // });
 
         let (value, errors) = match hash {
             Some(hash) => match self.file.lookup(path) {
                 Some(node) => {
                     let context = ValidatorContext {
                         model: self,
+                        ctx,
                         path,
                         node,
                     };
@@ -229,9 +231,10 @@ impl Model {
                             {
                                 // https://codepen.io/xotonic/pen/JRLAOR
                                 let fields = node.children.iter().map(
-                                    (|(name, hashes)| {
+                                    |(name, hashes)| {
                                         let values = hashes.iter().enumerate().map(|(i, h)| {
                                             let v = self.view_node(
+                                                ctx,
                                                 Some(h.to_string()),
                                                 &append(
                                                     path,
@@ -253,7 +256,7 @@ impl Model {
                                                 <div>{ for values }</div>
                                             </span>
                                         }
-                                    }),
+                                    },
                                 );
                                 html! {
                                     <div>
@@ -287,6 +290,7 @@ impl Model {
             None => (
                 crate::schema::textbox(
                     self,
+                    ctx,
                     &Node::default(),
                     path,
                     &self.parsed_commands,
@@ -298,7 +302,7 @@ impl Model {
         };
         // Use onmousedown to avoid re-selecting the node?
         html! {
-            <div class=classes.join(" ") onclick=onclick onmouseover=onmouseover>
+            <div class={ classes.join(" ") } onclick={ onclick } onmouseover={ onmouseover }>
                 { value }
                 { for errors.iter().map(|e| self.view_error(e)) }
             </div>
@@ -311,12 +315,19 @@ impl Model {
         }
     }
 
-    pub fn view_child(&self, node: &Node, field_name: &str, path: &[Selector]) -> Html {
-        self.view_child_with_placeholder(node, field_name, path, field_name)
+    pub fn view_child(
+        &self,
+        ctx: &Context<Self>,
+        node: &Node,
+        field_name: &str,
+        path: &[Selector],
+    ) -> Html {
+        self.view_child_with_placeholder(ctx, node, field_name, path, field_name)
     }
 
     pub fn view_child_with_placeholder(
         &self,
+        ctx: &Context<Self>,
         parent: &Node,
         field_name: &str,
         path: &[Selector],
@@ -336,12 +347,13 @@ impl Model {
             .cloned();
         // Empty list vs hole vs special value?
         // TODO: How to traverse nested lists in preorder?
-        self.view_node_with_placeholder(hash, &path, placeholder)
+        self.view_node_with_placeholder(ctx, hash, &path, placeholder)
     }
 
     /// Returns the head and children, separately.
     pub fn view_children(
         &self,
+        ctx: &Context<Self>,
         parent: &Node,
         field_name: &str,
         path: &[Selector],
@@ -367,16 +379,16 @@ impl Model {
             }
 
             let path_clone = path.clone();
-            let _onclick = self.link.callback(move |e: MouseEvent| {
-                e.stop_propagation();
-                Msg::Select(path_clone.clone())
-            });
+            // let _onclick = self.link.callback(move |e: MouseEvent| {
+            //     e.stop_propagation();
+            //     Msg::Select(path_clone.clone())
+            // });
 
             let path_clone = path.clone();
-            let _onmouseover = self.link.callback(move |e: MouseEvent| {
-                e.stop_propagation();
-                Msg::Hover(path_clone.clone())
-            });
+            // let _onmouseover = self.link.callback(move |e: MouseEvent| {
+            //     e.stop_propagation();
+            //     Msg::Hover(path_clone.clone())
+            // });
 
             // html! {
             //     <div onclick=onclick onmouseover=onmouseover class=classes.join(" ")>{ field_name
@@ -397,7 +409,7 @@ impl Model {
                         index: i,
                     },
                 );
-                self.view_node(Some(h.clone()), &path)
+                self.view_node(ctx, Some(h.clone()), &path)
             })
             .chain(std::iter::once({
                 let path = append(
@@ -407,7 +419,7 @@ impl Model {
                         index: children.len(),
                     },
                 );
-                self.view_node_with_placeholder(None, &path, &format!("{}▷", field_name))
+                self.view_node_with_placeholder(ctx, None, &path, &format!("{}▷", field_name))
             }))
             .collect::<Vec<_>>();
         (head, nodes)

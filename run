@@ -5,5 +5,4 @@ set -o nounset
 set -o xtrace
 set -o pipefail
 
-wasm-pack build --dev --target=web --out-name=wasm --out-dir=./static
-python3 -m http.server 8000
+trunk serve

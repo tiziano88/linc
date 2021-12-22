@@ -1,11 +1,9 @@
-use std::collections::HashMap;
-
 use crate::{
-    types::{Model, Msg, Node, Path, Selector},
+    types::{get_value_from_input_event, Model, Msg, Node, Path, Selector},
     view,
 };
-
-use yew::{html, prelude::*, Html, InputData};
+use std::collections::HashMap;
+use yew::{html, prelude::*, Html};
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
 //the kind field of Inner, and we then try to parse each element with all of them until one
@@ -424,10 +422,10 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["impl_trait"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let trait_ = c.model.view_child(c.node, "trait", c.path);
-                    let type_ = c.model.view_child(c.node, "type", c.path);
+                    let trait_ = c.model.view_child(c.ctx, c.node, "trait", c.path);
+                    let type_ = c.model.view_child(c.ctx, c.node, "type", c.path);
 
-                    let (items_head, items) = c.model.view_children(c.node, "items", c.path);
+                    let (items_head, items) = c.model.view_children(c.ctx, c.node, "items", c.path);
                     let items = items.into_iter().map(|b| {
                         html! {
                             <div>{ b }</div>
@@ -545,10 +543,10 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["identifier"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let ref_ = c.model.view_child(c.node, "ref", c.path);
-                    let mut_ = c.model.view_child(c.node, "mut", c.path);
-                    let identifier = c.model.view_child(c.node, "identifier", c.path);
-                    let pattern = c.model.view_child(c.node, "pattern", c.path);
+                    let ref_ = c.model.view_child(c.ctx, c.node, "ref", c.path);
+                    let mut_ = c.model.view_child(c.ctx, c.node, "mut", c.path);
+                    let identifier = c.model.view_child(c.ctx, c.node, "identifier", c.path);
+                    let pattern = c.model.view_child(c.ctx, c.node, "pattern", c.path);
                     html! {
                       <span>{ ref_ }{ mut_ }{ identifier }{ "@" }{ pattern }</span>
                     }
@@ -627,7 +625,7 @@ pub const SCHEMA: Schema = Schema {
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
                     let (components_head, components) =
-                        c.model.view_children(c.node, "components", c.path);
+                        c.model.view_children(c.ctx, c.node, "components", c.path);
                     let components = components
                         .into_iter()
                         .intersperse(html! { <span>{ "," }</span>});
@@ -782,7 +780,7 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["pub_in"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let path = c.model.view_child(c.node, "path", c.path);
+                    let path = c.model.view_child(c.ctx, c.node, "path", c.path);
                     html! {
                         <span>
                             <span class="keyword">{ "pub" }</span>
@@ -808,7 +806,7 @@ pub const SCHEMA: Schema = Schema {
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
                     let (segments_head, segments) =
-                        c.model.view_children(c.node, "segments", c.path);
+                        c.model.view_children(c.ctx, c.node, "segments", c.path);
                     let segments = segments
                         .into_iter()
                         .intersperse(html! { <span>{ "::" }</span>});
@@ -845,9 +843,9 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["reference"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let lifetime = c.model.view_child(c.node, "lifetime", c.path);
-                    let mutable = c.model.view_child(c.node, "mutable", c.path);
-                    let type_ = c.model.view_child(c.node, "type", c.path);
+                    let lifetime = c.model.view_child(c.ctx, c.node, "lifetime", c.path);
+                    let mutable = c.model.view_child(c.ctx, c.node, "mutable", c.path);
+                    let type_ = c.model.view_child(c.ctx, c.node, "type", c.path);
                     html! {
                         <span>
                         { "&" }{ lifetime }{ mutable }{ type_ }
@@ -880,9 +878,9 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["const"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let identifier = c.model.view_child(c.node, "identifier", c.path);
-                    let type_ = c.model.view_child(c.node, "type", c.path);
-                    let expression = c.model.view_child(c.node, "expression", c.path);
+                    let identifier = c.model.view_child(c.ctx, c.node, "identifier", c.path);
+                    let type_ = c.model.view_child(c.ctx, c.node, "type", c.path);
+                    let expression = c.model.view_child(c.ctx, c.node, "expression", c.path);
                     html! {
                         <span>
                             <span class="keyword">{ "const" }</span>
@@ -917,13 +915,13 @@ pub const SCHEMA: Schema = Schema {
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
                     let (_statements_head, statements) =
-                        c.model.view_children(c.node, "statements", c.path);
+                        c.model.view_children(c.ctx, c.node, "statements", c.path);
                     let statements = statements.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ ";" }</div>
                         }
                     });
-                    let expression = c.model.view_child(c.node, "expression", c.path);
+                    let expression = c.model.view_child(c.ctx, c.node, "expression", c.path);
 
                     html! {
                         <span>
@@ -2264,16 +2262,19 @@ type Validator = fn(&ValidatorContext) -> Vec<ValidationError>;
 
 pub struct ValidatorContext<'a> {
     pub model: &'a Model,
+    pub ctx: &'a Context<Model>,
     pub node: &'a Node,
     pub path: &'a [Selector],
 }
 
 impl<'a> ValidatorContext<'a> {
     pub fn view_child(&self, field_name: &str) -> Html {
-        self.model.view_child(self.node, field_name, self.path)
+        self.model
+            .view_child(self.ctx, self.node, field_name, self.path)
     }
     pub fn view_children(&self, field_name: &str) -> (Html, Vec<Html>) {
-        self.model.view_children(self.node, field_name, self.path)
+        self.model
+            .view_children(self.ctx, self.node, field_name, self.path)
     }
     // TODO: field / child.
 }
@@ -2306,6 +2307,7 @@ pub struct Schema {
 
 pub fn textbox(
     model: &Model,
+    ctx: &Context<Model>,
     node: &Node,
     path: &[Selector],
     suggestions: &[ParsedValue],
@@ -2314,9 +2316,9 @@ pub fn textbox(
 ) -> Html {
     let path_clone = path.to_vec();
     let _node_clone = node.clone();
-    let oninput = model
-        .link
-        .callback(move |e: InputData| Msg::SetNodeCommand(path_clone.clone(), e.value.clone()));
+    let oninput = ctx.link().callback(move |e: InputEvent| {
+        Msg::SetNodeCommand(path_clone.clone(), get_value_from_input_event(e))
+    });
     // let onblur = model.link.callback(move |e: yew::FocusEvent| {
     //     let target = e.related_target().unwrap().dyn_into::<HtmlElement>().unwrap();
     //     let mut node = node_clone.clone();
@@ -2344,7 +2346,7 @@ pub fn textbox(
                 let value_suffix = value_string.strip_prefix(value_prefix).unwrap_or_default();
 
                 let node = v.to_node();
-                let onclick = model.link.callback(move |_e: MouseEvent| {
+                let onclick = ctx.link().callback(move |_e: MouseEvent| {
                     Msg::ReplaceNode(path_clone.clone(), node.clone(), true)
                 });
                 let mut classes_item = vec!["block", "border"];
@@ -2353,7 +2355,7 @@ pub fn textbox(
                 }
                 // Avoid re-selecting the node, we want to move to next.
                 html! {
-                    <span class=classes_item.join(" ") onmousedown=onclick>
+                    <span class={classes_item.join(" ")} onmousedown={onclick}>
                       <span class="font-bold">{ value_prefix }</span>
                       { value_suffix }
                     </span>
@@ -2393,16 +2395,16 @@ pub fn textbox(
             { for placeholder }
             <span>
                 <input
-                  id=id
-                  class=class
+                  id={id}
+                  class={class}
                   type="text"
-                  oninput=oninput
-                  value=value
-                  style=style
+                  oninput={oninput}
+                  value={value}
+                  style={style}
                   autocomplete="off"
                 />
                 <span class="completion">{ completion }</span>
-                <div class=classes_dropdown.join(" ")>
+                <div class={classes_dropdown.join(" ")}>
                     { for suggestions }
                 </div>
             </span>
@@ -2410,23 +2412,23 @@ pub fn textbox(
     }
 }
 
-fn hole(model: &Model, node: &Node, path: &Path) -> Html {
+fn hole(model: &Model, ctx: &Context<Model>, node: &Node, path: &Path) -> Html {
     let path_clone = path.to_vec();
     let node_clone = node.clone();
-    let oninput = model.link.callback(move |e: InputData| {
+    let oninput = ctx.link().callback(move |e: InputEvent| {
         let mut node = node_clone.clone();
-        node.value = e.value.clone();
+        node.value = get_value_from_input_event(e);
         crate::types::Msg::ReplaceNode(path_clone.clone(), node, false)
     });
     let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
     let classes_item = vec!["block", "border"];
     html! {
         <span>
-            <input type="text" value=node.value.clone() oninput=oninput />
-            <div class=classes_dropdown.join(" ")>
-              <a href="#" class=classes_item.join(" ")>{"link 1"}</a>
-              <a href="#" class=classes_item.join(" ")>{"link 2"}</a>
-              <a href="#" class=classes_item.join(" ")>{"link 3"}</a>
+            <input type="text" value={node.value.clone()} oninput={oninput} />
+            <div class={classes_dropdown.join(" ")}>
+              <a href="#" class={classes_item.join(" ")}>{"link 1"}</a>
+              <a href="#" class={classes_item.join(" ")}>{"link 2"}</a>
+              <a href="#" class={classes_item.join(" ")}>{"link 3"}</a>
             </div>
         </span>
     }

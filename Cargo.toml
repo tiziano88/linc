@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 console_error_panic_hook = "*"
+gloo-storage = "*"
 hex = "*"
 html_parser = "*"
 itertools = "*"
