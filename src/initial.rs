@@ -1,11 +1,11 @@
 use super::types::*;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub fn initial() -> File {
     let node = Node {
-        kind: "rust_fragment".to_string(),
+        kind: "root".to_string(),
         value: "".to_string(),
-        children: HashMap::new(),
+        children: BTreeMap::new(),
     };
     let mut file = File {
         nodes: HashMap::new(),

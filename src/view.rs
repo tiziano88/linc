@@ -1,5 +1,7 @@
 use crate::{
-    schema::{Field, Multiplicity, ValidationError, ValidatorContext, SCHEMA},
+    schema::{
+        default_renderer, Field, KindValue, Multiplicity, ValidationError, ValidatorContext, SCHEMA,
+    },
     types::*,
 };
 use web_sys::MouseEvent;
@@ -178,7 +180,7 @@ impl Model {
         }
     }
 
-    fn view_node(&self, ctx: &Context<Self>, hash: Option<Hash>, path: &[Selector]) -> Html {
+    pub fn view_node(&self, ctx: &Context<Self>, hash: Option<Hash>, path: &[Selector]) -> Html {
         self.view_node_with_placeholder(ctx, hash, path, "◆")
     }
 
@@ -215,7 +217,7 @@ impl Model {
         //     crate::types::Msg::SetNodeCommand(path_clone.clone(), get_value_from_input_event(e))
         // });
 
-        let (value, errors) = match hash {
+        let (value, mut fields, errors): (_, Vec<Field>, _) = match hash {
             Some(hash) => match self.file.lookup(path) {
                 Some(node) => {
                     let context = ValidatorContext {
@@ -225,65 +227,33 @@ impl Model {
                         node,
                     };
 
-                    match SCHEMA.get_kind("&node.kind") {
-                        Some(kind) => (kind.render(&context), kind.validator(&context)),
-                        None => (
-                            {
-                                // https://codepen.io/xotonic/pen/JRLAOR
-                                let fields = node.children.iter().map(
-                                    |(name, hashes)| {
-                                        let values = hashes.iter().enumerate().map(|(i, h)| {
-                                            let v = self.view_node(
-                                                ctx,
-                                                Some(h.to_string()),
-                                                &append(
-                                                    path,
-                                                    Selector {
-                                                        field: name.to_string(),
-                                                        index: i,
-                                                    },
-                                                ),
-                                            );
-                                            html! {
-                                                <div class="px-5">{ v }</div>
-                                            }
-                                        });
-                                        html! {
-                                            <span class="px-1">
-                                                <div class="sticky bg-gray-300" style={ format!("top: {}rem; z-index: {};", (4. * (path.len() as f32)) + 2.5, 128-path.len()) }>
-                                                  { name }
-                                                </div>
-                                                <div>{ for values }</div>
-                                            </span>
-                                        }
-                                    },
-                                );
-                                html! {
-                                    <div>
-                                        <div class="sticky bg-white" style={ format!("top: {}rem; z-index: {};", 4. * (path.len() as f32), 128-path.len()) }>
-                                            <div>{ "kind: " }{ &node.kind }</div>
-                                            <div>{ "value: " }{ &node.value }</div>
-                                        </div>
-                                        { for fields }
-                                    </div>
-                                }
-                            },
-                            // crate::schema::textbox(
-                            //     self,
-                            //     node,
-                            //     path,
-                            //     &self.parsed_commands,
-                            //     placeholder,
-                            //     &[],
-                            // ),
-                            vec![],
-                        ),
+                    // XXX
+                    match SCHEMA.get_kind(&node.kind) {
+                        Some(kind) => {
+                            let KindValue::Struct { fields, .. } = kind.value;
+                            (
+                                kind.render(&context),
+                                fields.to_vec(),
+                                kind.validator(&context),
+                            )
+                        }
+                        None => (default_renderer(&context), vec![], vec![]),
                     }
                 }
                 None => (
-                    html! {
-                        <span>{ format!("invalid hash: {:?}", hash) }</span>
-                    },
+                    // html! {
+                    //     <span>{ format!("invalid hash: {:?}", hash) }</span>
+                    // },
+                    crate::schema::textbox(
+                        self,
+                        ctx,
+                        &Node::default(),
+                        path,
+                        &self.parsed_commands,
+                        placeholder,
+                        &[],
+                    ),
+                    vec![],
                     vec![],
                 ),
             },
@@ -298,14 +268,31 @@ impl Model {
                     &[],
                 ),
                 vec![],
+                vec![],
             ),
         };
+        if !selected {
+            fields = vec![];
+        }
         // Use onmousedown to avoid re-selecting the node?
         html! {
             <div class={ classes.join(" ") } onclick={ onclick } onmouseover={ onmouseover }>
                 { value }
+                { for fields.iter().map(|f| self.view_field(ctx, path, f)) }
                 { for errors.iter().map(|e| self.view_error(e)) }
             </div>
+        }
+    }
+
+    pub fn view_field(&self, ctx: &Context<Self>, path: &[Selector], field: &Field) -> Html {
+        let path = path.to_vec();
+        let field_name = field.name.to_string();
+        let onclick = ctx.link().callback(move |e: MouseEvent| {
+            e.stop_propagation();
+            Msg::AddField(path.clone(), field_name.clone())
+        });
+        html! {
+            <div class="field" onclick={ onclick }>{ format!("+ {}", field.name) }</div>
         }
     }
 

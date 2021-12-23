@@ -18,5 +18,11 @@ sha2 = "*"
 uuid = { version = "*", features = ["wasm-bindgen", "v4"] }
 wasm-bindgen = "*"
 wasm-logger = "*"
-web-sys = { version = "*", features = ["Selection"]}
+web-sys = { version = "*", features = [
+    "HtmlElement",
+    "HtmlInputElement",
+    "InputEvent",
+    "MouseEvent",
+    "Selection",
+    ]}
 yew = "*"

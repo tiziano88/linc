@@ -4,7 +4,10 @@ use crate::schema::{
 use gloo_storage::{LocalStorage, Storage};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, convert::TryInto};
+use std::{
+    collections::{BTreeMap, HashMap},
+    convert::TryInto,
+};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{window, HtmlElement, HtmlInputElement, InputEvent};
 use yew::{html, prelude::*, Component, Html, KeyboardEvent};
@@ -290,6 +293,7 @@ pub enum Msg {
     SetMode(Mode),
 
     ReplaceNode(Path, Node, bool),
+    AddField(Path, String),
 
     SetNodeCommand(Path, String),
     CommandKey(KeyboardEvent),
@@ -375,7 +379,7 @@ impl File {
 pub struct Node {
     pub kind: String,
     pub value: String,
-    pub children: HashMap<String, Vec<Hash>>,
+    pub children: BTreeMap<String, Vec<Hash>>,
 }
 
 fn display_selector(selector: &Selector) -> Vec<Html> {
@@ -539,13 +543,13 @@ impl Component for Model {
                     model.file.add_node(&Node {
                         kind: "string".into(),
                         value: value.into(),
-                        children: HashMap::new(),
+                        children: BTreeMap::new(),
                     })
                 }
                 fn add_node(model: &mut Model, node: &html_parser::Node) -> Hash {
                     match node {
                         html_parser::Node::Element(e) => {
-                            let mut children: HashMap<String, Vec<String>> = HashMap::new();
+                            let mut children: BTreeMap<String, Vec<String>> = BTreeMap::new();
                             e.attributes.iter().for_each(|(k, v)| {
                                 children.entry(k.clone()).or_insert_with(Vec::new).push(
                                     add_string(model, &v.as_ref().cloned().unwrap_or_default()),
@@ -568,7 +572,7 @@ impl Component for Model {
                     }
                 }
                 fn add_dom(model: &mut Model, e: &html_parser::Dom) -> Hash {
-                    let mut children: HashMap<String, Vec<String>> = HashMap::new();
+                    let mut children: BTreeMap<String, Vec<String>> = BTreeMap::new();
                     e.children.iter().for_each(|v| {
                         children
                             .entry("children".to_string())
@@ -586,6 +590,26 @@ impl Component for Model {
             }
             Msg::SetMode(mode) => {
                 self.mode = mode;
+            }
+            Msg::AddField(path, field) => {
+                let mut node = self.file.lookup(&path).cloned().unwrap();
+                node.children
+                    .entry(field.clone())
+                    .or_insert_with(Vec::new)
+                    .push("".into());
+                let n = node.children[&field].len();
+                let new_root = self.file.replace_node(&path, node);
+                if let Some(new_root) = new_root {
+                    self.file.root = new_root;
+                }
+                self.cursor = append(
+                    &path,
+                    Selector {
+                        field,
+                        index: n - 1,
+                    },
+                );
+                update_from_selected(self);
             }
             Msg::ReplaceNode(path, node, mv) => {
                 log::info!("replace node {:?} {:?}", path, node);
@@ -621,7 +645,7 @@ impl Component for Model {
                 let new_ref = self.file.add_node(&Node {
                     kind: "invalid".to_string(),
                     value: "invalid".to_string(),
-                    children: HashMap::new(),
+                    children: BTreeMap::new(),
                 });
                 let mut parent = self.file.lookup(parent_path).unwrap().clone();
                 // If the field does not exist, create a default one.

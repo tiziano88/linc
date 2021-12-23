@@ -1,8 +1,8 @@
 use crate::{
-    types::{get_value_from_input_event, Model, Msg, Node, Path, Selector},
+    types::{append, get_value_from_input_event, Model, Msg, Node, Path, Selector},
     view,
 };
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use yew::{html, prelude::*, Html};
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
@@ -213,6 +213,23 @@ fn any(_v: &str) -> Vec<ValidationError> {
 pub const SCHEMA: Schema = Schema {
     kinds: &[
         Kind {
+            name: "root",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "value",
+                    multiplicity: Multiplicity::Repeated,
+                    validators: &[
+                        FieldValidator::Kind("git"),
+                        FieldValidator::Kind("rust_fragment"),
+                    ],
+                }],
+                inner: None,
+                constructors: &["root"],
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: default_renderer,
+            },
+        },
+        Kind {
             name: "git",
             value: KindValue::Struct {
                 fields: &[Field {
@@ -223,21 +240,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["git"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |c: &ValidatorContext| {
-                    let (items_head, items) = c.view_children("items");
-                    let items = items.into_iter().map(|b| {
-                        html! {
-                            <div>{ b }</div>
-                        }
-                    });
-                    html! {
-                        <div>
-                        <div class="fragment-type">{ "rust" }</div>
-                        { for items }
-                        { items_head }
-                        </div>
-                    }
-                },
+                renderer: default_renderer,
             },
         },
         Kind {
@@ -263,21 +266,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["commit"],
                 validator: |_c: &ValidatorContext| vec![],
-                renderer: |c: &ValidatorContext| {
-                    let (items_head, items) = c.view_children("items");
-                    let items = items.into_iter().map(|b| {
-                        html! {
-                            <div>{ b }</div>
-                        }
-                    });
-                    html! {
-                        <div>
-                        <div class="fragment-type">{ "rust" }</div>
-                        { for items }
-                        { items_head }
-                        </div>
-                    }
-                },
+                renderer: default_renderer,
             },
         },
         Kind {
@@ -2260,6 +2249,49 @@ pub const SCHEMA: Schema = Schema {
 type Renderer = fn(&ValidatorContext) -> Html;
 type Validator = fn(&ValidatorContext) -> Vec<ValidationError>;
 
+pub fn default_renderer(c: &ValidatorContext) -> Html {
+    let node = c.node;
+    let path = c.path;
+    // https://codepen.io/xotonic/pen/JRLAOR
+    let fields = node.children.iter().map(
+        |(name, hashes)| {
+            let values = hashes.iter().enumerate().map(|(i, h)| {
+                let v = c.model.view_node(
+                    c.ctx,
+                    Some(h.to_string()),
+                    &append(
+                        path,
+                        Selector {
+                            field: name.to_string(),
+                            index: i,
+                        },
+                    ),
+                );
+                html! {
+                    <div class="px-5">{ v }</div>
+                }
+            });
+            html! {
+                <span class="px-1">
+                    <div class="sticky bg-gray-300" style={ format!("top: {}rem; z-index: {};", (4. * (path.len() as f32)) + 2.5, 128-path.len()) }>
+                        { name }
+                    </div>
+                    <div>{ for values }</div>
+                </span>
+            }
+        },
+    );
+    html! {
+        <div>
+            <div class="sticky bg-white" style={ format!("top: {}rem; z-index: {};", 4. * (path.len() as f32), 128-path.len()) }>
+                <div>{ "kind: " }{ &node.kind }</div>
+                <div>{ "value: " }{ &node.value }</div>
+            </div>
+            { for fields }
+        </div>
+    }
+}
+
 pub struct ValidatorContext<'a> {
     pub model: &'a Model,
     pub ctx: &'a Context<Model>,
@@ -2510,7 +2542,7 @@ impl ParsedValue {
         Node {
             kind: self.kind_hierarchy.last().unwrap().clone(),
             value: self.value.clone(),
-            children: HashMap::new(),
+            children: BTreeMap::new(),
         }
     }
 }
