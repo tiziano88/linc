@@ -5,7 +5,7 @@ readonly TARGET_DIR=$PWD/../linc-gh-pages
 rm -rf $TARGET_DIR/*
 
 ./build
-cp -r ./static/{snippets,index.html,icons.css,style.css,tailwind.css,wasm.js,wasm_bg.wasm} $TARGET_DIR
+cp --recursive ./dist/* $TARGET_DIR
 (
   cd $TARGET_DIR
   git add .

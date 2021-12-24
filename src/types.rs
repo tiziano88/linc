@@ -454,7 +454,7 @@ impl Component for Model {
         }
     }
 
-    fn create(ctx: &Context<Self>) -> Self {
+    fn create(_ctx: &Context<Self>) -> Self {
         // let key_listener = KeyboardService::register_key_down(
         //     &window().unwrap(),
         //     ctx.link().callback(move |e: KeyboardEvent| {
@@ -528,7 +528,7 @@ impl Component for Model {
                 update_from_selected(self);
             }
             Msg::Store => {
-                LocalStorage::set(KEY, &self.file);
+                LocalStorage::set(KEY, &self.file).unwrap();
             }
             Msg::Load => {
                 if let Ok(file) = LocalStorage::get(KEY) {
@@ -655,7 +655,7 @@ impl Component for Model {
                 self.file.replace_node(parent_path, parent);
                 // Select newly created element.
                 self.cursor.last_mut().unwrap().index = new_index;
-                self.next();
+                // self.next();
             }
             Msg::DeleteItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap().clone();

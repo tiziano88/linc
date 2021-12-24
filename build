@@ -5,4 +5,4 @@ set -o nounset
 set -o xtrace
 set -o pipefail
 
-wasm-pack build --dev --target=web --out-name=wasm --out-dir=./static
+trunk build --public-url=linc

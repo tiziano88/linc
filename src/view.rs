@@ -181,7 +181,7 @@ impl Model {
     }
 
     pub fn view_node(&self, ctx: &Context<Self>, hash: Option<Hash>, path: &[Selector]) -> Html {
-        self.view_node_with_placeholder(ctx, hash, path, "◆")
+        self.view_node_with_placeholder(ctx, hash, path, "")
     }
 
     fn view_node_with_placeholder(

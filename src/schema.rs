@@ -2252,8 +2252,13 @@ type Validator = fn(&ValidatorContext) -> Vec<ValidationError>;
 pub fn default_renderer(c: &ValidatorContext) -> Html {
     let node = c.node;
     let path = c.path;
-    // https://codepen.io/xotonic/pen/JRLAOR
-    let fields = node.children.iter().map(
+    if node.kind.is_empty() {
+        // Raw.
+        textbox(c.model, c.ctx, &node, &path, &[], "", &[])
+    } else {
+        // Node.
+        // https://codepen.io/xotonic/pen/JRLAOR
+        let fields = node.children.iter().map(
         |(name, hashes)| {
             let values = hashes.iter().enumerate().map(|(i, h)| {
                 let v = c.model.view_node(
@@ -2281,14 +2286,16 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
             }
         },
     );
-    html! {
-        <div>
-            <div class="sticky bg-white" style={ format!("top: {}rem; z-index: {};", 4. * (path.len() as f32), 128-path.len()) }>
-                <div>{ "kind: " }{ &node.kind }</div>
-                <div>{ "value: " }{ &node.value }</div>
+        html! {
+            <div>
+                <div class="sticky bg-white" style={ format!("top: {}rem; z-index: {};", 4. * (path.len() as f32), 128-path.len()) }>
+                    <div class="kind">{ &node.kind }</div>
+                    // <div>{ "kind: " }{ &node.kind }</div>
+                    // <div>{ "value: " }{ &node.value }</div>
+                </div>
+                { for fields }
             </div>
-            { for fields }
-        </div>
+        }
     }
 }
 
@@ -2387,7 +2394,7 @@ pub fn textbox(
                 }
                 // Avoid re-selecting the node, we want to move to next.
                 html! {
-                    <span class={classes_item.join(" ")} onmousedown={onclick}>
+                    <span class={classes_item.join(" ")} onmousedown={ onclick }>
                       <span class="font-bold">{ value_prefix }</span>
                       { value_suffix }
                     </span>
@@ -2427,12 +2434,12 @@ pub fn textbox(
             { for placeholder }
             <span>
                 <input
-                  id={id}
-                  class={class}
+                  id={ id }
+                  class={ class }
                   type="text"
-                  oninput={oninput}
-                  value={value}
-                  style={style}
+                  oninput={ oninput }
+                  value={ value }
+                  style={ style }
                   autocomplete="off"
                 />
                 <span class="completion">{ completion }</span>
