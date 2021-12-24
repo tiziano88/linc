@@ -2,7 +2,7 @@ use crate::{
     types::{append, get_value_from_input_event, Model, Msg, Node, Path, Selector},
     view,
 };
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use yew::{html, prelude::*, Html};
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
@@ -2356,8 +2356,16 @@ pub fn textbox(
     let path_clone = path.to_vec();
     let _node_clone = node.clone();
     let oninput = ctx.link().callback(move |e: InputEvent| {
-        Msg::SetNodeCommand(path_clone.clone(), get_value_from_input_event(e))
+        Msg::SetNodeValue(path_clone.clone(), get_value_from_input_event(e))
     });
+    let path_clone = path.to_vec();
+    let onkeydown = ctx
+        .link()
+        .callback(move |e: KeyboardEvent| Msg::CommandKey(path_clone.clone(), e));
+    let path_clone = path.to_vec();
+    let onfocus = ctx
+        .link()
+        .callback(move |_e: FocusEvent| Msg::Select(path_clone.clone()));
     // let onblur = model.link.callback(move |e: yew::FocusEvent| {
     //     let target = e.related_target().unwrap().dyn_into::<HtmlElement>().unwrap();
     //     let mut node = node_clone.clone();
@@ -2394,7 +2402,7 @@ pub fn textbox(
                 }
                 // Avoid re-selecting the node, we want to move to next.
                 html! {
-                    <span class={classes_item.join(" ")} onmousedown={ onclick }>
+                    <span class={ classes_item.join(" ") } onmousedown={ onclick }>
                       <span class="font-bold">{ value_prefix }</span>
                       { value_suffix }
                     </span>
@@ -2438,12 +2446,14 @@ pub fn textbox(
                   class={ class }
                   type="text"
                   oninput={ oninput }
+                  onkeydown={ onkeydown }
+                  onfocus={ onfocus }
                   value={ value }
                   style={ style }
                   autocomplete="off"
                 />
                 <span class="completion">{ completion }</span>
-                <div class={classes_dropdown.join(" ")}>
+                <div class={ classes_dropdown.join(" ") }>
                     { for suggestions }
                 </div>
             </span>

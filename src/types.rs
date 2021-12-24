@@ -295,8 +295,9 @@ pub enum Msg {
     ReplaceNode(Path, Node, bool),
     AddField(Path, String),
 
-    SetNodeCommand(Path, String),
-    CommandKey(KeyboardEvent),
+    SetNodeValue(Path, String),
+
+    CommandKey(Path, KeyboardEvent),
     PrevCommand,
     NextCommand,
 
@@ -494,7 +495,16 @@ impl Component for Model {
 
             let parsed_commands = model.parse_commands(&model.cursor);
             log::debug!("parsed commands {:?}", parsed_commands);
-            model.parsed_commands = parsed_commands;
+            let filtered_commands = match current_node {
+                Some(node) => parsed_commands
+                    .into_iter()
+                    .filter(|c| c.label.starts_with(&node.value))
+                    .collect(),
+                None => parsed_commands,
+            };
+            log::debug!("filtered commands {:?}", filtered_commands);
+            model.parsed_commands = filtered_commands;
+            model.selected_command_index = 0;
 
             let command_input_id = crate::view::command_input_id(&model.cursor);
             Model::focus_element(&format!("#{}", command_input_id));
@@ -624,21 +634,15 @@ impl Component for Model {
                     self.selected_command_index = 0;
                 }
             }
-            Msg::SetNodeCommand(path, raw_command) => {
+            Msg::SetNodeValue(path, value) => {
+                self.cursor = path.clone();
                 let mut node = self.file.lookup(&path).cloned().unwrap_or_default();
-                node.value = raw_command.clone();
+                node.value = value.clone();
                 let new_root = self.file.replace_node(&path, node);
-                let parsed_commands = self
-                    .parse_commands(&path)
-                    .into_iter()
-                    // TODO: Fuzzy match.
-                    .filter(|c| c.label.starts_with(&raw_command))
-                    .collect();
-                self.parsed_commands = parsed_commands;
-                self.selected_command_index = 0;
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
                 }
+                update_from_selected(self);
             }
             Msg::AddItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
@@ -680,8 +684,11 @@ impl Component for Model {
                         (self.selected_command_index + 1) % self.parsed_commands.len();
                 }
             }
-            Msg::CommandKey(e) => {
+            Msg::CommandKey(path, e) => {
                 log::info!("key: {}", e.key());
+                self.cursor = path.clone();
+                let node = self.file.lookup(&path).cloned().unwrap_or_default();
+
                 let selection = window().unwrap().get_selection().unwrap().unwrap();
                 let anchor_node = selection.anchor_node().unwrap();
                 let _anchor_offset = selection.anchor_offset();
@@ -706,6 +713,20 @@ impl Component for Model {
                                 node,
                                 true,
                             ));
+                        }
+                        // If it is a pure value, select the parent again so another field may be
+                        // added.
+                        if node.kind.is_empty() {
+                            self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
+                            update_from_selected(self);
+                        }
+                    }
+                    "Escape" => {
+                        // If it is a pure value, select the parent again so another field may be
+                        // added.
+                        if node.kind.is_empty() {
+                            self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
+                            update_from_selected(self);
                         }
                     }
                     // "Enter" if self.mode == Mode::Edit =>
