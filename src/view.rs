@@ -1,6 +1,7 @@
 use crate::{
     schema::{
-        default_renderer, Field, KindValue, Multiplicity, ValidationError, ValidatorContext, SCHEMA,
+        default_renderer, Entry, Field, KindValue, Multiplicity, ValidationError, ValidatorContext,
+        SCHEMA,
     },
     types::*,
 };
@@ -187,7 +188,7 @@ impl Model {
     fn view_node_with_placeholder(
         &self,
         ctx: &Context<Self>,
-        hash: Option<Hash>,
+        _hash: Option<Hash>,
         path: &[Selector],
         placeholder: &str,
     ) -> Html {
@@ -213,64 +214,42 @@ impl Model {
         });
 
         let path_clone = path.to_vec();
-        // let _oninput = ctx.link().callback(move |e: InputEvent| {
-        //     crate::types::Msg::SetNodeCommand(path_clone.clone(), get_value_from_input_event(e))
-        // });
+        let entries: Vec<Entry> = self
+            .parsed_commands
+            .iter()
+            .map(|v| Entry {
+                label: v.label.to_string(),
+                description: "".to_string(),
+                action: Msg::ReplaceNode(path_clone.clone(), v.to_node(), true),
+            })
+            .collect();
 
-        let (value, mut fields, errors): (_, Vec<Field>, _) = match hash {
-            Some(hash) => match self.file.lookup(path) {
-                Some(node) => {
-                    let context = ValidatorContext {
-                        model: self,
-                        ctx,
-                        path,
-                        node,
-                    };
-
-                    // XXX
-                    match SCHEMA.get_kind(&node.kind) {
-                        Some(kind) => {
-                            let KindValue::Struct { fields, .. } = kind.value;
-                            (
-                                kind.render(&context),
-                                fields.to_vec(),
-                                kind.validator(&context),
-                            )
-                        }
-                        None => (default_renderer(&context), vec![], vec![]),
-                    }
-                }
-                None => (
-                    // html! {
-                    //     <span>{ format!("invalid hash: {:?}", hash) }</span>
-                    // },
-                    crate::schema::textbox(
-                        self,
-                        ctx,
-                        &Node::default(),
-                        path,
-                        &self.parsed_commands,
-                        placeholder,
-                        &[],
-                    ),
-                    vec![],
-                    vec![],
-                ),
-            },
-            None => (
-                crate::schema::textbox(
-                    self,
-                    ctx,
-                    &Node::default(),
-                    path,
-                    &self.parsed_commands,
-                    placeholder,
-                    &[],
-                ),
-                vec![],
-                vec![],
-            ),
+        let default_node = Node {
+            ..Default::default()
         };
+        let node = self.file.lookup(path).unwrap_or(&default_node);
+
+        let context = ValidatorContext {
+            model: self,
+            ctx,
+            path,
+            node,
+            entries: &entries,
+            placeholder,
+        };
+
+        let (value, mut fields, errors) = match SCHEMA.get_kind(&node.kind) {
+            Some(kind) => {
+                let KindValue::Struct { fields, .. } = kind.value;
+                (
+                    kind.render(&context),
+                    fields.to_vec(),
+                    kind.validator(&context),
+                )
+            }
+            None => (default_renderer(&context), vec![], vec![]),
+        };
+
         if !selected {
             fields = vec![];
         }

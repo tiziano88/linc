@@ -258,6 +258,8 @@ impl Model {
                 ctx,
                 node: &node,
                 path,
+                entries: &[],
+                placeholder: "",
             });
             log::info!("errors: {:?} {:?}", path, errors);
         }
@@ -675,7 +677,11 @@ impl Component for Model {
                 self.selected_command_index = if self.selected_command_index > 0 {
                     self.selected_command_index - 1
                 } else {
-                    self.parsed_commands.len() - 1
+                    if self.parsed_commands.len() > 0 {
+                        self.parsed_commands.len() - 1
+                    } else {
+                        0
+                    }
                 };
             }
             Msg::NextCommand => {

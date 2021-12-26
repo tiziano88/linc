@@ -2254,7 +2254,7 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
     let path = c.path;
     if node.kind.is_empty() {
         // Raw.
-        textbox(c.model, c.ctx, &node, &path, &[], "", &[])
+        textbox(c.model, c.ctx, &node, &path, c.entries, c.placeholder, &[])
     } else {
         // Node.
         // https://codepen.io/xotonic/pen/JRLAOR
@@ -2304,6 +2304,9 @@ pub struct ValidatorContext<'a> {
     pub ctx: &'a Context<Model>,
     pub node: &'a Node,
     pub path: &'a [Selector],
+
+    pub entries: &'a [Entry],
+    pub placeholder: &'a str,
 }
 
 impl<'a> ValidatorContext<'a> {
@@ -2344,17 +2347,23 @@ pub struct Schema {
     pub kinds: &'static [Kind],
 }
 
+#[derive(Clone)]
+pub struct Entry {
+    pub label: String,
+    pub description: String,
+    pub action: Msg,
+}
+
 pub fn textbox(
     model: &Model,
     ctx: &Context<Model>,
     node: &Node,
     path: &[Selector],
-    suggestions: &[ParsedValue],
+    entries: &[Entry],
     placeholder: &str,
     errors: &[ValidationError],
 ) -> Html {
     let path_clone = path.to_vec();
-    let _node_clone = node.clone();
     let oninput = ctx.link().callback(move |e: InputEvent| {
         Msg::SetNodeValue(path_clone.clone(), get_value_from_input_event(e))
     });
@@ -2373,29 +2382,27 @@ pub fn textbox(
     //     crate::types::Msg::ReplaceNode(path_clone.clone(), node)
     // });
     let selected = path == &model.cursor;
-    let selected_suggestion = suggestions
+    let selected_entry = entries
         .get(model.selected_command_index)
         .cloned()
-        .map(|v| v.value.clone())
+        .map(|v| v.label.clone())
         .unwrap_or_default()
         .strip_prefix(&node.value)
         .map(|v| v.to_string())
         .unwrap_or_default();
-    let suggestions: Vec<_> = if selected {
-        suggestions
+    let entries: Vec<_> = if selected {
+        entries
             .iter()
             .enumerate()
             .map(|(i, v)| {
-                let path_clone = path.to_vec();
                 let value_string = v.label.clone();
 
                 let value_prefix = &node.value;
                 let value_suffix = value_string.strip_prefix(value_prefix).unwrap_or_default();
 
-                let node = v.to_node();
-                let onclick = ctx.link().callback(move |_e: MouseEvent| {
-                    Msg::ReplaceNode(path_clone.clone(), node.clone(), true)
-                });
+                // let node = v.to_node();
+                let action = v.action.clone();
+                let onclick = ctx.link().callback(move |_e: MouseEvent| action.clone());
                 let mut classes_item = vec!["block", "border"];
                 if i == model.selected_command_index {
                     classes_item.push("selected");
@@ -2429,7 +2436,7 @@ pub fn textbox(
         })
     };
     let completion = if selected {
-        selected_suggestion
+        selected_entry
     } else {
         "".to_string()
     };
@@ -2454,7 +2461,7 @@ pub fn textbox(
                 />
                 <span class="completion">{ completion }</span>
                 <div class={ classes_dropdown.join(" ") }>
-                    { for suggestions }
+                    { for entries }
                 </div>
             </span>
         </span>
