@@ -1,7 +1,7 @@
 use crate::{
     schema::{
-        default_renderer, Entry, Field, KindValue, Multiplicity, ValidationError, ValidatorContext,
-        SCHEMA,
+        default_renderer, textbox, Entry, Field, KindValue, Multiplicity, ValidationError,
+        ValidatorContext, SCHEMA,
     },
     types::*,
 };
@@ -220,7 +220,7 @@ impl Model {
             .map(|v| Entry {
                 label: v.label.to_string(),
                 description: "".to_string(),
-                action: Msg::ReplaceNode(path_clone.clone(), v.to_node(), true),
+                action: Msg::ReplaceNode(path_clone.clone(), v.to_node(), false),
             })
             .collect();
 
@@ -250,14 +250,33 @@ impl Model {
             None => (default_renderer(&context), vec![], vec![]),
         };
 
-        if !selected {
-            fields = vec![];
-        }
+        let edit = if selected && self.mode == Mode::Edit {
+            let entries = fields
+                .iter()
+                .map(|f| Entry {
+                    label: f.name.to_string(),
+                    description: "".to_string(),
+                    action: Msg::AddField(path.to_vec(), f.name.to_string()),
+                })
+                .collect::<Vec<_>>();
+            textbox(&self, ctx, node, path, &entries, "", &[])
+        } else {
+            html! {}
+        };
+
+        let onkeydown = ctx
+            .link()
+            .callback(move |e: KeyboardEvent| Msg::CommandKey(path_clone.clone(), e));
         // Use onmousedown to avoid re-selecting the node?
         html! {
-            <div class={ classes.join(" ") } onclick={ onclick } onmouseover={ onmouseover }>
+            <div
+              tabindex={ "0" }
+              class={ classes.join(" ") }
+              onclick={ onclick }
+              onkeydown={ onkeydown }
+              onmouseover={ onmouseover }>
                 { value }
-                { for fields.iter().map(|f| self.view_field(ctx, path, f)) }
+                { edit }
                 { for errors.iter().map(|e| self.view_error(e)) }
             </div>
         }

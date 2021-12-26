@@ -710,6 +710,7 @@ impl Component for Model {
                 match e.key().as_ref() {
                     "Enter" => {
                         e.prevent_default();
+                        self.mode = Mode::Edit;
                         if let Some(selected_command) =
                             self.parsed_commands.get(self.selected_command_index)
                         {
@@ -728,6 +729,7 @@ impl Component for Model {
                         }
                     }
                     "Escape" => {
+                        self.mode = Mode::Normal;
                         // If it is a pure value, select the parent again so another field may be
                         // added.
                         if node.kind.is_empty() {
