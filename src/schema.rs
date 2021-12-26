@@ -2382,7 +2382,7 @@ pub fn textbox(
     //     crate::types::Msg::ReplaceNode(path_clone.clone(), node)
     // });
     let selected = path == &model.cursor;
-    let selected_entry = entries
+    let selected_entry_suffix = entries
         .get(model.selected_command_index)
         .cloned()
         .map(|v| v.label.clone())
@@ -2435,8 +2435,8 @@ pub fn textbox(
             <div class="placeholder">{ placeholder }</div>
         })
     };
-    let completion = if selected {
-        selected_entry
+    let suffix = if selected {
+        selected_entry_suffix
     } else {
         "".to_string()
     };
@@ -2459,7 +2459,7 @@ pub fn textbox(
                   style={ style }
                   autocomplete="off"
                 />
-                <span class="completion">{ completion }</span>
+                <span class="completion">{ suffix }</span>
                 <div class={ classes_dropdown.join(" ") }>
                     { for entries }
                 </div>

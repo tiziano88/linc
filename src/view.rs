@@ -206,6 +206,11 @@ impl Model {
             e.stop_propagation();
             Msg::Select(path_clone.clone())
         });
+        let path_clone = path.to_vec();
+        let onfocus = ctx.link().callback(move |e: FocusEvent| {
+            e.stop_propagation();
+            Msg::Select(path_clone.clone())
+        });
 
         let path_clone = path.to_vec();
         let onmouseover = ctx.link().callback(move |e: MouseEvent| {
@@ -273,6 +278,7 @@ impl Model {
               tabindex={ "0" }
               class={ classes.join(" ") }
               onclick={ onclick }
+              onfocus={ onfocus }
               onkeydown={ onkeydown }
               onmouseover={ onmouseover }>
                 { value }
