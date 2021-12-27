@@ -221,6 +221,7 @@ pub const SCHEMA: Schema = Schema {
                     validators: &[
                         FieldValidator::Kind("git"),
                         FieldValidator::Kind("rust_fragment"),
+                        FieldValidator::Kind("markdown_fragment"),
                     ],
                 }],
                 inner: None,
@@ -2252,9 +2253,21 @@ type Validator = fn(&ValidatorContext) -> Vec<ValidationError>;
 pub fn default_renderer(c: &ValidatorContext) -> Html {
     let node = c.node;
     let path = c.path;
+    let path_clone = path.to_vec();
     if node.kind.is_empty() {
         // Raw.
-        textbox(c.model, c.ctx, &node, &path, c.entries, c.placeholder, &[])
+        textbox(
+            c.model,
+            c.ctx,
+            &node.value,
+            &path,
+            c.entries,
+            c.placeholder,
+            &[],
+            c.ctx.link().callback(move |e: InputEvent| {
+                Msg::SetNodeValue(path_clone.clone(), get_value_from_input_event(e))
+            }),
+        )
     } else {
         // Node.
         // https://codepen.io/xotonic/pen/JRLAOR
@@ -2357,16 +2370,17 @@ pub struct Entry {
 pub fn textbox(
     model: &Model,
     ctx: &Context<Model>,
-    node: &Node,
+    value: &str,
     path: &[Selector],
     entries: &[Entry],
     placeholder: &str,
     errors: &[ValidationError],
+    oninput: Callback<InputEvent>,
 ) -> Html {
     let path_clone = path.to_vec();
-    let oninput = ctx.link().callback(move |e: InputEvent| {
-        Msg::SetNodeValue(path_clone.clone(), get_value_from_input_event(e))
-    });
+    // let oninput = ctx.link().callback(move |e: InputEvent| {
+    //     Msg::SetNodeValue(path_clone.clone(), get_value_from_input_event(e))
+    // });
     let path_clone = path.to_vec();
     let onkeydown = ctx
         .link()
@@ -2387,7 +2401,7 @@ pub fn textbox(
         .cloned()
         .map(|v| v.label.clone())
         .unwrap_or_default()
-        .strip_prefix(&node.value)
+        .strip_prefix(value)
         .map(|v| v.to_string())
         .unwrap_or_default();
     let entries: Vec<_> = if selected {
@@ -2397,7 +2411,7 @@ pub fn textbox(
             .map(|(i, v)| {
                 let value_string = v.label.clone();
 
-                let value_prefix = &node.value;
+                let value_prefix = value;
                 let value_suffix = value_string.strip_prefix(value_prefix).unwrap_or_default();
 
                 // let node = v.to_node();
@@ -2421,7 +2435,6 @@ pub fn textbox(
     };
     let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
     let id = view::command_input_id(&path);
-    let value = node.value.clone();
     let style = if value.len() > 0 {
         format!("width: {}ch;", value.len())
     } else {
@@ -2444,6 +2457,20 @@ pub fn textbox(
     if !errors.is_empty() {
         class.push("error");
     }
+
+    let editing = if model.mode == crate::types::Mode::Edit {
+        html! {
+            <>
+                <span class="completion">{ suffix }</span>
+                <div class={ classes_dropdown.join(" ") }>
+                    { for entries }
+                </div>
+            </>
+        }
+    } else {
+        html! {}
+    };
+
     html! {
         <span>
             { for placeholder }
@@ -2455,14 +2482,12 @@ pub fn textbox(
                   oninput={ oninput }
                   onkeydown={ onkeydown }
                   onfocus={ onfocus }
-                  value={ value }
+                  value={ value.to_string() }
                   style={ style }
+                  disabled={ model.mode != crate::types::Mode::Edit }
                   autocomplete="off"
                 />
-                <span class="completion">{ suffix }</span>
-                <div class={ classes_dropdown.join(" ") }>
-                    { for entries }
-                </div>
+                { editing }
             </span>
         </span>
     }

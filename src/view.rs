@@ -255,7 +255,7 @@ impl Model {
             None => (default_renderer(&context), vec![], vec![]),
         };
 
-        let edit = if selected && self.mode == Mode::Edit {
+        let edit = if selected && self.mode == Mode::Edit && !node.kind.is_empty() {
             let entries = fields
                 .iter()
                 .map(|f| Entry {
@@ -264,18 +264,30 @@ impl Model {
                     action: Msg::AddField(path.to_vec(), f.name.to_string()),
                 })
                 .collect::<Vec<_>>();
-            textbox(&self, ctx, node, path, &entries, "", &[])
+            textbox(
+                &self,
+                ctx,
+                &node.value,
+                path,
+                &entries,
+                "",
+                &[],
+                ctx.link().callback(move |e: InputEvent| {
+                    Msg::SetNodeValue(path_clone.clone(), get_value_from_input_event(e))
+                }),
+            )
         } else {
             html! {}
         };
 
+        let path_clone = path.to_vec();
         let onkeydown = ctx
             .link()
             .callback(move |e: KeyboardEvent| Msg::CommandKey(path_clone.clone(), e));
         // Use onmousedown to avoid re-selecting the node?
         html! {
             <div
-              tabindex={ "0" }
+              tabindex="0"
               class={ classes.join(" ") }
               onclick={ onclick }
               onfocus={ onfocus }
@@ -285,18 +297,6 @@ impl Model {
                 { edit }
                 { for errors.iter().map(|e| self.view_error(e)) }
             </div>
-        }
-    }
-
-    pub fn view_field(&self, ctx: &Context<Self>, path: &[Selector], field: &Field) -> Html {
-        let path = path.to_vec();
-        let field_name = field.name.to_string();
-        let onclick = ctx.link().callback(move |e: MouseEvent| {
-            e.stop_propagation();
-            Msg::AddField(path.clone(), field_name.clone())
-        });
-        html! {
-            <div class="field" onclick={ onclick }>{ format!("+ {}", field.name) }</div>
         }
     }
 

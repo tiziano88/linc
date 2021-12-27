@@ -68,6 +68,7 @@ pub struct Model {
 
     pub node_state: HashMap<Path, NodeState>,
 
+    pub field_to_add: String,
     pub parsed_commands: Vec<ParsedValue>,
     pub selected_command_index: usize,
 
@@ -477,6 +478,7 @@ impl Component for Model {
             selected_command_index: 0,
             errors: vec![],
             show_serialized: false,
+            field_to_add: "".to_string(),
         }
     }
 
