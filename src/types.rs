@@ -1,5 +1,6 @@
-use crate::schema::{
-    FieldValidator, KindValue, ParsedValue, ValidationError, ValidatorContext, SCHEMA,
+use crate::{
+    node::NodeComponent,
+    schema::{FieldValidator, KindValue, ParsedValue, ValidationError, ValidatorContext, SCHEMA},
 };
 use gloo_storage::{LocalStorage, Storage};
 use serde::{Deserialize, Serialize};
@@ -7,10 +8,11 @@ use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, HashMap},
     convert::TryInto,
+    rc::Rc,
 };
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{window, HtmlElement, HtmlInputElement, InputEvent};
-use yew::{html, prelude::*, Component, Html, KeyboardEvent};
+use yew::{html, prelude::*, Html, KeyboardEvent};
 
 pub type Ref = String;
 
@@ -59,6 +61,7 @@ pub fn hash_node(node: &Node) -> Hash {
     hash(node_bytes)
 }
 
+#[derive(PartialEq)]
 pub struct Model {
     pub file: File,
 
@@ -77,7 +80,7 @@ pub struct Model {
     pub show_serialized: bool,
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 pub struct NodeState {
     // TODO: Errors.
 }
@@ -213,7 +216,7 @@ impl Model {
     }
 
     pub fn focus_element(selector: &str) {
-        log::info!("select {}", selector);
+        // log::info!("select {}", selector);
         if let Ok(Some(element)) = window()
             .unwrap()
             .document()
@@ -222,7 +225,7 @@ impl Model {
         {
             element.dyn_into::<HtmlElement>().unwrap().focus().unwrap();
         } else {
-            log::warn!("not found");
+            // log::warn!("not found");
         }
     }
 
@@ -275,7 +278,7 @@ impl Model {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Msg {
     Noop,
 
@@ -310,7 +313,7 @@ pub enum Msg {
      */
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct File {
     pub nodes: HashMap<Hash, Node>,
     pub root: Hash,
@@ -332,6 +335,10 @@ impl File {
             let child = children.get(selector.index)?;
             self.lookup_from(child, &rest)
         }
+    }
+
+    pub fn lookup_hash(&self, hash: &Hash) -> Option<&Node> {
+        self.nodes.get(hash)
     }
 
     #[must_use]
@@ -379,7 +386,7 @@ impl File {
 
 // TODO: Navigate to children directly, but use :var to navigate to variables, otherwise skip them
 // when navigating.
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct Node {
     pub kind: String,
     pub value: String,
@@ -440,7 +447,15 @@ impl Component for Model {
                 <div>{ "LINC" }</div>
                 <div>{ "click on an empty node to see list of possible completions" }</div>
                 <div class="">
-                    <div class="column">{ self.view_file(ctx, &self.file) }</div>
+                    // <div class="column">{ self.view_file(ctx, &self.file) }</div>
+                    <NodeComponent
+                      file={ Rc::from(self.file.clone()) }
+                      hash={ self.file.root.clone() }
+                      onselect={ ctx.link().callback(|path: Vec<Selector>| Msg::Select(path)) }
+                      updatemodel={ ctx.link().callback(|m| m) }
+                      cursor={ self.cursor.clone() }
+                      path={ vec![] }
+                    />
 
                     <div class="column">
                         <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
@@ -511,7 +526,7 @@ impl Component for Model {
             model.selected_command_index = 0;
 
             let command_input_id = crate::view::command_input_id(&model.cursor);
-            Model::focus_element(&format!("#{}", command_input_id));
+            // Model::focus_element(&format!("#{}", command_input_id));
         }
 
         const KEY: &str = "linc_file";

@@ -265,8 +265,8 @@ impl Model {
                 })
                 .collect::<Vec<_>>();
             textbox(
-                &self,
-                ctx,
+                selected,
+                // ctx,
                 &node.value,
                 path,
                 &entries,

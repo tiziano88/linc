@@ -2254,11 +2254,12 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
     let node = c.node;
     let path = c.path;
     let path_clone = path.to_vec();
+    let selected = c.path == c.model.cursor;
     if node.kind.is_empty() {
         // Raw.
         textbox(
-            c.model,
-            c.ctx,
+            selected,
+            // c.ctx,
             &node.value,
             &path,
             c.entries,
@@ -2334,7 +2335,7 @@ impl<'a> ValidatorContext<'a> {
     // TODO: field / child.
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ValidationError {
     // TODO: Path vs Ref?????
     path: Path,
@@ -2368,8 +2369,9 @@ pub struct Entry {
 }
 
 pub fn textbox(
-    model: &Model,
-    ctx: &Context<Model>,
+    // model: &Model,
+    selected: bool,
+    // ctx: &Context<Model>,
     value: &str,
     path: &[Selector],
     entries: &[Entry],
@@ -2382,22 +2384,24 @@ pub fn textbox(
     //     Msg::SetNodeValue(path_clone.clone(), get_value_from_input_event(e))
     // });
     let path_clone = path.to_vec();
-    let onkeydown = ctx
-        .link()
-        .callback(move |e: KeyboardEvent| Msg::CommandKey(path_clone.clone(), e));
+    // let onkeydown = ctx
+    //     .link()
+    //     .callback(move |e: KeyboardEvent| Msg::CommandKey(path_clone.clone(), e));
     let path_clone = path.to_vec();
-    let onfocus = ctx
-        .link()
-        .callback(move |_e: FocusEvent| Msg::Select(path_clone.clone()));
+    // let onfocus = ctx
+    //     .link()
+    //     .callback(move |_e: FocusEvent| Msg::Select(path_clone.clone()));
     // let onblur = model.link.callback(move |e: yew::FocusEvent| {
     //     let target = e.related_target().unwrap().dyn_into::<HtmlElement>().unwrap();
     //     let mut node = node_clone.clone();
     //     node.value = target.inner_text();
     //     crate::types::Msg::ReplaceNode(path_clone.clone(), node)
     // });
-    let selected = path == &model.cursor;
+    // let selected = path == &model.cursor;
+    // let selected_index = model.selected_command_index;
+    let selected_command_index = 0;
     let selected_entry_suffix = entries
-        .get(model.selected_command_index)
+        .get(selected_command_index)
         .cloned()
         .map(|v| v.label.clone())
         .unwrap_or_default()
@@ -2416,14 +2420,17 @@ pub fn textbox(
 
                 // let node = v.to_node();
                 let action = v.action.clone();
-                let onclick = ctx.link().callback(move |_e: MouseEvent| action.clone());
+                // let onclick = ctx.link().callback(move |_e: MouseEvent| action.clone());
                 let mut classes_item = vec!["block", "border"];
-                if i == model.selected_command_index {
+                if i == selected_command_index {
                     classes_item.push("selected");
                 }
                 // Avoid re-selecting the node, we want to move to next.
                 html! {
-                    <span class={ classes_item.join(" ") } onmousedown={ onclick }>
+                    <span
+                      class={ classes_item.join(" ") }
+                    //   onmousedown={ onclick }
+                    >
                       <span class="font-bold">{ value_prefix }</span>
                       { value_suffix }
                     </span>
@@ -2458,7 +2465,8 @@ pub fn textbox(
         class.push("error");
     }
 
-    let editing = if model.mode == crate::types::Mode::Edit {
+    // let editing = if model.mode == crate::types::Mode::Edit {
+    let editing = if selected {
         html! {
             <>
                 <span class="completion">{ suffix }</span>
@@ -2480,11 +2488,11 @@ pub fn textbox(
                   class={ class }
                   type="text"
                   oninput={ oninput }
-                  onkeydown={ onkeydown }
-                  onfocus={ onfocus }
+                //   onkeydown={ onkeydown }
+                //   onfocus={ onfocus }
                   value={ value.to_string() }
                   style={ style }
-                  disabled={ model.mode != crate::types::Mode::Edit }
+                //   disabled={ model.mode != crate::types::Mode::Edit }
                   autocomplete="off"
                 />
                 { editing }
@@ -2579,7 +2587,7 @@ impl Kind {
     */
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ParsedValue {
     pub kind_hierarchy: Vec<String>,
     pub label: String,
@@ -2615,6 +2623,16 @@ pub enum Multiplicity {
 pub enum FieldValidator {
     Kind(&'static str),
     Literal(fn(&str) -> Vec<ValidationError>),
+}
+
+impl PartialEq for FieldValidator {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Kind(l0), Self::Kind(r0)) => l0 == r0,
+            (Self::Literal(l0), Self::Literal(r0)) => true,
+            (_, _) => false,
+        }
+    }
 }
 
 // TODO: Replace parser with validator fn that can return errors on the node itself or its children

@@ -3,7 +3,9 @@
 
 use types::Model;
 
+mod command_line;
 mod initial;
+mod node;
 mod schema;
 mod types;
 mod view;
