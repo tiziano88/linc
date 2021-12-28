@@ -1,4 +1,5 @@
 use crate::{
+    node::FIELD_CLASSES,
     types::{append, get_value_from_input_event, Model, Msg, Node, Path, Selector},
     view,
 };
@@ -236,7 +237,10 @@ pub const SCHEMA: Schema = Schema {
                 fields: &[Field {
                     name: "command",
                     multiplicity: Multiplicity::Repeated,
-                    validators: &[FieldValidator::Kind("git_commit")],
+                    validators: &[
+                        FieldValidator::Kind("git_commit"),
+                        FieldValidator::Kind("git_status"),
+                    ],
                 }],
                 inner: None,
                 constructors: &["git"],
@@ -260,6 +264,92 @@ pub const SCHEMA: Schema = Schema {
                     },
                     Field {
                         name: "date",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "interactive",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "amend",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "dry-run",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "squash",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "fixup",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "reset-author",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                ],
+                inner: None,
+                constructors: &["commit"],
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: default_renderer,
+            },
+        },
+        Kind {
+            name: "git_status",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "short",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "branch",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "show-stash",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "porcelain",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "long",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "verbose",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "untracked-files",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "ignore-submodules",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "ignored",
                         multiplicity: Multiplicity::Single,
                         validators: &[FieldValidator::Literal(any)],
                     },
@@ -2185,6 +2275,35 @@ pub const SCHEMA: Schema = Schema {
         },
         */
         Kind {
+            name: "markdown_code",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "lang",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "text",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                ],
+                inner: Some("text"),
+                constructors: &["heading"],
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: |c: &ValidatorContext| {
+                    let level = c.view_child("level");
+                    let text = c.view_child("text");
+                    html! {
+                        <span>
+                        { "#" }{ level}{ text }
+                        </span>
+                    }
+                },
+            },
+        },
+        Kind {
             name: "markdown_heading",
             value: KindValue::Struct {
                 fields: &[
@@ -2253,63 +2372,56 @@ type Validator = fn(&ValidatorContext) -> Vec<ValidationError>;
 pub fn default_renderer(c: &ValidatorContext) -> Html {
     let node = c.node;
     let path = c.path;
-    let path_clone = path.to_vec();
-    let selected = c.path == c.model.cursor;
-    if node.kind.is_empty() {
-        // Raw.
-        textbox(
-            selected,
-            // c.ctx,
-            &node.value,
-            &path,
-            c.entries,
-            c.placeholder,
-            &[],
-            c.ctx.link().callback(move |e: InputEvent| {
-                Msg::SetNodeValue(path_clone.clone(), get_value_from_input_event(e))
-            }),
-        )
-    } else {
-        // Node.
-        // https://codepen.io/xotonic/pen/JRLAOR
-        let fields = node.children.iter().map(
-        |(name, hashes)| {
-            let values = hashes.iter().enumerate().map(|(i, h)| {
-                let v = c.model.view_node(
-                    c.ctx,
-                    Some(h.to_string()),
-                    &append(
-                        path,
-                        Selector {
-                            field: name.to_string(),
-                            index: i,
-                        },
-                    ),
+    let kind = SCHEMA.get_kind(&node.kind);
+    // Node.
+    // https://codepen.io/xotonic/pen/JRLAOR
+    let children: Vec<_> = node
+        .children
+        .iter()
+        .flat_map(|(field_name, hashes)| {
+            let field_schema = kind.and_then(|k| k.get_field(field_name));
+            let validators = field_schema
+                .map(|v| v.validators.clone())
+                .unwrap_or_default();
+            let path = path.clone();
+            hashes.iter().enumerate().map(move |(i, h)| {
+                let child_path = append(
+                    &path,
+                    Selector {
+                        field: field_name.clone(),
+                        index: i,
+                    },
                 );
+                // TODO: Sticky field headers.
                 html! {
-                    <div class="px-5">{ v }</div>
-                }
-            });
-            html! {
-                <span class="px-1">
-                    <div class="sticky bg-gray-300" style={ format!("top: {}rem; z-index: {};", (4. * (path.len() as f32)) + 2.5, 128-path.len()) }>
-                        { name }
+                    <div class="px-6"
+                    //   onclick={ onclick }
+                    >
+                        <div class={ FIELD_CLASSES.join(" ") }>
+                            { field_name }
+                        </div>
+                        <div class="inline-block">
+                            { ":" }
+                        </div>
+                        { c.view_child("foo") }
+                        // <NodeComponent
+                        //   file={ ctx.props().file.clone() }
+                        //   hash={ h.clone() }
+                        //   cursor={ ctx.props().cursor.clone() }
+                        //   onselect={ ctx.props().onselect.clone() }
+                        //   path={ child_path }
+                        //   updatemodel={ ctx.props().updatemodel.clone() }
+                        //   validators={ validators }
+                        // />
                     </div>
-                    <div>{ for values }</div>
-                </span>
-            }
-        },
-    );
-        html! {
-            <div>
-                <div class="sticky bg-white" style={ format!("top: {}rem; z-index: {};", 4. * (path.len() as f32), 128-path.len()) }>
-                    <div class="kind">{ &node.kind }</div>
-                    // <div>{ "kind: " }{ &node.kind }</div>
-                    // <div>{ "value: " }{ &node.value }</div>
-                </div>
-                { for fields }
-            </div>
-        }
+                }
+            })
+        })
+        .collect();
+    html! {
+        <div class="divide-y divide-black border-t border-b border-black border-solid">
+            { for children }
+        </div>
     }
 }
 

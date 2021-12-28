@@ -37,7 +37,7 @@ pub enum NodeMsg {
     Click,
 }
 
-const FIELD_CLASSES: &[&str] = &[
+pub const FIELD_CLASSES: &[&str] = &[
     "bg-blue-300",
     "inline-block",
     "p-0.5",
@@ -111,6 +111,14 @@ impl Component for NodeComponent {
                 })
                 .collect();
             log::info!("{:?}", entries);
+            let onenter = {
+                let path = path.clone();
+                let onupdatemodel = onupdatemodel.clone();
+                ctx.link().callback(move |()| {
+                    onupdatemodel.emit(Msg::Parent);
+                    NodeMsg::Noop
+                })
+            };
             html! {
               <CommandLine
                 input_node_ref={ self.input_node_ref.clone() }
@@ -121,6 +129,7 @@ impl Component for NodeComponent {
                     NodeMsg::Noop
                  }) }
                 onselect={ ctx.props().updatemodel.clone() }
+                onenter={ onenter }
                 enabled={ selected }
               />
             }
@@ -255,7 +264,7 @@ impl Component for NodeComponent {
                 <div class={ KIND_CLASSES.join(" ") }>
                     { node.kind.clone() }
                 </div>
-                <div class="inline-block text-sm border border-black">
+                <div class="inline-block text-xs border border-black">
                     { ctx.props().hash.clone().unwrap_or("-".to_string()) }
                 </div>
                 <div class="divide-y divide-black border-t border-b border-black border-solid">

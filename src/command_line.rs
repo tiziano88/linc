@@ -3,6 +3,8 @@ use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
 pub struct CommandLine {
+    valid_entries: Vec<Entry>,
+    // Among valid (filtered) entries.
     selected_command_index: usize,
     value: String,
 }
@@ -17,6 +19,8 @@ pub struct CommandLineProperties {
     pub oninput: Callback<String>,
     #[prop_or_default]
     pub onselect: Callback<Msg>,
+    #[prop_or_default]
+    pub onenter: Callback<()>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -41,6 +45,7 @@ impl Component for CommandLine {
 
     fn create(ctx: &Context<Self>) -> Self {
         Self {
+            valid_entries: ctx.props().entries.clone(),
             selected_command_index: 0,
             value: ctx.props().value.clone(),
         }
@@ -50,7 +55,8 @@ impl Component for CommandLine {
         let props = ctx.props();
         let value = &self.value;
         let enabled = props.enabled;
-        let selected_entry = props.entries.get(self.selected_command_index);
+        let valid_entries = &self.valid_entries;
+        let selected_entry = valid_entries.get(self.selected_command_index);
         let selected_entry_suffix = selected_entry
             .cloned()
             .map(|v| v.label.clone())
@@ -59,39 +65,35 @@ impl Component for CommandLine {
             .map(|v| v.to_string())
             .unwrap_or_default();
         let selected = true;
+        // TODO: Fuzzy search.
         let entries: Vec<_> = if selected {
-            props
-                .entries
+            valid_entries
                 .iter()
                 .enumerate()
-                .filter_map(|(i, v)| {
+                .map(|(i, v)| {
                     let value_string = v.label.clone();
-                    if value_string.starts_with(value) {
-                        let value_suffix = value_string.strip_prefix(value).unwrap_or_default();
+                    let value_suffix = value_string.strip_prefix(value).unwrap_or_default();
 
-                        // let node = v.to_node();
-                        let action = v.action.clone();
-                        let onselect = props.onselect.clone();
-                        let onclick = ctx.link().callback(move |_e: MouseEvent| {
-                            onselect.emit(action.clone());
-                            CommandLineMsg::Noop
-                        });
-                        let mut classes_item = vec!["block", "border"];
-                        if i == self.selected_command_index {
-                            classes_item.push("selected");
-                        }
-                        // Avoid re-selecting the node, we want to move to next.
-                        Some(html! {
-                            <span
-                              class={ classes_item.join(" ") }
-                              onmousedown={ onclick }
-                            >
-                              <span class="font-bold">{ value.clone() }</span>
-                              { value_suffix }
-                            </span>
-                        })
-                    } else {
-                        None
+                    // let node = v.to_node();
+                    let action = v.action.clone();
+                    let onselect = props.onselect.clone();
+                    let onclick = ctx.link().callback(move |_e: MouseEvent| {
+                        onselect.emit(action.clone());
+                        CommandLineMsg::Noop
+                    });
+                    let mut classes_item = vec!["block", "border"];
+                    if i == self.selected_command_index {
+                        classes_item.push("selected");
+                    }
+                    // Avoid re-selecting the node, we want to move to next.
+                    html! {
+                        <span
+                          class={ classes_item.join(" ") }
+                          onmousedown={ onclick }
+                        >
+                          <span class="font-bold">{ value.clone() }</span>
+                          { value_suffix }
+                        </span>
                     }
                 })
                 .collect()
@@ -105,6 +107,7 @@ impl Component for CommandLine {
         } else {
             "width: 0.1ch;".to_string()
         };
+        let rows = value.split('\n').count();
         // XXX: Chrome inspector CSS color editor.
         let placeholder = "";
         let placeholder = if placeholder.is_empty() {
@@ -119,7 +122,13 @@ impl Component for CommandLine {
         } else {
             "".to_string()
         };
-        let mut class = vec!["inline-block", "w-full"];
+        let mut class = vec![
+            "inline-block",
+            "w-full",
+            "bg-transparent",
+            "resize-none",
+            "overflow-hidden",
+        ];
         // let errors = vec![];
         // if !errors.is_empty() {
         //     class.push("error");
@@ -172,7 +181,8 @@ impl Component for CommandLine {
                 { for placeholder }
                 <span>
                     <span class={ classes }>
-                        <input
+                        <textarea
+                        rows={ format!("{}", rows) }
                         ref={ ctx.props().input_node_ref.clone() }
                         //   id={ id }
                         class={ class }
@@ -184,7 +194,8 @@ impl Component for CommandLine {
                         style={ style }
                         //   disabled={ model.mode != crate::types::Mode::Edit }
                         autocomplete="off"
-                        />
+                        >
+                        </textarea>
                         { suffix }
                     </span>
                     { dropdown }
@@ -203,34 +214,44 @@ impl Component for CommandLine {
                     .unwrap()
                     .focus()
                     .unwrap();
-                false
+                true
             }
-            CommandLineMsg::Input(v) => {
-                self.value = v;
+            CommandLineMsg::Input(value) => {
+                self.value = value.clone();
+                self.valid_entries = ctx
+                    .props()
+                    .entries
+                    .clone()
+                    .into_iter()
+                    .filter(|v| v.label.starts_with(&value))
+                    .collect();
                 true
             }
             CommandLineMsg::Key(e) => {
                 let props = ctx.props();
-                let entries = props.entries.clone();
+                let entries = &self.valid_entries;
                 let selected_command_index = self.selected_command_index;
+                if e.shift_key() {
+                    return false;
+                }
                 match e.key().as_ref() {
                     "ArrowUp" => {
-                        self.selected_command_index = if selected_command_index > 0 {
-                            selected_command_index - 1
-                        } else {
-                            if entries.len() > 0 {
-                                entries.len() - 1
+                        if entries.len() > 0 {
+                            self.selected_command_index = if selected_command_index > 0 {
+                                selected_command_index - 1
                             } else {
-                                0
+                                entries.len() - 1
                             }
                         }
                     }
                     "ArrowDown" => {
-                        self.selected_command_index = if selected_command_index < entries.len() - 1
-                        {
-                            selected_command_index + 1
-                        } else {
-                            0
+                        if entries.len() > 0 {
+                            self.selected_command_index =
+                                if selected_command_index < entries.len() - 1 {
+                                    selected_command_index + 1
+                                } else {
+                                    0
+                                }
                         }
                     }
                     "Enter" => {
@@ -238,6 +259,8 @@ impl Component for CommandLine {
                         if let Some(selected_entry) = selected_entry {
                             let action = selected_entry.action.clone();
                             props.onselect.emit(action);
+                        } else {
+                            props.onenter.emit(());
                         }
                     }
                     _ => {}

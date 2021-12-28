@@ -76,7 +76,7 @@
 }
 
 .completion {
-  color: lightpink;
+  color: grey;
 }
 
 input:focus, textarea:focus {

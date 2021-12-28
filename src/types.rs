@@ -11,7 +11,7 @@ use std::{
     rc::Rc,
 };
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
-use web_sys::{window, HtmlElement, HtmlInputElement, InputEvent};
+use web_sys::{window, HtmlElement, HtmlInputElement, HtmlTextAreaElement, InputEvent};
 use yew::{html, prelude::*, Html, KeyboardEvent};
 
 pub type Ref = String;
@@ -699,7 +699,14 @@ pub struct Action {
 pub fn get_value_from_input_event(e: InputEvent) -> String {
     let event: Event = e.dyn_into().unwrap_throw();
     let event_target = event.target().unwrap_throw();
-    let target: HtmlInputElement = event_target.dyn_into().unwrap_throw();
+    if let Ok(target) = event_target.clone().dyn_into::<HtmlInputElement>() {
+        return target.value();
+    }
+    if let Ok(target) = event_target.dyn_into::<HtmlTextAreaElement>() {
+        return target.value();
+    }
+    panic!("unexpected input event");
+    // let target: HtmlTextareaElement = event_target.dyn_into().unwrap_throw();
     // web_sys::console::log_1(&target.value().into());
-    target.value()
+    // target.value()
 }
