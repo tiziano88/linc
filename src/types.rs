@@ -178,8 +178,6 @@ impl Model {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Msg {
-    Noop,
-
     Select(Path),
     Hover(Path),
 
@@ -402,7 +400,6 @@ impl Component for Model {
         log::info!("update {:?}", msg);
         const KEY: &str = "linc_file";
         match msg {
-            Msg::Noop => {}
             Msg::ToggleSerialized => {
                 self.show_serialized = !self.show_serialized;
             }

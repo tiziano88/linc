@@ -33,7 +33,6 @@ pub struct NodeProperties {
 }
 
 pub enum NodeMsg {
-    Noop,
     Click,
 }
 
@@ -116,9 +115,8 @@ impl Component for NodeComponent {
             let onenter = {
                 let path = path.clone();
                 let onupdatemodel = onupdatemodel.clone();
-                ctx.link().callback(move |()| {
+                Callback::from(move |()| {
                     onupdatemodel.emit(Msg::Parent);
-                    NodeMsg::Noop
                 })
             };
             html! {
@@ -126,9 +124,8 @@ impl Component for NodeComponent {
                 input_node_ref={ self.input_node_ref.clone() }
                 entries={ entries }
                 value={ node.value.clone() }
-                oninput={ ctx.link().callback(move |v| {
+                oninput={ Callback::from(move |v| {
                     onupdatemodel.emit(Msg::SetNodeValue(path.clone(), v));
-                    NodeMsg::Noop
                  }) }
                 onselect={ ctx.props().updatemodel.clone() }
                 onenter={ onenter }
@@ -336,7 +333,6 @@ impl Component for NodeComponent {
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            NodeMsg::Noop => false,
             NodeMsg::Click => {
                 self.focus_input();
                 true

@@ -2390,12 +2390,16 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
                         index: i,
                     },
                 );
+                let updatemodel = c.updatemodel.clone();
+                let onclick = Callback::from(move |e: MouseEvent| {
+                    e.stop_propagation();
+                    updatemodel.emit(Msg::Select(child_path.clone()))
+                });
                 // TODO: Sticky field headers.
                 html! {
-                    <div class="pl-3 flex items-start"
-                    //   onclick={ onclick }
-                    >
-                        <div class={ FIELD_CLASSES.join(" ") }>
+                    <div class="pl-3 flex items-start">
+                        <div class={ FIELD_CLASSES.join(" ") }
+                          onclick={ onclick } >
                             { field_name }
                         </div>
                         <div class="">
