@@ -285,7 +285,7 @@ impl Component for NodeComponent {
                     .unwrap_or_default();
                 // Make it look like an actual field.
                 html! {
-                    <div class="px-3">
+                    <div class="pl-3">
                         <CommandLine
                             input_node_ref={ self.input_node_ref.clone() }
                             entries={ entries }
@@ -315,7 +315,11 @@ impl Component for NodeComponent {
                 NodeMsg::Click
             })
         };
-        let mut classes = vec!["node".to_string(), "align-top".to_string()];
+        let mut classes = vec![
+            "node".to_string(),
+            "align-top".to_string(),
+            "flex-auto".to_string(),
+        ];
         if selected {
             classes.push("selected".to_string());
         }

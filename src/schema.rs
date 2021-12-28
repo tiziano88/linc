@@ -2392,13 +2392,13 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
                 );
                 // TODO: Sticky field headers.
                 html! {
-                    <div class="px-3"
+                    <div class="pl-3 flex items-start"
                     //   onclick={ onclick }
                     >
                         <div class={ FIELD_CLASSES.join(" ") }>
                             { field_name }
                         </div>
-                        <div class="inline-block">
+                        <div class="">
                             { ":" }
                         </div>
                         { c.view_child_index(field_name, i) }
