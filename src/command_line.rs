@@ -255,6 +255,7 @@ impl Component for CommandLine {
                         }
                     }
                     "Enter" => {
+                        e.prevent_default();
                         let selected_entry = entries.get(selected_command_index).cloned();
                         if let Some(selected_entry) = selected_entry {
                             let action = selected_entry.action.clone();
