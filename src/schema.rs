@@ -2369,6 +2369,7 @@ type Validator = fn(&ValidatorContext) -> Vec<ValidationError>;
 pub fn default_renderer(c: &ValidatorContext) -> Html {
     let node = &c.node;
     let path = &c.path;
+    log::debug!("default_renderer: {:?}", path);
     let kind = SCHEMA.get_kind(&node.kind);
     // Node.
     // https://codepen.io/xotonic/pen/JRLAOR
@@ -2391,7 +2392,7 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
                 );
                 // TODO: Sticky field headers.
                 html! {
-                    <div class="px-6"
+                    <div class="px-3"
                     //   onclick={ onclick }
                     >
                         <div class={ FIELD_CLASSES.join(" ") }>
@@ -2400,16 +2401,7 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
                         <div class="inline-block">
                             { ":" }
                         </div>
-                        { c.view_child("foo") }
-                        <NodeComponent
-                          file={ c.file.clone() }
-                          hash={ h.clone() }
-                          cursor={ c.cursor.clone() }
-                          onselect={ c.onselect.clone() }
-                          path={ child_path }
-                          updatemodel={ c.updatemodel.clone() }
-                          validators={ validators }
-                        />
+                        { c.view_child_index(field_name, i) }
                     </div>
                 }
             })
@@ -2426,19 +2418,70 @@ pub struct ValidatorContext {
     pub path: Vec<Selector>,
     pub cursor: Vec<Selector>,
     pub file: Rc<File>,
-    pub node: Rc<Node>,
+    pub node: Node,
     pub onselect: Callback<Vec<Selector>>,
     pub updatemodel: Callback<Msg>,
 }
 
 impl ValidatorContext {
     pub fn view_child(&self, field_name: &str) -> Html {
-        html! {}
-        // self.model
-        //     .view_child(self.ctx, self.node, field_name, self.path)
+        self.view_child_index(field_name, 0)
+    }
+    pub fn view_child_index(&self, field_name: &str, index: usize) -> Html {
+        log::debug!("view_child: {:?}", field_name);
+        if self.node.children.get(field_name).is_none() {
+            return html! {};
+        }
+        if self.node.children.get(field_name).unwrap().is_empty() {
+            return html! {};
+        }
+        let h = &self.node.children.get(field_name).unwrap()[index];
+        let child_path = append(
+            &self.path,
+            Selector {
+                field: field_name.to_string(),
+                index: index,
+            },
+        );
+        let kind = SCHEMA.get_kind(&self.node.kind);
+        let field_schema = kind.and_then(|k| k.get_field(field_name));
+        let validators = field_schema
+            .map(|v| v.validators.clone())
+            .unwrap_or_default();
+        html! {
+            // <div>
+            //   { format!("{:?} {:?}", h, child_path) }
+            // </div>
+            <NodeComponent
+                file={ self.file.clone() }
+                hash={ h.clone() }
+                cursor={ self.cursor.clone() }
+                onselect={ self.onselect.clone() }
+                path={ child_path }
+                updatemodel={ self.updatemodel.clone() }
+                validators={ validators }
+            />
+        }
     }
     pub fn view_children(&self, field_name: &str) -> (Html, Vec<Html>) {
-        (html! {}, vec![])
+        log::debug!("view_child: {:?}", field_name);
+        if self.node.children.get(field_name).is_none() {
+            return (html! {}, vec![]);
+        }
+        if self.node.children.get(field_name).unwrap().is_empty() {
+            return (html! {}, vec![]);
+        }
+        (
+            html! {},
+            self.node
+                .children
+                .get(field_name)
+                .unwrap()
+                .iter()
+                .enumerate()
+                .map(|(i, h)| self.view_child_index(field_name, i))
+                .collect(),
+        )
         // self.model
         //     .view_children(self.ctx, self.node, field_name, self.path)
     }

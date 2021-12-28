@@ -1,6 +1,6 @@
 use crate::{
     command_line::{CommandLine, Entry},
-    schema::{FieldValidator, KindValue, SCHEMA},
+    schema::{default_renderer, FieldValidator, KindValue, ValidatorContext, SCHEMA},
     types::{append, File, Hash, Msg, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
@@ -61,6 +61,7 @@ impl Component for NodeComponent {
     type Properties = NodeProperties;
 
     fn create(ctx: &Context<Self>) -> Self {
+        log::debug!("creating node");
         Self {
             input_node_ref: NodeRef::default(),
         }
@@ -77,6 +78,7 @@ impl Component for NodeComponent {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
+        log::debug!("rendering node");
         let default_node = Node::default();
         let props = ctx.props();
         let hash = props.hash.clone().unwrap_or_default();
@@ -134,6 +136,24 @@ impl Component for NodeComponent {
               />
             }
         } else {
+            let renderer = kind
+                .map(|r| {
+                    let KindValue::Struct { renderer, .. } = r.value;
+                    renderer
+                })
+                .unwrap_or(default_renderer);
+            // TODO: Disable default renderer.
+            let renderer = default_renderer;
+            let validator_context = ValidatorContext {
+                path: path.clone(),
+                cursor: cursor.clone(),
+                file: props.file.clone(),
+                node: node.clone(),
+                onselect: props.onselect.clone(),
+                updatemodel: props.updatemodel.clone(),
+            };
+            let content = renderer(&validator_context);
+            /*
             // Node.
             // https://codepen.io/xotonic/pen/JRLAOR
             let children: Vec<_> = if false {
@@ -229,24 +249,43 @@ impl Component for NodeComponent {
                     })
                     .collect()
             };
-            let entries: Vec<Entry> = kind
-                .map(|k| {
-                    let KindValue::Struct { fields, .. } = k.value;
-                    fields
-                        .iter()
-                        .map(|f| Entry {
-                            label: f.name.to_string(),
-                            description: "".to_string(),
-                            action: Msg::AddField(path.to_vec(), f.name.to_string()),
-                            valid_classes: FIELD_CLASSES.iter().map(|v| v.to_string()).collect(),
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
-            let edit = if selected {
+            let content = html! {
+                <div class="divide-y divide-black border-t border-b border-black border-solid">
+                    { for children }
+                </div>
+            };
+            */
+            let header = html! {
+                <div>
+                    <div class={ KIND_CLASSES.join(" ") }>
+                        { node.kind.clone() }
+                    </div>
+                    <div class="inline-block text-xs border border-black">
+                        { ctx.props().hash.clone().unwrap_or("-".to_string()) }
+                    </div>
+                </div>
+            };
+            let footer = if selected {
+                let entries: Vec<Entry> = kind
+                    .map(|k| {
+                        let KindValue::Struct { fields, .. } = k.value;
+                        fields
+                            .iter()
+                            .map(|f| Entry {
+                                label: f.name.to_string(),
+                                description: "".to_string(),
+                                action: Msg::AddField(path.to_vec(), f.name.to_string()),
+                                valid_classes: FIELD_CLASSES
+                                    .iter()
+                                    .map(|v| v.to_string())
+                                    .collect(),
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
                 // Make it look like an actual field.
                 html! {
-                    <div class="px-6">
+                    <div class="px-3">
                         <CommandLine
                             input_node_ref={ self.input_node_ref.clone() }
                             entries={ entries }
@@ -261,16 +300,9 @@ impl Component for NodeComponent {
             };
             html! {
               <>
-                <div class={ KIND_CLASSES.join(" ") }>
-                    { node.kind.clone() }
-                </div>
-                <div class="inline-block text-xs border border-black">
-                    { ctx.props().hash.clone().unwrap_or("-".to_string()) }
-                </div>
-                <div class="divide-y divide-black border-t border-b border-black border-solid">
-                    { for children }
-                </div>
-                { edit }
+                { header }
+                { content }
+                { footer }
               </>
             }
         };

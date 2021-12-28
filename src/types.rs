@@ -71,12 +71,6 @@ pub struct Model {
 
     pub node_state: HashMap<Path, NodeState>,
 
-    pub field_to_add: String,
-    pub parsed_commands: Vec<ParsedValue>,
-    pub selected_command_index: usize,
-
-    pub errors: Vec<ValidationError>,
-
     pub show_serialized: bool,
 }
 
@@ -208,8 +202,6 @@ pub enum Msg {
     SetNodeValue(Path, String),
 
     CommandKey(Path, KeyboardEvent),
-    PrevCommand,
-    NextCommand,
 
     ToggleSerialized,
     /* EnterCommand,
@@ -393,11 +385,7 @@ impl Component for Model {
             cursor: vec![].into(),
             hover: vec![].into(),
             node_state: HashMap::new(),
-            parsed_commands: Vec::new(),
-            selected_command_index: 0,
-            errors: vec![],
             show_serialized: false,
-            field_to_add: "".to_string(),
         }
     }
 
@@ -412,24 +400,6 @@ impl Component for Model {
             return false;
         }
         log::info!("update {:?}", msg);
-        fn update_from_selected(model: &mut Model) {
-            let current_node = model.file.lookup(&model.cursor);
-            let _current_kind = current_node.clone().map(|n| n.kind.clone());
-
-            let parsed_commands = model.parse_commands(&model.cursor);
-            log::debug!("parsed commands {:?}", parsed_commands);
-            let filtered_commands = match current_node {
-                Some(node) => parsed_commands
-                    .into_iter()
-                    .filter(|c| c.label.starts_with(&node.value))
-                    .collect(),
-                None => parsed_commands,
-            };
-            log::debug!("filtered commands {:?}", filtered_commands);
-            model.parsed_commands = filtered_commands;
-            model.selected_command_index = 0;
-        }
-
         const KEY: &str = "linc_file";
         match msg {
             Msg::Noop => {}
@@ -438,7 +408,6 @@ impl Component for Model {
             }
             Msg::Select(path) => {
                 self.cursor = path.clone();
-                update_from_selected(self);
             }
             Msg::Hover(path) => {
                 self.hover = path;
@@ -446,16 +415,13 @@ impl Component for Model {
             // TODO: sibling vs inner
             Msg::Prev => {
                 self.prev();
-                update_from_selected(self);
             }
             // Preorder tree traversal.
             Msg::Next => {
                 self.next();
-                update_from_selected(self);
             }
             Msg::Parent => {
                 self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
-                update_from_selected(self);
             }
             Msg::Store => {
                 LocalStorage::set(KEY, &self.file).unwrap();
@@ -539,7 +505,6 @@ impl Component for Model {
                         index: n - 1,
                     },
                 );
-                update_from_selected(self);
             }
             Msg::ReplaceNode(path, node, mv) => {
                 log::info!("replace node {:?} {:?}", path, node);
@@ -550,8 +515,6 @@ impl Component for Model {
                 }
                 if mv {
                     ctx.link().send_message(Msg::Next);
-                    self.parsed_commands = vec![];
-                    self.selected_command_index = 0;
                 }
             }
             Msg::SetNodeValue(path, value) => {
@@ -562,7 +525,6 @@ impl Component for Model {
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
                 }
-                update_from_selected(self);
             }
             Msg::AddItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
@@ -591,23 +553,6 @@ impl Component for Model {
                     self.file.root = new_root;
                 }
             }
-            Msg::PrevCommand => {
-                self.selected_command_index = if self.selected_command_index > 0 {
-                    self.selected_command_index - 1
-                } else {
-                    if self.parsed_commands.len() > 0 {
-                        self.parsed_commands.len() - 1
-                    } else {
-                        0
-                    }
-                };
-            }
-            Msg::NextCommand => {
-                if self.parsed_commands.len() > 0 {
-                    self.selected_command_index =
-                        (self.selected_command_index + 1) % self.parsed_commands.len();
-                }
-            }
             Msg::CommandKey(path, e) => {
                 log::info!("key: {}", e.key());
                 self.cursor = path.clone();
@@ -626,40 +571,20 @@ impl Component for Model {
 
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match e.key().as_ref() {
-                    "Enter" => {
-                        e.prevent_default();
-                        self.mode = Mode::Edit;
-                        if let Some(selected_command) =
-                            self.parsed_commands.get(self.selected_command_index)
-                        {
-                            let node = selected_command.to_node();
-                            ctx.link().send_message(Msg::ReplaceNode(
-                                self.cursor.clone(),
-                                node,
-                                true,
-                            ));
-                        }
-                        // If it is a pure value, select the parent again so another field may be
-                        // added.
-                        if node.kind.is_empty() {
-                            self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
-                            update_from_selected(self);
-                        }
-                    }
+                    "Enter" => {}
                     "Escape" => {
                         self.mode = Mode::Normal;
                         // If it is a pure value, select the parent again so another field may be
                         // added.
                         if node.kind.is_empty() {
                             self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
-                            update_from_selected(self);
                         }
                     }
                     // "Enter" if self.mode == Mode::Edit =>
                     // self.link.send_message(Msg::EnterCommand), "Escape" =>
                     // self.link.send_message(Msg::EscapeCommand),
-                    "ArrowUp" => ctx.link().send_message(Msg::PrevCommand),
-                    "ArrowDown" => ctx.link().send_message(Msg::NextCommand),
+                    "ArrowUp" => {}
+                    "ArrowDown" => {}
                     "ArrowLeft" if self.mode == Mode::Normal => ctx.link().send_message(Msg::Prev),
                     "ArrowRight" if self.mode == Mode::Normal => ctx.link().send_message(Msg::Next),
                     /*
