@@ -1,13 +1,14 @@
 use crate::{
     command_line::{CommandLine, Entry},
-    schema::{textbox, FieldValidator, KindValue, SCHEMA},
+    schema::{FieldValidator, KindValue, SCHEMA},
     types::{append, get_value_from_input_event, File, Hash, Msg, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
+use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
 pub struct NodeComponent {
-    node_ref: NodeRef,
+    input_node_ref: NodeRef,
 }
 
 #[derive(Properties, PartialEq)]
@@ -31,13 +32,18 @@ pub struct NodeProperties {
     pub validators: &'static [FieldValidator],
 }
 
+pub enum NodeMsg {
+    Noop,
+    Click,
+}
+
 impl Component for NodeComponent {
-    type Message = ();
+    type Message = NodeMsg;
     type Properties = NodeProperties;
 
     fn create(ctx: &Context<Self>) -> Self {
         Self {
-            node_ref: NodeRef::default(),
+            input_node_ref: NodeRef::default(),
         }
     }
 
@@ -77,51 +83,98 @@ impl Component for NodeComponent {
             log::info!("{:?}", entries);
             html! {
               <CommandLine
+                input_node_ref={ self.input_node_ref.clone() }
                 entries={ entries }
                 value={ node.value.clone() }
-                oninput={ ctx.link().callback(move |v| onupdatemodel.emit(Msg::SetNodeValue(path.clone(), v))) }
+                oninput={ ctx.link().callback(move |v| {
+                    onupdatemodel.emit(Msg::SetNodeValue(path.clone(), v));
+                    NodeMsg::Noop
+                 }) }
                 onselect={ ctx.props().updatemodel.clone() }
+                enabled={ selected }
               />
             }
         } else {
             // Node.
             // https://codepen.io/xotonic/pen/JRLAOR
-            let children = node.children.iter().map(|(field_name, hashes)| {
-                let field_schema = kind.and_then(|k| k.get_field(field_name));
-                let validators = field_schema
-                    .map(|v| v.validators.clone())
-                    .unwrap_or_default();
-                let values = hashes.iter().enumerate().map(|(i, h)| {
-                    let child_path = append(
-                        &path,
-                        Selector {
-                            field: field_name.clone(),
-                            index: i,
-                        },
-                    );
-                    html! {
-                        <div class="px-5">
-                            <NodeComponent
-                              file={ ctx.props().file.clone() }
-                              hash={ h.clone() }
-                              cursor={ ctx.props().cursor.clone() }
-                              onselect={ ctx.props().onselect.clone() }
-                              path={ child_path }
-                              updatemodel={ ctx.props().updatemodel.clone() }
-                              validators={ validators }
-                            />
-                        </div>
-                    }
-                });
-                html! {
-                    <span class="px-1">
-                        <div class="sticky bg-gray-300" >
-                            { field_name }
-                        </div>
-                        <div>{ for values }</div>
-                    </span>
-                }
-            });
+            let children: Vec<_> = if false {
+                node.children
+                    .iter()
+                    .map(|(field_name, hashes)| {
+                        let field_schema = kind.and_then(|k| k.get_field(field_name));
+                        let validators = field_schema
+                            .map(|v| v.validators.clone())
+                            .unwrap_or_default();
+                        let values = hashes.iter().enumerate().map(|(i, h)| {
+                            let child_path = append(
+                                &path,
+                                Selector {
+                                    field: field_name.clone(),
+                                    index: i,
+                                },
+                            );
+                            html! {
+                                <div class="px-6">
+                                    <NodeComponent
+                                      file={ ctx.props().file.clone() }
+                                      hash={ h.clone() }
+                                      cursor={ ctx.props().cursor.clone() }
+                                      onselect={ ctx.props().onselect.clone() }
+                                      path={ child_path }
+                                      updatemodel={ ctx.props().updatemodel.clone() }
+                                      validators={ validators }
+                                    />
+                                </div>
+                            }
+                        });
+                        html! {
+                            <span class="px-1">
+                                <div class="sticky bg-gray-300 mx-3" >
+                                    { field_name }
+                                </div>
+                                <div>{ for values }</div>
+                            </span>
+                        }
+                    })
+                    .collect()
+            } else {
+                node.children
+                    .iter()
+                    .flat_map(|(field_name, hashes)| {
+                        let field_schema = kind.and_then(|k| k.get_field(field_name));
+                        let validators = field_schema
+                            .map(|v| v.validators.clone())
+                            .unwrap_or_default();
+                        let path = path.clone();
+                        hashes.iter().enumerate().map(move |(i, h)| {
+                            let child_path = append(
+                                &path,
+                                Selector {
+                                    field: field_name.clone(),
+                                    index: i,
+                                },
+                            );
+                            html! {
+                                <div class="px-6">
+                                    <div class="sticky bg-gray-300 mx-3 inline-block" >
+                                        { field_name }
+                                        { ":" }
+                                    </div>
+                                    <NodeComponent
+                                      file={ ctx.props().file.clone() }
+                                      hash={ h.clone() }
+                                      cursor={ ctx.props().cursor.clone() }
+                                      onselect={ ctx.props().onselect.clone() }
+                                      path={ child_path }
+                                      updatemodel={ ctx.props().updatemodel.clone() }
+                                      validators={ validators }
+                                    />
+                                </div>
+                            }
+                        })
+                    })
+                    .collect()
+            };
             let entries: Vec<Entry> = kind
                 .map(|k| {
                     let KindValue::Struct { fields, .. } = k.value;
@@ -135,17 +188,26 @@ impl Component for NodeComponent {
                         .collect()
                 })
                 .unwrap_or_default();
+            let edit = if selected {
+                html! {
+                    <CommandLine
+                        input_node_ref={ self.input_node_ref.clone() }
+                        entries={ entries }
+                        value={ node.value.clone() }
+                        onselect={ ctx.props().updatemodel.clone() }
+                        enabled=true
+                    />
+                }
+            } else {
+                html! {}
+            };
             html! {
               <>
                 <div class="kind">
                     { format!("{} [{:?}]", node.kind, ctx.props().hash) }
                 </div>
                 { for children }
-                <CommandLine
-                    entries={ entries }
-                    value={ node.value.clone() }
-                    onselect={ ctx.props().updatemodel.clone() }
-                />
+                { edit }
               </>
             }
         };
@@ -155,6 +217,7 @@ impl Component for NodeComponent {
             ctx.link().callback(move |e: MouseEvent| {
                 e.stop_propagation();
                 onselect.emit(path.clone());
+                NodeMsg::Click
             })
         };
         let mut classes = vec!["node".to_string(), "align-top".to_string()];
@@ -169,6 +232,21 @@ impl Component for NodeComponent {
             >
               { inner }
             </div>
+        }
+    }
+
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+        match msg {
+            NodeMsg::Noop => false,
+            NodeMsg::Click => {
+                let input_node = self.input_node_ref.clone();
+                input_node
+                    .cast::<HtmlInputElement>()
+                    .unwrap()
+                    .focus()
+                    .unwrap();
+                true
+            }
         }
     }
 }

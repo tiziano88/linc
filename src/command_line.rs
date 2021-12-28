@@ -4,13 +4,15 @@ use yew::prelude::*;
 
 pub struct CommandLine {
     selected_command_index: usize,
-    input_node_ref: NodeRef,
+    value: String,
 }
 
 #[derive(PartialEq, Clone, Properties, Debug)]
 pub struct CommandLineProperties {
     pub value: String,
     pub entries: Vec<Entry>,
+    pub enabled: bool,
+    pub input_node_ref: NodeRef,
     #[prop_or_default]
     pub oninput: Callback<String>,
     #[prop_or_default]
@@ -29,6 +31,7 @@ pub enum CommandLineMsg {
     Noop,
     Click,
     Key(KeyboardEvent),
+    Input(String),
 }
 
 impl Component for CommandLine {
@@ -38,19 +41,21 @@ impl Component for CommandLine {
     fn create(ctx: &Context<Self>) -> Self {
         Self {
             selected_command_index: 0,
-            input_node_ref: NodeRef::default(),
+            value: ctx.props().value.clone(),
         }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let props = ctx.props();
+        let value = &self.value;
+        let enabled = props.enabled;
         let selected_entry_suffix = props
             .entries
             .get(self.selected_command_index)
             .cloned()
             .map(|v| v.label.clone())
             .unwrap_or_default()
-            .strip_prefix(&props.value)
+            .strip_prefix(value)
             .map(|v| v.to_string())
             .unwrap_or_default();
         let selected = true;
@@ -62,7 +67,7 @@ impl Component for CommandLine {
                 .map(|(i, v)| {
                     let value_string = v.label.clone();
 
-                    let value_suffix = value_string.strip_prefix(&props.value).unwrap_or_default();
+                    let value_suffix = value_string.strip_prefix(value).unwrap_or_default();
 
                     // let node = v.to_node();
                     let action = v.action.clone();
@@ -81,7 +86,7 @@ impl Component for CommandLine {
                           class={ classes_item.join(" ") }
                           onmousedown={ onclick }
                         >
-                          <span class="font-bold">{ props.value.clone() }</span>
+                          <span class="font-bold">{ value.clone() }</span>
                           { value_suffix }
                         </span>
                     }
@@ -92,8 +97,8 @@ impl Component for CommandLine {
         };
         let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
         // let id = view::command_input_id(&path);
-        let style = if props.value.len() > 0 {
-            format!("width: {}ch;", props.value.len())
+        let style = if value.len() > 0 {
+            format!("width: {}ch;", value.len())
         } else {
             "width: 0.1ch;".to_string()
         };
@@ -118,7 +123,7 @@ impl Component for CommandLine {
         // }
 
         // let editing = if model.mode == crate::types::Mode::Edit {
-        let editing = if selected {
+        let editing = if enabled && selected {
             html! {
                 <>
                     <span class="completion">{ suffix }</span>
@@ -134,28 +139,32 @@ impl Component for CommandLine {
         let oninput = props.oninput.clone();
         let oninput = ctx.link().callback(move |e: InputEvent| {
             let v = get_value_from_input_event(e);
-            oninput.emit(v);
-            CommandLineMsg::Noop
+            oninput.emit(v.clone());
+            CommandLineMsg::Input(v)
         });
 
         let onclick = ctx.link().callback(|_| CommandLineMsg::Click);
+        let onfocus = ctx.link().callback(|_| CommandLineMsg::Click);
         let onkeydown = ctx
             .link()
             .callback(move |e: KeyboardEvent| CommandLineMsg::Key(e));
 
         html! {
-            <span onclick={ onclick }>
+            <span
+              onclick={ onclick }
+              onfocus={ onfocus }
+            >
                 { for placeholder }
                 <span>
                     <input
-                      ref={ self.input_node_ref.clone() }
+                      ref={ ctx.props().input_node_ref.clone() }
                     //   id={ id }
                       class={ class }
                       type="text"
                       oninput={ oninput }
                       onkeydown={ onkeydown }
                     //   onfocus={ onfocus }
-                      value={ props.value.to_string() }
+                      value={ value.to_string() }
                       style={ style }
                     //   disabled={ model.mode != crate::types::Mode::Edit }
                       autocomplete="off"
@@ -170,12 +179,16 @@ impl Component for CommandLine {
         match msg {
             CommandLineMsg::Noop => false,
             CommandLineMsg::Click => {
-                let input_node = self.input_node_ref.clone();
+                let input_node = ctx.props().input_node_ref.clone();
                 let input_node = input_node.cast::<HtmlInputElement>();
                 if let Some(input_node) = input_node {
                     input_node.focus().unwrap();
                 }
                 false
+            }
+            CommandLineMsg::Input(v) => {
+                self.value = v;
+                true
             }
             CommandLineMsg::Key(e) => {
                 let props = ctx.props();
