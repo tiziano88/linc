@@ -24,6 +24,7 @@ pub struct Entry {
     pub label: String,
     pub description: String,
     pub action: Msg,
+    pub valid_classes: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -49,9 +50,8 @@ impl Component for CommandLine {
         let props = ctx.props();
         let value = &self.value;
         let enabled = props.enabled;
-        let selected_entry_suffix = props
-            .entries
-            .get(self.selected_command_index)
+        let selected_entry = props.entries.get(self.selected_command_index);
+        let selected_entry_suffix = selected_entry
             .cloned()
             .map(|v| v.label.clone())
             .unwrap_or_default()
@@ -126,17 +126,29 @@ impl Component for CommandLine {
         // }
 
         // let editing = if model.mode == crate::types::Mode::Edit {
-        let editing = if enabled && selected {
+        let dropdown = if enabled && selected {
             html! {
-                <>
-                    <span class="completion">{ suffix }</span>
-                    <div class={ classes_dropdown.join(" ") }>
-                        { for entries }
-                    </div>
-                </>
+                <div class={ classes_dropdown.join(" ") }>
+                    { for entries }
+                </div>
             }
         } else {
             html! {}
+        };
+        let suffix = if enabled && selected {
+            html! {
+                <span class="completion">{ suffix }</span>
+            }
+        } else {
+            html! {}
+        };
+        let classes = if enabled && selected {
+            match selected_entry {
+                Some(entry) => entry.valid_classes.clone().join(" "),
+                None => "".to_string(),
+            }
+        } else {
+            "".to_string()
         };
 
         let oninput = props.oninput.clone();
@@ -159,20 +171,23 @@ impl Component for CommandLine {
             >
                 { for placeholder }
                 <span>
-                    <input
-                      ref={ ctx.props().input_node_ref.clone() }
-                    //   id={ id }
-                      class={ class }
-                      type="text"
-                      oninput={ oninput }
-                      onkeydown={ onkeydown }
-                    //   onfocus={ onfocus }
-                      value={ value.to_string() }
-                      style={ style }
-                    //   disabled={ model.mode != crate::types::Mode::Edit }
-                      autocomplete="off"
-                    />
-                    { editing }
+                    <span class={ classes }>
+                        <input
+                        ref={ ctx.props().input_node_ref.clone() }
+                        //   id={ id }
+                        class={ class }
+                        type="text"
+                        oninput={ oninput }
+                        onkeydown={ onkeydown }
+                        //   onfocus={ onfocus }
+                        value={ value.to_string() }
+                        style={ style }
+                        //   disabled={ model.mode != crate::types::Mode::Edit }
+                        autocomplete="off"
+                        />
+                        { suffix }
+                    </span>
+                    { dropdown }
                 </span>
             </span>
         }
@@ -203,7 +218,11 @@ impl Component for CommandLine {
                         self.selected_command_index = if selected_command_index > 0 {
                             selected_command_index - 1
                         } else {
-                            entries.len() - 1
+                            if entries.len() > 0 {
+                                entries.len() - 1
+                            } else {
+                                0
+                            }
                         }
                     }
                     "ArrowDown" => {

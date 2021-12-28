@@ -37,6 +37,25 @@ pub enum NodeMsg {
     Click,
 }
 
+const FIELD_CLASSES: &[&str] = &[
+    "bg-blue-300",
+    "inline-block",
+    "p-0.5",
+    "px-1",
+    "border-blue-800",
+    "border",
+    "rounded",
+];
+const KIND_CLASSES: &[&str] = &[
+    "kind",
+    "bg-yellow-400",
+    "border-yellow-800",
+    "border-4",
+    "inline-block",
+    "p-0.5",
+    "px-1",
+];
+
 impl Component for NodeComponent {
     type Message = NodeMsg;
     type Properties = NodeProperties;
@@ -86,6 +105,7 @@ impl Component for NodeComponent {
                             },
                             false,
                         ),
+                        valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
                     }),
                     FieldValidator::Literal(v) => None,
                 })
@@ -174,11 +194,12 @@ impl Component for NodeComponent {
                                     NodeMsg::Noop
                                 })
                             };
+                            // TODO: Sticky field headers.
                             html! {
                                 <div class="px-6"
                                   onclick={ onclick }
                                 >
-                                    <div class="sticky bg-blue-300 inline-block p-0.5 px-1 border-blue-800 border rounded">
+                                    <div class={ FIELD_CLASSES.join(" ") }>
                                         { field_name }
                                     </div>
                                     <div class="inline-block">
@@ -208,6 +229,7 @@ impl Component for NodeComponent {
                             label: f.name.to_string(),
                             description: "".to_string(),
                             action: Msg::AddField(path.to_vec(), f.name.to_string()),
+                            valid_classes: FIELD_CLASSES.iter().map(|v| v.to_string()).collect(),
                         })
                         .collect()
                 })
@@ -230,8 +252,11 @@ impl Component for NodeComponent {
             };
             html! {
               <>
-                <div class="kind">
-                    { format!("{} [{:?}]", node.kind, ctx.props().hash) }
+                <div class={ KIND_CLASSES.join(" ") }>
+                    { node.kind.clone() }
+                </div>
+                <div class="inline-block text-sm border border-black">
+                    { ctx.props().hash.clone().unwrap_or("-".to_string()) }
                 </div>
                 <div class="divide-y divide-black border-t border-b border-black border-solid">
                     { for children }
