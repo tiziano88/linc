@@ -270,7 +270,7 @@ async function load(module, imports) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('index-f363fb014a1daa62_bg.wasm', import.meta.url);
+        input = new URL('index-75e440407f63d176_bg.wasm', import.meta.url);
     }
     const imports = {};
     imports.wbg = {};
@@ -357,6 +357,10 @@ async function init(input) {
     imports.wbg.__wbg_addEventListener_09e11fbf8b4b719b = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
         getObject(arg0).addEventListener(getStringFromWasm0(arg1, arg2), getObject(arg3), getObject(arg4));
     }, arguments) };
+    imports.wbg.__wbg_shiftKey_bd2875540e5db840 = function(arg0) {
+        var ret = getObject(arg0).shiftKey;
+        return ret;
+    };
     imports.wbg.__wbg_key_10dcaa4bb6d5449f = function(arg0, arg1) {
         var ret = getObject(arg1).key;
         var ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -449,6 +453,10 @@ async function init(input) {
     };
     imports.wbg.__wbg_warn_c1cc594c33944c11 = function(arg0, arg1, arg2, arg3) {
         console.warn(getObject(arg0), getObject(arg1), getObject(arg2), getObject(arg3));
+    };
+    imports.wbg.__wbg_instanceof_HtmlTextAreaElement_c2f3b4bd6871d5ad = function(arg0) {
+        var ret = getObject(arg0) instanceof HTMLTextAreaElement;
+        return ret;
     };
     imports.wbg.__wbg_value_686b2a68422cb88d = function(arg0, arg1) {
         var ret = getObject(arg1).value;
@@ -573,8 +581,8 @@ async function init(input) {
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
     };
-    imports.wbg.__wbindgen_closure_wrapper9377 = function(arg0, arg1, arg2) {
-        var ret = makeClosure(arg0, arg1, 485, __wbg_adapter_20);
+    imports.wbg.__wbindgen_closure_wrapper9508 = function(arg0, arg1, arg2) {
+        var ret = makeClosure(arg0, arg1, 490, __wbg_adapter_20);
         return addHeapObject(ret);
     };
 
