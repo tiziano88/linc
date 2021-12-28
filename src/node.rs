@@ -1,7 +1,7 @@
 use crate::{
     command_line::{CommandLine, Entry},
     schema::{FieldValidator, KindValue, SCHEMA},
-    types::{append, get_value_from_input_event, File, Hash, Msg, Node, Selector},
+    types::{append, File, Hash, Msg, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
 use web_sys::HtmlInputElement;
@@ -154,10 +154,24 @@ impl Component for NodeComponent {
                                     index: i,
                                 },
                             );
+                            let onclick = {
+                                let onselect = props.onselect.clone();
+                                let child_path = child_path.clone();
+                                ctx.link().callback(move |e: MouseEvent| {
+                                    log::info!("click");
+                                    e.stop_propagation();
+                                    onselect.emit(child_path.clone());
+                                    NodeMsg::Noop
+                                })
+                            };
                             html! {
-                                <div class="px-6">
-                                    <div class="sticky bg-gray-300 mx-3 inline-block" >
+                                <div class="px-6"
+                                  onclick={ onclick }
+                                >
+                                    <div class="sticky bg-blue-300 inline-block p-0.5 px-1 border-blue-800 border rounded">
                                         { field_name }
+                                    </div>
+                                    <div class="inline-block">
                                         { ":" }
                                     </div>
                                     <NodeComponent
@@ -189,14 +203,17 @@ impl Component for NodeComponent {
                 })
                 .unwrap_or_default();
             let edit = if selected {
+                // Make it look like an actual field.
                 html! {
-                    <CommandLine
-                        input_node_ref={ self.input_node_ref.clone() }
-                        entries={ entries }
-                        value={ node.value.clone() }
-                        onselect={ ctx.props().updatemodel.clone() }
-                        enabled=true
-                    />
+                    <div class="px-6">
+                        <CommandLine
+                            input_node_ref={ self.input_node_ref.clone() }
+                            entries={ entries }
+                            value={ node.value.clone() }
+                            onselect={ ctx.props().updatemodel.clone() }
+                            enabled=true
+                        />
+                    </div>
                 }
             } else {
                 html! {}
@@ -206,7 +223,9 @@ impl Component for NodeComponent {
                 <div class="kind">
                     { format!("{} [{:?}]", node.kind, ctx.props().hash) }
                 </div>
-                { for children }
+                <div class="divide-y divide-black border-t border-b border-black border-solid">
+                    { for children }
+                </div>
                 { edit }
               </>
             }
