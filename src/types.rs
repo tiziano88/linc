@@ -167,7 +167,6 @@ impl Model {
                 ctx,
                 node: &node,
                 path,
-                entries: &[],
                 placeholder: "",
             });
             log::info!("errors: {:?} {:?}", path, errors);
@@ -429,9 +428,6 @@ impl Component for Model {
             log::debug!("filtered commands {:?}", filtered_commands);
             model.parsed_commands = filtered_commands;
             model.selected_command_index = 0;
-
-            let command_input_id = crate::view::command_input_id(&model.cursor);
-            // Model::focus_element(&format!("#{}", command_input_id));
         }
 
         const KEY: &str = "linc_file";

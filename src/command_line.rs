@@ -123,7 +123,7 @@ impl Component for CommandLine {
             "".to_string()
         };
         let mut class = vec![
-            "inline-block",
+            "inline-flex",
             "w-full",
             "bg-transparent",
             "resize-none",

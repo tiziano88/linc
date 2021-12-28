@@ -502,10 +502,10 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["impl_trait"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let trait_ = c.model.view_child(c.ctx, c.node, "trait", c.path);
-                    let type_ = c.model.view_child(c.ctx, c.node, "type", c.path);
+                    let trait_ = c.view_child("trait");
+                    let type_ = c.view_child("type");
 
-                    let (items_head, items) = c.model.view_children(c.ctx, c.node, "items", c.path);
+                    let (items_head, items) = c.view_children("items");
                     let items = items.into_iter().map(|b| {
                         html! {
                             <div>{ b }</div>
@@ -623,10 +623,10 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["identifier"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let ref_ = c.model.view_child(c.ctx, c.node, "ref", c.path);
-                    let mut_ = c.model.view_child(c.ctx, c.node, "mut", c.path);
-                    let identifier = c.model.view_child(c.ctx, c.node, "identifier", c.path);
-                    let pattern = c.model.view_child(c.ctx, c.node, "pattern", c.path);
+                    let ref_ = c.view_child("ref");
+                    let mut_ = c.view_child("mut");
+                    let identifier = c.view_child("identifier");
+                    let pattern = c.view_child("pattern");
                     html! {
                       <span>{ ref_ }{ mut_ }{ identifier }{ "@" }{ pattern }</span>
                     }
@@ -704,8 +704,7 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["tuple"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let (components_head, components) =
-                        c.model.view_children(c.ctx, c.node, "components", c.path);
+                    let (components_head, components) = c.view_children("components");
                     let components = components
                         .into_iter()
                         .intersperse(html! { <span>{ "," }</span>});
@@ -860,7 +859,7 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["pub_in"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let path = c.model.view_child(c.ctx, c.node, "path", c.path);
+                    let path = c.view_child("path");
                     html! {
                         <span>
                             <span class="keyword">{ "pub" }</span>
@@ -885,8 +884,7 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["type_path"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let (segments_head, segments) =
-                        c.model.view_children(c.ctx, c.node, "segments", c.path);
+                    let (segments_head, segments) = c.view_children("segments");
                     let segments = segments
                         .into_iter()
                         .intersperse(html! { <span>{ "::" }</span>});
@@ -923,9 +921,9 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["reference"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let lifetime = c.model.view_child(c.ctx, c.node, "lifetime", c.path);
-                    let mutable = c.model.view_child(c.ctx, c.node, "mutable", c.path);
-                    let type_ = c.model.view_child(c.ctx, c.node, "type", c.path);
+                    let lifetime = c.view_child("lifetime");
+                    let mutable = c.view_child("mutable");
+                    let type_ = c.view_child("type");
                     html! {
                         <span>
                         { "&" }{ lifetime }{ mutable }{ type_ }
@@ -958,9 +956,9 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["const"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let identifier = c.model.view_child(c.ctx, c.node, "identifier", c.path);
-                    let type_ = c.model.view_child(c.ctx, c.node, "type", c.path);
-                    let expression = c.model.view_child(c.ctx, c.node, "expression", c.path);
+                    let identifier = c.view_child("identifier");
+                    let type_ = c.view_child("type");
+                    let expression = c.view_child("expression");
                     html! {
                         <span>
                             <span class="keyword">{ "const" }</span>
@@ -994,14 +992,13 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["block"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let (_statements_head, statements) =
-                        c.model.view_children(c.ctx, c.node, "statements", c.path);
+                    let (_statements_head, statements) = c.view_children("statements");
                     let statements = statements.into_iter().map(|v| {
                         html! {
                             <div class="indent">{ v }{ ";" }</div>
                         }
                     });
-                    let expression = c.model.view_child(c.ctx, c.node, "expression", c.path);
+                    let expression = c.view_child("expression");
 
                     html! {
                         <span>
@@ -2431,18 +2428,19 @@ pub struct ValidatorContext<'a> {
     pub node: &'a Node,
     pub path: &'a [Selector],
 
-    pub entries: &'a [Entry],
     pub placeholder: &'a str,
 }
 
 impl<'a> ValidatorContext<'a> {
     pub fn view_child(&self, field_name: &str) -> Html {
-        self.model
-            .view_child(self.ctx, self.node, field_name, self.path)
+        html! {}
+        // self.model
+        //     .view_child(self.ctx, self.node, field_name, self.path)
     }
     pub fn view_children(&self, field_name: &str) -> (Html, Vec<Html>) {
-        self.model
-            .view_children(self.ctx, self.node, field_name, self.path)
+        (html! {}, vec![])
+        // self.model
+        //     .view_children(self.ctx, self.node, field_name, self.path)
     }
     // TODO: field / child.
 }
@@ -2471,168 +2469,6 @@ pub struct ValidationError {
 
 pub struct Schema {
     pub kinds: &'static [Kind],
-}
-
-#[derive(Clone)]
-pub struct Entry {
-    pub label: String,
-    pub description: String,
-    pub action: Msg,
-}
-
-pub fn textbox(
-    // model: &Model,
-    selected: bool,
-    // ctx: &Context<Model>,
-    value: &str,
-    path: &[Selector],
-    entries: &[Entry],
-    placeholder: &str,
-    errors: &[ValidationError],
-    oninput: Callback<InputEvent>,
-) -> Html {
-    let path_clone = path.to_vec();
-    // let oninput = ctx.link().callback(move |e: InputEvent| {
-    //     Msg::SetNodeValue(path_clone.clone(), get_value_from_input_event(e))
-    // });
-    let path_clone = path.to_vec();
-    // let onkeydown = ctx
-    //     .link()
-    //     .callback(move |e: KeyboardEvent| Msg::CommandKey(path_clone.clone(), e));
-    let path_clone = path.to_vec();
-    // let onfocus = ctx
-    //     .link()
-    //     .callback(move |_e: FocusEvent| Msg::Select(path_clone.clone()));
-    // let onblur = model.link.callback(move |e: yew::FocusEvent| {
-    //     let target = e.related_target().unwrap().dyn_into::<HtmlElement>().unwrap();
-    //     let mut node = node_clone.clone();
-    //     node.value = target.inner_text();
-    //     crate::types::Msg::ReplaceNode(path_clone.clone(), node)
-    // });
-    // let selected = path == &model.cursor;
-    // let selected_index = model.selected_command_index;
-    let selected_command_index = 0;
-    let selected_entry_suffix = entries
-        .get(selected_command_index)
-        .cloned()
-        .map(|v| v.label.clone())
-        .unwrap_or_default()
-        .strip_prefix(value)
-        .map(|v| v.to_string())
-        .unwrap_or_default();
-    let entries: Vec<_> = if selected {
-        entries
-            .iter()
-            .enumerate()
-            .map(|(i, v)| {
-                let value_string = v.label.clone();
-
-                let value_prefix = value;
-                let value_suffix = value_string.strip_prefix(value_prefix).unwrap_or_default();
-
-                // let node = v.to_node();
-                let action = v.action.clone();
-                // let onclick = ctx.link().callback(move |_e: MouseEvent| action.clone());
-                let mut classes_item = vec!["block", "border"];
-                if i == selected_command_index {
-                    classes_item.push("selected");
-                }
-                // Avoid re-selecting the node, we want to move to next.
-                html! {
-                    <span
-                      class={ classes_item.join(" ") }
-                    //   onmousedown={ onclick }
-                    >
-                      <span class="font-bold">{ value_prefix }</span>
-                      { value_suffix }
-                    </span>
-                }
-            })
-            .collect()
-    } else {
-        vec![]
-    };
-    let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
-    let id = view::command_input_id(&path);
-    let style = if value.len() > 0 {
-        format!("width: {}ch;", value.len())
-    } else {
-        "width: 0.1ch;".to_string()
-    };
-    // XXX: Chrome inspector CSS color editor.
-    let placeholder = if placeholder.is_empty() {
-        None
-    } else {
-        Some(html! {
-            <div class="placeholder">{ placeholder }</div>
-        })
-    };
-    let suffix = if selected {
-        selected_entry_suffix
-    } else {
-        "".to_string()
-    };
-    let mut class = vec!["inline-block", "w-full"];
-    if !errors.is_empty() {
-        class.push("error");
-    }
-
-    // let editing = if model.mode == crate::types::Mode::Edit {
-    let editing = if selected {
-        html! {
-            <>
-                <span class="completion">{ suffix }</span>
-                <div class={ classes_dropdown.join(" ") }>
-                    { for entries }
-                </div>
-            </>
-        }
-    } else {
-        html! {}
-    };
-
-    html! {
-        <span>
-            { for placeholder }
-            <span>
-                <input
-                  id={ id }
-                  class={ class }
-                  type="text"
-                  oninput={ oninput }
-                //   onkeydown={ onkeydown }
-                //   onfocus={ onfocus }
-                  value={ value.to_string() }
-                  style={ style }
-                //   disabled={ model.mode != crate::types::Mode::Edit }
-                  autocomplete="off"
-                />
-                { editing }
-            </span>
-        </span>
-    }
-}
-
-fn hole(model: &Model, ctx: &Context<Model>, node: &Node, path: &Path) -> Html {
-    let path_clone = path.to_vec();
-    let node_clone = node.clone();
-    let oninput = ctx.link().callback(move |e: InputEvent| {
-        let mut node = node_clone.clone();
-        node.value = get_value_from_input_event(e);
-        crate::types::Msg::ReplaceNode(path_clone.clone(), node, false)
-    });
-    let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
-    let classes_item = vec!["block", "border"];
-    html! {
-        <span>
-            <input type="text" value={node.value.clone()} oninput={oninput} />
-            <div class={classes_dropdown.join(" ")}>
-              <a href="#" class={classes_item.join(" ")}>{"link 1"}</a>
-              <a href="#" class={classes_item.join(" ")}>{"link 2"}</a>
-              <a href="#" class={classes_item.join(" ")}>{"link 3"}</a>
-            </div>
-        </span>
-    }
 }
 
 impl Schema {
