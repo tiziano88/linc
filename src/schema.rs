@@ -2413,7 +2413,7 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
         .collect();
     html! {
         // <div class="divide-y divide-black border-t border-b border-black border-solid">
-        <div>
+        <div class="space-y-1 my-1">
             { for children }
         </div>
     }
