@@ -151,7 +151,7 @@ impl Component for CommandLine {
         } else {
             html! {}
         };
-        let classes = if enabled && selected {
+        let mut classes = if enabled && selected {
             match selected_entry {
                 Some(entry) => entry.valid_classes.clone().join(" "),
                 None => "".to_string(),
@@ -159,6 +159,7 @@ impl Component for CommandLine {
         } else {
             "".to_string()
         };
+        classes.push_str(" flex");
 
         let oninput = props.oninput.clone();
         let oninput = ctx.link().callback(move |e: InputEvent| {
@@ -180,7 +181,7 @@ impl Component for CommandLine {
             >
                 { for placeholder }
                 <span>
-                    <span class={ classes }>
+                    <span class={ classes } style="width: fit-content;">
                         <textarea
                         rows={ format!("{}", rows) }
                         ref={ ctx.props().input_node_ref.clone() }
