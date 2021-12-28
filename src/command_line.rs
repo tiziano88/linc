@@ -64,31 +64,34 @@ impl Component for CommandLine {
                 .entries
                 .iter()
                 .enumerate()
-                .map(|(i, v)| {
+                .filter_map(|(i, v)| {
                     let value_string = v.label.clone();
+                    if value_string.starts_with(value) {
+                        let value_suffix = value_string.strip_prefix(value).unwrap_or_default();
 
-                    let value_suffix = value_string.strip_prefix(value).unwrap_or_default();
-
-                    // let node = v.to_node();
-                    let action = v.action.clone();
-                    let onselect = props.onselect.clone();
-                    let onclick = ctx.link().callback(move |_e: MouseEvent| {
-                        onselect.emit(action.clone());
-                        CommandLineMsg::Noop
-                    });
-                    let mut classes_item = vec!["block", "border"];
-                    if i == self.selected_command_index {
-                        classes_item.push("selected");
-                    }
-                    // Avoid re-selecting the node, we want to move to next.
-                    html! {
-                        <span
-                          class={ classes_item.join(" ") }
-                          onmousedown={ onclick }
-                        >
-                          <span class="font-bold">{ value.clone() }</span>
-                          { value_suffix }
-                        </span>
+                        // let node = v.to_node();
+                        let action = v.action.clone();
+                        let onselect = props.onselect.clone();
+                        let onclick = ctx.link().callback(move |_e: MouseEvent| {
+                            onselect.emit(action.clone());
+                            CommandLineMsg::Noop
+                        });
+                        let mut classes_item = vec!["block", "border"];
+                        if i == self.selected_command_index {
+                            classes_item.push("selected");
+                        }
+                        // Avoid re-selecting the node, we want to move to next.
+                        Some(html! {
+                            <span
+                              class={ classes_item.join(" ") }
+                              onmousedown={ onclick }
+                            >
+                              <span class="font-bold">{ value.clone() }</span>
+                              { value_suffix }
+                            </span>
+                        })
+                    } else {
+                        None
                     }
                 })
                 .collect()
@@ -180,10 +183,11 @@ impl Component for CommandLine {
             CommandLineMsg::Noop => false,
             CommandLineMsg::Click => {
                 let input_node = ctx.props().input_node_ref.clone();
-                let input_node = input_node.cast::<HtmlInputElement>();
-                if let Some(input_node) = input_node {
-                    input_node.focus().unwrap();
-                }
+                input_node
+                    .cast::<HtmlInputElement>()
+                    .unwrap()
+                    .focus()
+                    .unwrap();
                 false
             }
             CommandLineMsg::Input(v) => {
