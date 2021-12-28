@@ -162,14 +162,14 @@ impl Model {
 
         if let Some(kind) = SCHEMA.get_kind(kind) {
             let crate::schema::KindValue::Struct { validator, .. } = kind.value;
-            let errors = validator(&ValidatorContext {
-                model: self,
-                ctx,
-                node: &node,
-                path,
-                placeholder: "",
-            });
-            log::info!("errors: {:?} {:?}", path, errors);
+            // let errors = validator(&ValidatorContext {
+            //     model: self,
+            //     ctx,
+            //     node: &node,
+            //     path,
+            //     placeholder: "",
+            // });
+            // log::info!("errors: {:?} {:?}", path, errors);
         }
         /*
         for (_, children) in node.children.iter() {

@@ -1,9 +1,9 @@
 use crate::{
-    node::FIELD_CLASSES,
-    types::{append, get_value_from_input_event, Model, Msg, Node, Path, Selector},
+    node::{NodeComponent, FIELD_CLASSES},
+    types::{append, get_value_from_input_event, File, Model, Msg, Node, Path, Selector},
     view,
 };
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, rc::Rc};
 use yew::{html, prelude::*, Html};
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
@@ -1175,7 +1175,7 @@ pub const SCHEMA: Schema = Schema {
                 inner: None,
                 constructors: &["number"],
                 validator: |c: &ValidatorContext| {
-                    let node = c.node;
+                    let node = &c.node;
                     // TODO: child.
                     if node.value.parse::<i32>().is_ok() {
                         vec![]
@@ -2367,8 +2367,8 @@ type Renderer = fn(&ValidatorContext) -> Html;
 type Validator = fn(&ValidatorContext) -> Vec<ValidationError>;
 
 pub fn default_renderer(c: &ValidatorContext) -> Html {
-    let node = c.node;
-    let path = c.path;
+    let node = &c.node;
+    let path = &c.path;
     let kind = SCHEMA.get_kind(&node.kind);
     // Node.
     // https://codepen.io/xotonic/pen/JRLAOR
@@ -2401,15 +2401,15 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
                             { ":" }
                         </div>
                         { c.view_child("foo") }
-                        // <NodeComponent
-                        //   file={ ctx.props().file.clone() }
-                        //   hash={ h.clone() }
-                        //   cursor={ ctx.props().cursor.clone() }
-                        //   onselect={ ctx.props().onselect.clone() }
-                        //   path={ child_path }
-                        //   updatemodel={ ctx.props().updatemodel.clone() }
-                        //   validators={ validators }
-                        // />
+                        <NodeComponent
+                          file={ c.file.clone() }
+                          hash={ h.clone() }
+                          cursor={ c.cursor.clone() }
+                          onselect={ c.onselect.clone() }
+                          path={ child_path }
+                          updatemodel={ c.updatemodel.clone() }
+                          validators={ validators }
+                        />
                     </div>
                 }
             })
@@ -2422,16 +2422,16 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
     }
 }
 
-pub struct ValidatorContext<'a> {
-    pub model: &'a Model,
-    pub ctx: &'a Context<Model>,
-    pub node: &'a Node,
-    pub path: &'a [Selector],
-
-    pub placeholder: &'a str,
+pub struct ValidatorContext {
+    pub path: Vec<Selector>,
+    pub cursor: Vec<Selector>,
+    pub file: Rc<File>,
+    pub node: Rc<Node>,
+    pub onselect: Callback<Vec<Selector>>,
+    pub updatemodel: Callback<Msg>,
 }
 
-impl<'a> ValidatorContext<'a> {
+impl ValidatorContext {
     pub fn view_child(&self, field_name: &str) -> Html {
         html! {}
         // self.model
