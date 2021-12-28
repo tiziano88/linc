@@ -47,6 +47,16 @@ impl Component for NodeComponent {
         }
     }
 
+    fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
+        let props = ctx.props();
+        let path = props.path.clone();
+        let cursor = props.cursor.clone();
+        let selected = path == cursor;
+        if selected {
+            self.focus_input();
+        }
+    }
+
     fn view(&self, ctx: &Context<Self>) -> Html {
         let default_node = Node::default();
         let props = ctx.props();
@@ -258,14 +268,20 @@ impl Component for NodeComponent {
         match msg {
             NodeMsg::Noop => false,
             NodeMsg::Click => {
-                let input_node = self.input_node_ref.clone();
-                input_node
-                    .cast::<HtmlInputElement>()
-                    .unwrap()
-                    .focus()
-                    .unwrap();
+                self.focus_input();
                 true
             }
         }
+    }
+}
+
+impl NodeComponent {
+    fn focus_input(&self) {
+        let input_node = self.input_node_ref.clone();
+        input_node
+            .cast::<HtmlInputElement>()
+            .unwrap()
+            .focus()
+            .unwrap();
     }
 }
