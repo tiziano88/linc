@@ -1,6 +1,6 @@
 use crate::{
     node::NodeComponent,
-    schema::{FieldValidator, KindValue, ParsedValue, ValidationError, ValidatorContext, SCHEMA},
+    schema::{FieldValidator, KindValue, ValidationError, ValidatorContext, SCHEMA},
 };
 use gloo_storage::{LocalStorage, Storage};
 use serde::{Deserialize, Serialize};
@@ -88,30 +88,6 @@ pub fn parent(path: &[Selector]) -> &[Selector] {
 }
 
 impl Model {
-    fn parse_commands(&self, path: &Path) -> Vec<ParsedValue> {
-        self.field(path)
-            .map(|field| {
-                field
-                    .validators
-                    .iter()
-                    .filter_map(|validator| match validator {
-                        FieldValidator::Kind(kind) => SCHEMA.get_kind(kind),
-                        FieldValidator::Literal(_valid) => None,
-                    })
-                    .map(|kind| ParsedValue {
-                        kind_hierarchy: vec![kind.name.to_string()],
-                        label: match kind.value {
-                            KindValue::Struct { constructors, .. } => constructors[0].to_string(),
-                            _ => kind.name.to_string(),
-                        },
-                        value: "".to_string(),
-                    })
-                    .collect::<Vec<_>>()
-                // TODO: Ranking.
-            })
-            .unwrap_or_default()
-    }
-
     fn prev(&mut self) {
         let flattened_paths = self.flatten_paths(&[]);
         log::info!("paths: {:?}", flattened_paths);

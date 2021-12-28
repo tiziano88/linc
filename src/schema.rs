@@ -2583,23 +2583,6 @@ impl Kind {
     */
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct ParsedValue {
-    pub kind_hierarchy: Vec<String>,
-    pub label: String,
-    pub value: String,
-}
-
-impl ParsedValue {
-    pub fn to_node(&self) -> Node {
-        Node {
-            kind: self.kind_hierarchy.last().unwrap().clone(),
-            value: self.value.clone(),
-            children: BTreeMap::new(),
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct Field {
     pub name: &'static str,
