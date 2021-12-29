@@ -134,14 +134,15 @@ impl Component for NodeComponent {
               />
             }
         } else {
-            let renderer = kind
-                .map(|r| {
+            let renderer = if props.model.rich_render {
+                kind.map(|r| {
                     let KindValue::Struct { renderer, .. } = r.value;
                     renderer
                 })
-                .unwrap_or(default_renderer);
-            // TODO: Disable default renderer.
-            let renderer = default_renderer;
+                .unwrap_or(default_renderer)
+            } else {
+                default_renderer
+            };
             let validator_context = ValidatorContext {
                 model: props.model.clone(),
                 path: path.clone(),

@@ -72,6 +72,7 @@ pub struct Model {
     pub node_state: HashMap<Path, NodeState>,
 
     pub show_serialized: bool,
+    pub rich_render: bool,
 }
 
 #[derive(Default, PartialEq, Clone)]
@@ -178,6 +179,7 @@ pub enum Msg {
     CommandKey(Path, KeyboardEvent),
 
     ToggleSerialized,
+    ToggleRenderer,
     /* EnterCommand,
      * EscapeCommand,
      */
@@ -361,6 +363,7 @@ impl Component for Model {
             hover: vec![].into(),
             node_state: HashMap::new(),
             show_serialized: false,
+            rich_render: false,
         }
     }
 
@@ -379,6 +382,9 @@ impl Component for Model {
         match msg {
             Msg::ToggleSerialized => {
                 self.show_serialized = !self.show_serialized;
+            }
+            Msg::ToggleRenderer => {
+                self.rich_render = !self.rich_render;
             }
             Msg::Select(path) => {
                 self.cursor = path.clone();

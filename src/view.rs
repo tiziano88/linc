@@ -60,6 +60,11 @@ impl Model {
                 text: "serialized".to_string(),
                 msg: Msg::ToggleSerialized,
             },
+            Action {
+                image: None,
+                text: "renderer".to_string(),
+                msg: Msg::ToggleRenderer,
+            },
         ];
         let actions = actions
             .iter()
