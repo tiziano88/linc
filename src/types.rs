@@ -17,14 +17,6 @@ use yew::{html, prelude::*, Html, KeyboardEvent};
 pub type Ref = String;
 
 pub type Hash = String;
-// pub const EMPTY_HASH: Hash = "".to_string();
-// pub type Value = Vec<u8>;
-
-#[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
-pub struct Link {
-    root: Option<Hash>,
-    path: Path,
-}
 
 pub fn new_ref() -> Ref {
     uuid::Uuid::new_v4().to_hyphenated().to_string()
