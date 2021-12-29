@@ -44,7 +44,7 @@ pub const FIELD_CLASSES: &[&str] = &[
     "border",
     "rounded",
 ];
-const KIND_CLASSES: &[&str] = &[
+pub const KIND_CLASSES: &[&str] = &[
     "kind",
     "bg-yellow-400",
     "border-yellow-800",
@@ -139,7 +139,7 @@ impl Component for NodeComponent {
                 })
                 .unwrap_or(default_renderer);
             // TODO: Disable default renderer.
-            let renderer = default_renderer;
+            // let renderer = default_renderer;
             let validator_context = ValidatorContext {
                 model: props.model.clone(),
                 path: path.clone(),
@@ -148,16 +148,6 @@ impl Component for NodeComponent {
                 updatemodel: props.updatemodel.clone(),
             };
             let content = renderer(&validator_context);
-            let header = html! {
-                <div>
-                    <div class={ KIND_CLASSES.join(" ") }>
-                        { node.kind.clone() }
-                    </div>
-                    <div class="inline-block text-xs border border-black">
-                        { ctx.props().hash.clone().unwrap_or("-".to_string()) }
-                    </div>
-                </div>
-            };
             let footer = if selected {
                 let entries: Vec<Entry> = kind
                     .map(|k| {
@@ -193,7 +183,6 @@ impl Component for NodeComponent {
             };
             html! {
               <>
-                { header }
                 { content }
                 { footer }
               </>

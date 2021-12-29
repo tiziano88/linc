@@ -1,5 +1,5 @@
 use crate::{
-    node::{NodeComponent, FIELD_CLASSES},
+    node::{NodeComponent, FIELD_CLASSES, KIND_CLASSES},
     types::{append, get_value_from_input_event, File, Model, Msg, Node, Path, Selector},
     view,
 };
@@ -2371,6 +2371,17 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
     let path = &c.path;
     log::debug!("default_renderer: {:?}", path);
     let kind = SCHEMA.get_kind(&node.kind);
+    let hash = "xxx";
+    let header = html! {
+        <div>
+            <div class={ KIND_CLASSES.join(" ") }>
+                { kind.map(|k| k.name.clone()).unwrap_or_default() }
+            </div>
+            // <div class="inline-block text-xs border border-black">
+            //     { hash.clone() }
+            // </div>
+        </div>
+    };
     // Node.
     // https://codepen.io/xotonic/pen/JRLAOR
     let children: Vec<_> = node
@@ -2413,9 +2424,12 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
         .collect();
     html! {
         // <div class="divide-y divide-black border-t border-b border-black border-solid">
-        <div class="space-y-1 my-1">
-            { for children }
-        </div>
+        <>
+            { header }
+            <div class="space-y-1 my-1">
+                { for children }
+            </div>
+        </>
     }
 }
 

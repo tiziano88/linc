@@ -316,7 +316,7 @@ impl Component for Model {
               >
                 <div>{ "LINC" }</div>
                 <div>{ "click on an empty node to see list of possible completions" }</div>
-                <div class="">
+                <div class="flex">
                     // <div class="column">{ self.view_file(ctx, &self.file) }</div>
                     <NodeComponent
                       model={ Rc::from(self.clone()) }
@@ -325,7 +325,8 @@ impl Component for Model {
                       updatemodel={ ctx.link().callback(|m| m) }
                       path={ vec![] }
                     />
-
+                </div>
+                <div>
                     <div class="column">
                         <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
                         <div>{ display_cursor(&self.cursor) }</div>
