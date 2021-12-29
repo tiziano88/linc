@@ -50,6 +50,12 @@ impl Component for CommandLine {
         }
     }
 
+    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+        self.valid_entries = ctx.props().entries.clone();
+        self.value = ctx.props().value.clone();
+        true
+    }
+
     fn view(&self, ctx: &Context<Self>) -> Html {
         let props = ctx.props();
         let value = &self.value;
