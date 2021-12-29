@@ -10,6 +10,8 @@ use yew::prelude::*;
 pub struct NodeComponent {
     input_node_ref: NodeRef,
     old_props: Option<NodeProperties>,
+    // Memoize callbacks?
+    ondelete: Callback<()>,
 }
 
 #[derive(Properties, PartialEq, Clone)]
@@ -61,9 +63,11 @@ impl Component for NodeComponent {
 
     fn create(ctx: &Context<Self>) -> Self {
         log::debug!("creating node");
+        let updatemodel = ctx.props().updatemodel.clone();
         Self {
             input_node_ref: NodeRef::default(),
             old_props: None,
+            ondelete: Callback::from(move |()| updatemodel.emit(Msg::Parent)),
         }
     }
 
@@ -180,9 +184,7 @@ impl Component for NodeComponent {
                             entries={ entries }
                             value={ node.value.clone() }
                             onselect={ ctx.props().updatemodel.clone() }
-                            ondelete={ Callback::from(move |()| {
-                                onupdatemodel0.emit(Msg::Parent);
-                            }) }
+                            ondelete={ self.ondelete.clone() }
                             enabled=true
                         />
                     </div>
