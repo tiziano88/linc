@@ -1,19 +1,13 @@
-use crate::{
-    model::{Model, Msg},
-    node::{NodeComponent, FIELD_CLASSES},
-    schema::{FieldValidator, KindValue, ValidationError, ValidatorContext, SCHEMA},
-};
-use gloo_storage::{LocalStorage, Storage};
+use crate::{model::Msg, node::FIELD_CLASSES};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, HashMap},
     convert::TryInto,
-    rc::Rc,
 };
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
-use web_sys::{window, HtmlElement, HtmlInputElement, HtmlTextAreaElement, InputEvent};
-use yew::{html, prelude::*, Html, KeyboardEvent};
+use web_sys::{HtmlInputElement, HtmlTextAreaElement, InputEvent};
+use yew::{html, prelude::*, Html};
 
 pub type Ref = String;
 
@@ -93,10 +87,10 @@ impl File {
         if path.is_empty() {
             Some(base)
         } else {
-            let (selector, rest) = path.split_first().unwrap().clone();
+            let (selector, rest) = path.split_first().unwrap();
             let children = base.links.get(&selector.field)?;
             let child = children.get(selector.index)?;
-            self.lookup_from(child, &rest)
+            self.lookup_from(child, rest)
         }
     }
 
@@ -168,7 +162,7 @@ pub fn display_selector(selector: &Selector) -> Html {
 pub fn display_cursor(cursor: &Path) -> Html {
     let segments = cursor
         .iter()
-        .map(|s| display_selector(s))
+        .map(display_selector)
         .intersperse(html! { <span>{ ">" }</span>});
     html! {
         <div>{ for segments }</div>

@@ -1,21 +1,14 @@
 use crate::{
-    node::{NodeComponent, FIELD_CLASSES},
-    schema::{
-        default_renderer, Field, FieldValidator, KindValue, Multiplicity, ValidationError,
-        ValidatorContext, SCHEMA,
-    },
+    node::NodeComponent,
+    schema::{Field, Multiplicity, ValidationError, SCHEMA},
     types::*,
 };
 use gloo_storage::{LocalStorage, Storage};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, HashMap},
-    convert::TryInto,
     rc::Rc,
 };
-use wasm_bindgen::{JsCast, UnwrapThrowExt};
-use web_sys::{window, HtmlElement, HtmlInputElement, HtmlTextAreaElement, InputEvent, MouseEvent};
+use web_sys::{window, InputEvent, MouseEvent};
 use yew::{html, prelude::*, Html, KeyboardEvent};
 
 #[derive(PartialEq, Clone)]
@@ -71,7 +64,7 @@ impl Component for Model {
     fn view(&self, ctx: &Context<Self>) -> Html {
         let onmouseover = ctx.link().callback(move |e: MouseEvent| {
             e.stop_propagation();
-            Msg::Hover(vec![].into())
+            Msg::Hover(vec![])
         });
         let parse = ctx
             .link()
@@ -104,7 +97,7 @@ impl Component for Model {
                     <NodeComponent
                       model={ Rc::from(self.clone()) }
                       hash={ self.file.root.clone() }
-                      onselect={ ctx.link().callback(|path: Vec<Selector>| Msg::Select(path)) }
+                      onselect={ ctx.link().callback(Msg::Select) }
                       updatemodel={ ctx.link().callback(|m| m) }
                       path={ vec![] }
                     />
@@ -130,8 +123,8 @@ impl Component for Model {
         Model {
             file: super::initial::initial(),
             mode: Mode::Normal,
-            cursor: vec![].into(),
-            hover: vec![].into(),
+            cursor: vec![],
+            hover: vec![],
             node_state: HashMap::new(),
             show_serialized: false,
             rich_render: false,
@@ -158,7 +151,7 @@ impl Component for Model {
                 self.rich_render = !self.rich_render;
             }
             Msg::Select(path) => {
-                self.cursor = path.clone();
+                self.cursor = path;
             }
             Msg::Hover(path) => {
                 self.hover = path;
@@ -271,14 +264,14 @@ impl Component for Model {
             Msg::SetNodeValue(path, value) => {
                 self.cursor = path.clone();
                 let mut node = self.file.lookup(&path).cloned().unwrap_or_default();
-                node.value = value.clone();
+                node.value = value;
                 let new_root = self.file.replace_node(&path, node);
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
                 }
             }
             Msg::AddItem => {
-                let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
+                let (selector, parent_path) = self.cursor.split_last().unwrap();
                 let new_ref = self.file.add_node(&Node {
                     kind: "invalid".to_string(),
                     value: "invalid".to_string(),
@@ -295,7 +288,7 @@ impl Component for Model {
                 // self.next();
             }
             Msg::DeleteItem => {
-                let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
+                let (selector, parent_path) = self.cursor.split_last().unwrap();
                 let mut parent = self.file.lookup(parent_path).unwrap().clone();
                 // If the field does not exist, create a default one.
                 let children = parent.links.entry(selector.field.clone()).or_default();
@@ -389,10 +382,8 @@ impl Model {
                 log::info!("new path: {:?}", path);
                 self.cursor = path.clone();
             }
-        } else {
-            if let Some(path) = flattened_paths.get(0) {
-                self.cursor = path.clone();
-            }
+        } else if let Some(path) = flattened_paths.get(0) {
+            self.cursor = path.clone();
         }
     }
 
@@ -400,7 +391,7 @@ impl Model {
         self.update_errors_node(ctx, &self.cursor.clone());
     }
 
-    pub fn update_errors_node(&mut self, ctx: &Context<Self>, path: &[Selector]) {
+    pub fn update_errors_node(&mut self, _ctx: &Context<Self>, path: &[Selector]) {
         let node = match self.file.lookup(path) {
             Some(node) => node.clone(),
             None => return,
@@ -408,7 +399,7 @@ impl Model {
         let kind = &node.kind;
 
         if let Some(kind) = SCHEMA.get_kind(kind) {
-            let crate::schema::KindValue::Struct { validator, .. } = kind.value;
+            let crate::schema::KindValue::Struct { validator: _, .. } = kind.value;
             // let errors = validator(&ValidatorContext {
             //     model: self,
             //     ctx,
@@ -506,7 +497,7 @@ impl Model {
 
     pub fn field(&self, path: &Path) -> Option<Field> {
         path.split_last().and_then(|(selector, parent_path)| {
-            let parent = self.file.lookup(&parent_path).unwrap();
+            let parent = self.file.lookup(parent_path).unwrap();
             SCHEMA
                 .get_kind(&parent.kind)
                 .and_then(|f| f.get_field(&selector.field))
@@ -556,7 +547,7 @@ impl Model {
         match &self.file.lookup(path) {
             Some(node) => {
                 let mut paths = vec![];
-                for field in Model::traverse_fields(&node) {
+                for field in Model::traverse_fields(node) {
                     let mut children = node.links.get(field.name).cloned().unwrap_or_default();
                     match field.multiplicity {
                         Multiplicity::Single => {

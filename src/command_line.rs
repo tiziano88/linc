@@ -71,7 +71,7 @@ impl Component for CommandLine {
         let selected_entry = valid_entries.get(self.selected_command_index);
         let selected_entry_suffix = selected_entry
             .cloned()
-            .map(|v| v.label.clone())
+            .map(|v| v.label)
             .unwrap_or_default()
             .strip_prefix(value)
             .map(|v| v.to_string())
@@ -113,7 +113,7 @@ impl Component for CommandLine {
         };
         let classes_dropdown = vec!["absolute", "z-10", "bg-white", "w-64"];
         // let id = view::command_input_id(&path);
-        let style = if value.len() > 0 {
+        let style = if !value.is_empty() {
             format!("width: {}ch;", value.len())
         } else {
             "width: 0.1ch;".to_string()
@@ -133,7 +133,7 @@ impl Component for CommandLine {
         } else {
             "".to_string()
         };
-        let mut class = vec![
+        let class = vec![
             "inline-flex",
             "w-full",
             "bg-transparent",
@@ -183,7 +183,7 @@ impl Component for CommandLine {
         let onfocus = ctx.link().callback(|_| CommandLineMsg::Click);
         let onkeydown = ctx
             .link()
-            .callback(move |e: KeyboardEvent| CommandLineMsg::Key(e));
+            .callback(CommandLineMsg::Key);
 
         html! {
             <span
@@ -228,7 +228,7 @@ impl Component for CommandLine {
                 true
             }
             CommandLineMsg::Input(value) => {
-                self.value = value.clone();
+                self.value = value;
                 self.update_valid_entries();
                 true
             }
@@ -247,7 +247,7 @@ impl Component for CommandLine {
                         }
                     }
                     "ArrowUp" => {
-                        if entries.len() > 0 {
+                        if !entries.is_empty() {
                             self.selected_command_index = if selected_command_index > 0 {
                                 selected_command_index - 1
                             } else {
@@ -256,7 +256,7 @@ impl Component for CommandLine {
                         }
                     }
                     "ArrowDown" => {
-                        if entries.len() > 0 {
+                        if !entries.is_empty() {
                             self.selected_command_index =
                                 if selected_command_index < entries.len() - 1 {
                                     selected_command_index + 1
@@ -269,7 +269,7 @@ impl Component for CommandLine {
                         e.prevent_default();
                         let selected_entry = entries.get(selected_command_index).cloned();
                         if let Some(selected_entry) = selected_entry {
-                            let action = selected_entry.action.clone();
+                            let action = selected_entry.action;
                             props.onselect.emit(action);
                         } else {
                             props.onenter.emit(());

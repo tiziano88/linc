@@ -1,9 +1,9 @@
 use crate::{
     model::{Model, Msg},
-    node::{NodeComponent, FIELD_CLASSES, KIND_CLASSES},
-    types::{append, display_selector, get_value_from_input_event, File, Node, Path, Selector},
+    node::{NodeComponent, KIND_CLASSES},
+    types::{append, display_selector, Node, Path, Selector},
 };
-use std::{collections::BTreeMap, rc::Rc};
+use std::rc::Rc;
 use yew::{html, prelude::*, Html};
 
 // Alternative implementation: distinct structs implementing a parse_from method that only looks at
@@ -81,17 +81,17 @@ const RUST_ITEM: &[FieldValidator] = &[
 const RUST_IDENTIFIER: FieldValidator = FieldValidator::Literal(|v: &str| {
     if v.is_empty() {
         vec![ValidationError {
-            path: vec![].into(),
+            path: vec![],
             message: "empty identifier".to_string(),
         }]
     } else if v.contains(' ') {
         vec![ValidationError {
-            path: vec![].into(),
+            path: vec![],
             message: "contains whitespace".to_string(),
         }]
     } else if !v.starts_with(|c: char| c.is_alphabetic()) {
         vec![ValidationError {
-            path: vec![].into(),
+            path: vec![],
             message: "must start with alphabetic character".to_string(),
         }]
     } else {
@@ -1183,7 +1183,7 @@ pub const SCHEMA: Schema = Schema {
                         vec![]
                     } else {
                         vec![ValidationError {
-                            path: vec![].into(),
+                            path: vec![],
                             message: "invalid number".to_string(),
                         }]
                     }
@@ -2375,11 +2375,11 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
     let path = &c.path;
     log::debug!("default_renderer: {:?}", path);
     let kind = SCHEMA.get_kind(&node.kind);
-    let hash = "xxx";
+    let _hash = "xxx";
     let header = html! {
         <div>
             <div class={ KIND_CLASSES.join(" ") }>
-                { kind.map(|k| k.name.clone()).unwrap_or_default() }
+                { kind.map(|k| k.name).unwrap_or_default() }
             </div>
             // <div class="inline-block text-xs border border-black">
             //     { hash.clone() }
@@ -2393,11 +2393,9 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
         .iter()
         .flat_map(|(field_name, hashes)| {
             let field_schema = kind.and_then(|k| k.get_field(field_name));
-            let validators = field_schema
-                .map(|v| v.validators.clone())
-                .unwrap_or_default();
+            let _validators = field_schema.map(|v| v.validators).unwrap_or_default();
             let path = path.clone();
-            hashes.iter().enumerate().map(move |(i, h)| {
+            hashes.iter().enumerate().map(move |(i, _h)| {
                 let selector = Selector {
                     field: field_name.clone(),
                     index: i,
@@ -2459,14 +2457,12 @@ impl ValidatorContext {
             &self.path,
             Selector {
                 field: field_name.to_string(),
-                index: index,
+                index,
             },
         );
         let kind = SCHEMA.get_kind(&self.node.kind);
         let field_schema = kind.and_then(|k| k.get_field(field_name));
-        let validators = field_schema
-            .map(|v| v.validators.clone())
-            .unwrap_or_default();
+        let validators = field_schema.map(|v| v.validators).unwrap_or_default();
         html! {
             // <div>
             //   { format!("{:?} {:?}", h, child_path) }
@@ -2497,7 +2493,7 @@ impl ValidatorContext {
                 .unwrap()
                 .iter()
                 .enumerate()
-                .map(|(i, h)| self.view_child_index(field_name, i))
+                .map(|(i, _h)| self.view_child_index(field_name, i))
                 .collect(),
         )
         // self.model
@@ -2564,7 +2560,7 @@ impl Kind {
 
     pub fn get_fields(&self) -> Vec<Field> {
         match self.value {
-            KindValue::Struct { fields, .. } => fields.iter().cloned().collect(),
+            KindValue::Struct { fields, .. } => fields.to_vec(),
         }
     }
 
@@ -2621,7 +2617,7 @@ impl PartialEq for FieldValidator {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Kind(l0), Self::Kind(r0)) => l0 == r0,
-            (Self::Literal(l0), Self::Literal(r0)) => true,
+            (Self::Literal(_l0), Self::Literal(_r0)) => true,
             (_, _) => false,
         }
     }

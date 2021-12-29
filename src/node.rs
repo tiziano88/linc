@@ -72,7 +72,7 @@ impl Component for NodeComponent {
         }
     }
 
-    fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
+    fn rendered(&mut self, ctx: &Context<Self>, _first_render: bool) {
         let props = ctx.props();
         let path = props.path.clone();
         let cursor = props.model.cursor.clone();
@@ -89,7 +89,7 @@ impl Component for NodeComponent {
         let node = props.model.file.lookup_hash(&hash).unwrap_or(&default_node);
         let path = props.path.clone();
         let cursor = props.model.cursor.clone();
-        let oninput = props.oninput.clone();
+        let _oninput = props.oninput.clone();
         let selected = path == cursor;
         let kind = SCHEMA.get_kind(&node.kind);
         let inner = if node.kind.is_empty() {
@@ -113,11 +113,11 @@ impl Component for NodeComponent {
                         ),
                         valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
                     }),
-                    FieldValidator::Literal(v) => None,
+                    FieldValidator::Literal(_v) => None,
                 })
                 .collect();
             let onenter = {
-                let path = path.clone();
+                let _path = path.clone();
                 let onupdatemodel = onupdatemodel.clone();
                 Callback::from(move |()| {
                     onupdatemodel.emit(Msg::Parent);
@@ -177,7 +177,7 @@ impl Component for NodeComponent {
                     })
                     .unwrap_or_default();
                 // Make it look like an actual field.
-                let onupdatemodel0 = ctx.props().updatemodel.clone();
+                let _onupdatemodel0 = ctx.props().updatemodel.clone();
                 html! {
                     <div class="pl-3 absolute bg-white">
                         <CommandLine
@@ -202,7 +202,7 @@ impl Component for NodeComponent {
         };
         let onselect = ctx.props().onselect.clone();
         let onclick = {
-            let path = path.clone();
+            let path = path;
             ctx.link().callback(move |e: MouseEvent| {
                 e.stop_propagation();
                 onselect.emit(path.clone());
@@ -228,7 +228,7 @@ impl Component for NodeComponent {
         }
     }
 
-    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             NodeMsg::Click => {
                 self.focus_input();
