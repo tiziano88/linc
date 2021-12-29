@@ -183,11 +183,20 @@ pub enum Msg {
      */
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct File {
     pub nodes: HashMap<Hash, Node>,
     pub root: Hash,
     pub log: Vec<(Ref, Node)>,
+}
+
+impl PartialEq for File {
+    fn eq(&self, other: &Self) -> bool {
+        // Only compare the size of the hashmap, since it is effectively append-only.
+        self.nodes.len() == other.nodes.len()
+            && self.root == other.root
+            && self.log.len() == other.log.len()
+    }
 }
 
 impl File {
