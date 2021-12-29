@@ -1,7 +1,8 @@
 use crate::{
     command_line::{CommandLine, Entry},
+    model::{Model, Msg},
     schema::{default_renderer, FieldValidator, KindValue, ValidatorContext, SCHEMA},
-    types::{Hash, Model, Msg, Node, Selector},
+    types::{Hash, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
 use web_sys::HtmlInputElement;

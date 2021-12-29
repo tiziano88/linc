@@ -1,10 +1,7 @@
 use crate::{
+    model::{Model, Msg},
     node::{NodeComponent, FIELD_CLASSES, KIND_CLASSES},
-    types::{
-        append, display_selector, get_value_from_input_event, File, Model, Msg, Node, Path,
-        Selector,
-    },
-    view,
+    types::{append, display_selector, get_value_from_input_event, File, Node, Path, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
 use yew::{html, prelude::*, Html};
@@ -14,104 +11,6 @@ use yew::{html, prelude::*, Html};
 // matches.
 
 // example: "true" may be an identifier, string literal, bool literal, type name.
-
-/*
-fn rust_primitive_type(n: &str) -> Kind {
-    Kind {
-        name: &format!("rust_primitive_type_{}", n),
-        fields: &[],
-        inner: None,
-        parser: |v: &str| {
-            if n.starts_with(v) {
-                Some("".to_string())
-            } else {
-                None
-            }
-        },
-        renderer: |model: &Model, value: &Node, path: &Path| {
-            html! {
-                <span>{ v.clone() }</div>
-            }
-        },
-    }
-}
-
-
-
-struct RustFragment;
-
-impl K for RustFragment {
-    fn name() -> String {
-        "rust_fragment".to_string()
-    }
-
-    fn fields() -> &[Field] {
-        &[Field {
-            name: "items",
-            kind: RUST_ITEM,
-            multiplicity: Multiplicity::Repeated,
-        }]
-    }
-
-    fn parse(v: &str) -> Option<String> {
-        if "rust_fragment".starts_with(v) {
-            Some("".to_string())
-        } else {
-            None
-        }
-    }
-
-    fn render(model: &Model, node: &Node, path: &Path) -> Html {
-        let (items_head, items) = model.view_children(&node, "items", &path);
-        let items = items.into_iter().map(|b| {
-            html! {
-                <div>{ b }</div>
-            }
-        });
-        html! {
-            <div>
-            { items_head }
-            { for items }
-            </div>
-        }
-    }
-}
-
-
-trait K: Sized {
-    const NAME: &'static str;
-    fn fields() -> &'static [Field];
-    fn generate() -> Vec<String>;
-    // fn parse(v: &str) -> Option<Self>;
-    fn render(&self, model: &Model, path: &Path) -> Html;
-    // fn decode(&self) -> Node,
-    // fn encode(&self) -> Node,
-}
-
-pub struct RustVisibility;
-
-impl K for RustVisibility {
-    const NAME: &'static str = "rust_visibility";
-
-    fn render(&self, model: &Model, path: &Path) -> Html {
-        todo!()
-    }
-
-    fn generate() -> Vec<String> {
-        vec![
-            "pub".to_string(),
-            "pub_crate".to_string(),
-            "pub_self".to_string(),
-            "pub_super".to_string(),
-            "pub_in".to_string(),
-        ]
-    }
-
-    fn fields() -> &'static [Field] {
-        todo!()
-    }
-}
-*/
 
 // https://doc.rust-lang.org/stable/reference/types.html#type-expressions
 const RUST_TYPE: &[FieldValidator] = &[

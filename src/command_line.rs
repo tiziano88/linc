@@ -1,4 +1,4 @@
-use crate::types::{get_value_from_input_event, Msg};
+use crate::{model::Msg, types::get_value_from_input_event};
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
