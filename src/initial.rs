@@ -5,7 +5,7 @@ pub fn initial() -> File {
     let node = Node {
         kind: "root".to_string(),
         value: "".to_string(),
-        children: BTreeMap::new(),
+        links: BTreeMap::new(),
     };
     let mut file = File {
         nodes: HashMap::new(),

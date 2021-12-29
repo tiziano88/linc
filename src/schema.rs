@@ -2490,7 +2490,7 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
     // Node.
     // https://codepen.io/xotonic/pen/JRLAOR
     let children: Vec<_> = node
-        .children
+        .links
         .iter()
         .flat_map(|(field_name, hashes)| {
             let field_schema = kind.and_then(|k| k.get_field(field_name));
@@ -2549,13 +2549,13 @@ impl ValidatorContext {
     }
     pub fn view_child_index(&self, field_name: &str, index: usize) -> Html {
         log::debug!("view_child: {:?}", field_name);
-        if self.node.children.get(field_name).is_none() {
+        if self.node.links.get(field_name).is_none() {
             return html! {};
         }
-        if self.node.children.get(field_name).unwrap().is_empty() {
+        if self.node.links.get(field_name).unwrap().is_empty() {
             return html! {};
         }
-        let h = &self.node.children.get(field_name).unwrap()[index];
+        let h = &self.node.links.get(field_name).unwrap()[index];
         let child_path = append(
             &self.path,
             Selector {
@@ -2584,16 +2584,16 @@ impl ValidatorContext {
     }
     pub fn view_children(&self, field_name: &str) -> (Html, Vec<Html>) {
         log::debug!("view_child: {:?}", field_name);
-        if self.node.children.get(field_name).is_none() {
+        if self.node.links.get(field_name).is_none() {
             return (html! {}, vec![]);
         }
-        if self.node.children.get(field_name).unwrap().is_empty() {
+        if self.node.links.get(field_name).unwrap().is_empty() {
             return (html! {}, vec![]);
         }
         (
             html! {},
             self.node
-                .children
+                .links
                 .get(field_name)
                 .unwrap()
                 .iter()

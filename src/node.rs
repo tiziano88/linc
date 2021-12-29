@@ -106,7 +106,7 @@ impl Component for NodeComponent {
                             Node {
                                 kind: k.to_string(),
                                 value: "".to_string(),
-                                children: BTreeMap::new(),
+                                links: BTreeMap::new(),
                             },
                             false,
                         ),

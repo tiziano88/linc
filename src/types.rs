@@ -212,7 +212,7 @@ impl File {
             Some(base)
         } else {
             let (selector, rest) = path.split_first().unwrap().clone();
-            let children = base.children.get(&selector.field)?;
+            let children = base.links.get(&selector.field)?;
             let child = children.get(selector.index)?;
             self.lookup_from(child, &rest)
         }
@@ -242,19 +242,19 @@ impl File {
             let mut base = self.nodes.get(base)?.clone();
             let selector = path[0].clone();
             match base
-                .children
+                .links
                 .get(&selector.field)
                 .and_then(|v| v.get(selector.index))
             {
                 Some(old_child_hash) => {
                     let new_child_hash =
                         self.replace_node_from(old_child_hash, &path[1..], node)?;
-                    base.children.get_mut(&selector.field)?[selector.index] = new_child_hash;
+                    base.links.get_mut(&selector.field)?[selector.index] = new_child_hash;
                 }
                 None => {
                     // WARN: Only works for one level of children.
                     let new_child_hash = self.add_node(&node);
-                    base.children
+                    base.links
                         .entry(selector.field)
                         .or_default()
                         .push(new_child_hash);
@@ -271,7 +271,7 @@ impl File {
 pub struct Node {
     pub kind: String,
     pub value: String,
-    pub children: BTreeMap<String, Vec<Hash>>,
+    pub links: BTreeMap<String, Vec<Hash>>,
 }
 
 pub fn display_selector(selector: &Selector) -> Html {
@@ -419,7 +419,7 @@ impl Component for Model {
                     model.file.add_node(&Node {
                         kind: "string".into(),
                         value: value.into(),
-                        children: BTreeMap::new(),
+                        links: BTreeMap::new(),
                     })
                 }
                 fn add_node(model: &mut Model, node: &html_parser::Node) -> Hash {
@@ -440,7 +440,7 @@ impl Component for Model {
                             model.file.add_node(&Node {
                                 kind: e.name.clone(),
                                 value: "".into(),
-                                children,
+                                links: children,
                             })
                         }
                         html_parser::Node::Text(t) => add_string(model, t),
@@ -458,7 +458,7 @@ impl Component for Model {
                     model.file.add_node(&Node {
                         kind: "dom".into(),
                         value: "".to_string(),
-                        children,
+                        links: children,
                     })
                 }
                 let h = add_dom(self, &html);
@@ -469,11 +469,11 @@ impl Component for Model {
             }
             Msg::AddField(path, field) => {
                 let mut node = self.file.lookup(&path).cloned().unwrap();
-                node.children
+                node.links
                     .entry(field.clone())
                     .or_insert_with(Vec::new)
                     .push("".into());
-                let n = node.children[&field].len();
+                let n = node.links[&field].len();
                 let new_root = self.file.replace_node(&path, node);
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
@@ -511,11 +511,11 @@ impl Component for Model {
                 let new_ref = self.file.add_node(&Node {
                     kind: "invalid".to_string(),
                     value: "invalid".to_string(),
-                    children: BTreeMap::new(),
+                    links: BTreeMap::new(),
                 });
                 let mut parent = self.file.lookup(parent_path).unwrap().clone();
                 // If the field does not exist, create a default one.
-                let children = parent.children.entry(selector.field.clone()).or_default();
+                let children = parent.links.entry(selector.field.clone()).or_default();
                 let new_index = selector.index + 1;
                 children.insert(new_index, new_ref);
                 self.file.replace_node(parent_path, parent);
@@ -527,7 +527,7 @@ impl Component for Model {
                 let (selector, parent_path) = self.cursor.split_last().unwrap().clone();
                 let mut parent = self.file.lookup(parent_path).unwrap().clone();
                 // If the field does not exist, create a default one.
-                let children = parent.children.entry(selector.field.clone()).or_default();
+                let children = parent.links.entry(selector.field.clone()).or_default();
                 children.remove(selector.index);
                 if let Some(new_root) = self.file.replace_node(parent_path, parent) {
                     self.file.root = new_root;

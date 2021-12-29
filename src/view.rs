@@ -135,7 +135,7 @@ impl Model {
             Some(node) => {
                 let mut paths = vec![];
                 for field in Model::traverse_fields(&node) {
-                    let mut children = node.children.get(field.name).cloned().unwrap_or_default();
+                    let mut children = node.links.get(field.name).cloned().unwrap_or_default();
                     match field.multiplicity {
                         Multiplicity::Single => {
                             if children.is_empty() {
