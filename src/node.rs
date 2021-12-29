@@ -337,6 +337,11 @@ impl Component for NodeComponent {
             }
         }
     }
+
+    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+        log::debug!("changed");
+        true
+    }
 }
 
 impl NodeComponent {
