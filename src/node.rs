@@ -1,7 +1,7 @@
 use crate::{
     command_line::{CommandLine, Entry},
     schema::{default_renderer, FieldValidator, KindValue, ValidatorContext, SCHEMA},
-    types::{append, File, Hash, Msg, Node, Selector},
+    types::{append, File, Hash, Model, Msg, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
 use web_sys::HtmlInputElement;
@@ -14,12 +14,11 @@ pub struct NodeComponent {
 #[derive(Properties, PartialEq)]
 pub struct NodeProperties {
     pub path: Vec<Selector>,
-    pub cursor: Vec<Selector>,
+    pub model: Rc<Model>,
     #[prop_or_default]
     pub hash: Option<Hash>,
     #[prop_or_default]
     pub placeholder: String,
-    pub file: Rc<File>,
     // When a new value is typed in the text box.
     #[prop_or_default]
     pub oninput: Callback<String>,
@@ -69,7 +68,7 @@ impl Component for NodeComponent {
     fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
         let props = ctx.props();
         let path = props.path.clone();
-        let cursor = props.cursor.clone();
+        let cursor = props.model.cursor.clone();
         let selected = path == cursor;
         if selected {
             self.focus_input();
@@ -81,9 +80,9 @@ impl Component for NodeComponent {
         let default_node = Node::default();
         let props = ctx.props();
         let hash = props.hash.clone().unwrap_or_default();
-        let node = props.file.lookup_hash(&hash).unwrap_or(&default_node);
+        let node = props.model.file.lookup_hash(&hash).unwrap_or(&default_node);
         let path = props.path.clone();
-        let cursor = props.cursor.clone();
+        let cursor = props.model.cursor.clone();
         let oninput = props.oninput.clone();
         let selected = path == cursor;
         let kind = SCHEMA.get_kind(&node.kind);
@@ -142,9 +141,8 @@ impl Component for NodeComponent {
             // TODO: Disable default renderer.
             let renderer = default_renderer;
             let validator_context = ValidatorContext {
+                model: props.model.clone(),
                 path: path.clone(),
-                cursor: cursor.clone(),
-                file: props.file.clone(),
                 node: node.clone(),
                 onselect: props.onselect.clone(),
                 updatemodel: props.updatemodel.clone(),

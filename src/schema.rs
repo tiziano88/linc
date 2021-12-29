@@ -2420,9 +2420,8 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
 }
 
 pub struct ValidatorContext {
+    pub model: Rc<Model>,
     pub path: Vec<Selector>,
-    pub cursor: Vec<Selector>,
-    pub file: Rc<File>,
     pub node: Node,
     pub onselect: Callback<Vec<Selector>>,
     pub updatemodel: Callback<Msg>,
@@ -2458,9 +2457,8 @@ impl ValidatorContext {
             //   { format!("{:?} {:?}", h, child_path) }
             // </div>
             <NodeComponent
-                file={ self.file.clone() }
+                model={ self.model.clone() }
                 hash={ h.clone() }
-                cursor={ self.cursor.clone() }
                 onselect={ self.onselect.clone() }
                 path={ child_path }
                 updatemodel={ self.updatemodel.clone() }

@@ -61,7 +61,7 @@ pub fn hash_node(node: &Node) -> Hash {
     hash(node_bytes)
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct Model {
     pub file: File,
 
@@ -74,7 +74,7 @@ pub struct Model {
     pub show_serialized: bool,
 }
 
-#[derive(Default, PartialEq)]
+#[derive(Default, PartialEq, Clone)]
 pub struct NodeState {
     // TODO: Errors.
 }
@@ -319,11 +319,10 @@ impl Component for Model {
                 <div class="">
                     // <div class="column">{ self.view_file(ctx, &self.file) }</div>
                     <NodeComponent
-                      file={ Rc::from(self.file.clone()) }
+                      model={ Rc::from(self.clone()) }
                       hash={ self.file.root.clone() }
                       onselect={ ctx.link().callback(|path: Vec<Selector>| Msg::Select(path)) }
                       updatemodel={ ctx.link().callback(|m| m) }
-                      cursor={ self.cursor.clone() }
                       path={ vec![] }
                     />
 
