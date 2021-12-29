@@ -263,11 +263,11 @@ pub struct Node {
     pub children: BTreeMap<String, Vec<Hash>>,
 }
 
-fn display_selector(selector: &Selector) -> Html {
+pub fn display_selector(selector: &Selector) -> Html {
     html! {
         <div class={ FIELD_CLASSES.join(" ") }>
-          { selector.field.clone() }
-              { format!("[{}]", selector.index) }
+          <span class="border-r border-black pr-1">{ selector.field.clone() }</span>
+          <span class="pl-1">{ format!("{}", selector.index) }</span>
         </div>
     }
 }

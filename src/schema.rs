@@ -1,6 +1,9 @@
 use crate::{
     node::{NodeComponent, FIELD_CLASSES, KIND_CLASSES},
-    types::{append, get_value_from_input_event, File, Model, Msg, Node, Path, Selector},
+    types::{
+        append, display_selector, get_value_from_input_event, File, Model, Msg, Node, Path,
+        Selector,
+    },
     view,
 };
 use std::{collections::BTreeMap, rc::Rc};
@@ -2394,13 +2397,11 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
                 .unwrap_or_default();
             let path = path.clone();
             hashes.iter().enumerate().map(move |(i, h)| {
-                let child_path = append(
-                    &path,
-                    Selector {
-                        field: field_name.clone(),
-                        index: i,
-                    },
-                );
+                let selector = Selector {
+                    field: field_name.clone(),
+                    index: i,
+                };
+                let child_path = append(&path, selector.clone());
                 let updatemodel = c.updatemodel.clone();
                 let onclick = Callback::from(move |e: MouseEvent| {
                     e.stop_propagation();
@@ -2409,9 +2410,8 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
                 // TODO: Sticky field headers.
                 html! {
                     <div class="pl-3 flex items-start">
-                        <div class={ FIELD_CLASSES.join(" ") }
-                          onclick={ onclick } >
-                            { field_name }
+                        <div onclick={ onclick } >
+                            { display_selector(&selector) }
                         </div>
                         <div class="">
                             { ":" }
