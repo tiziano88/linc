@@ -139,7 +139,7 @@ impl Component for NodeComponent {
                 })
                 .unwrap_or(default_renderer);
             // TODO: Disable default renderer.
-            // let renderer = default_renderer;
+            let renderer = default_renderer;
             let validator_context = ValidatorContext {
                 model: props.model.clone(),
                 path: path.clone(),

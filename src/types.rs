@@ -1,5 +1,5 @@
 use crate::{
-    node::NodeComponent,
+    node::{NodeComponent, FIELD_CLASSES},
     schema::{FieldValidator, KindValue, ValidationError, ValidatorContext, SCHEMA},
 };
 use gloo_storage::{LocalStorage, Storage};
@@ -263,26 +263,19 @@ pub struct Node {
     pub children: BTreeMap<String, Vec<Hash>>,
 }
 
-fn display_selector(selector: &Selector) -> Vec<Html> {
-    let mut segments = Vec::new();
-    segments.push(html! {
-        <span>
+fn display_selector(selector: &Selector) -> Html {
+    html! {
+        <div class={ FIELD_CLASSES.join(" ") }>
           { selector.field.clone() }
               { format!("[{}]", selector.index) }
-        </span>
-    });
-    segments.push(html! {
-        <span>
-          { format!("[{}]", selector.index) }
-        </span>
-    });
-    segments
+        </div>
+    }
 }
 
 fn display_cursor(cursor: &Path) -> Html {
     let segments = cursor
         .iter()
-        .flat_map(|s| display_selector(s))
+        .map(|s| display_selector(s))
         .intersperse(html! { <span>{ ">" }</span>});
     html! {
         <div>{ for segments }</div>
@@ -314,10 +307,18 @@ impl Component for Model {
             //   onkeydown=onkeypress
               onmouseover={ onmouseover }
               >
-                <div>{ "LINC" }</div>
-                <div>{ "click on an empty node to see list of possible completions" }</div>
+                <div class="sticky top-0 bg-white">
+                    <div>{ "LINC" }</div>
+                    <div>{ "click on an empty node to see list of possible completions" }</div>
+                    <div class="column">
+                        <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
+                        <div>{ display_cursor(&self.cursor) }</div>
+                        <div>{ format!("Ref: {:?}", self.file.lookup(&self.cursor)) }</div>
+                    </div>
+
+                    <div>{ self.view_actions(ctx) }</div>
+                </div>
                 <div class="flex">
-                    // <div class="column">{ self.view_file(ctx, &self.file) }</div>
                     <NodeComponent
                       model={ Rc::from(self.clone()) }
                       hash={ self.file.root.clone() }
@@ -326,18 +327,9 @@ impl Component for Model {
                       path={ vec![] }
                     />
                 </div>
-                <div>
-                    <div class="column">
-                        <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
-                        <div>{ display_cursor(&self.cursor) }</div>
-                        <div>{ format!("Ref: {:?}", self.file.lookup(&self.cursor)) }</div>
-                    </div>
-
-                    <div>{ self.view_actions(ctx) }</div>
-                    <div class="h-40">
-                        <textarea type="text" class="border-solid border-black border" oninput={ parse } />
-                        { serialized }
-                    </div>
+                <div class="h-40">
+                    <textarea type="text" class="border-solid border-black border" oninput={ parse } />
+                    { serialized }
                 </div>
             </div>
         }
