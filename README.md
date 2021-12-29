@@ -1,5 +1,7 @@
 # LINC -- Linc Is Not Code
 
+Interactive demo: https://tiziano88.github.io/linc
+
 LINC is a prototype for a programming editor based on direct manipulation of
 abstract syntax tree.
 
