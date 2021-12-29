@@ -36,6 +36,14 @@ pub fn append(path: &[Selector], selector: Selector) -> Path {
     new_path
 }
 
+pub fn parent(path: &[Selector]) -> &[Selector] {
+    if path.is_empty() {
+        path
+    } else {
+        path.split_last().unwrap().1
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Mode {
     Normal,
@@ -70,14 +78,6 @@ pub struct Model {
 #[derive(Default, PartialEq, Clone)]
 pub struct NodeState {
     // TODO: Errors.
-}
-
-pub fn parent(path: &[Selector]) -> &[Selector] {
-    if path.is_empty() {
-        path
-    } else {
-        path.split_last().unwrap().1
-    }
 }
 
 impl Model {

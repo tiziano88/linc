@@ -19,6 +19,10 @@ To allow meaningful structural editing of a tree, LINC relies on a schema that d
 
 Roughly speaking, a node kind corresponds to a struct, and link names correspond to its fields.
 
+LINC aims to be the Vim / Emacs of structural editing, i.e. a general-purpose editor and format for manipulating trees. It should be embeddable in other system, instead of each of them reinventing structural editing in different ways, and it should be extendable via a schema language that determines how to manipulate the structure of the trees.
+
+Note that LINC heavily relies on statically knowing the schema of the tree to manipulate, in order to show interactive completion and traversal editing hints, as well as validation. It is not well suited for dynamic or unstructured programming.
+
 A tree may be used to represent a variety of structures, detailed below.
 
 ## Program ASTs
