@@ -9,9 +9,10 @@ use yew::prelude::*;
 
 pub struct NodeComponent {
     input_node_ref: NodeRef,
+    old_props: Option<NodeProperties>,
 }
 
-#[derive(Properties, PartialEq)]
+#[derive(Properties, PartialEq, Clone)]
 pub struct NodeProperties {
     pub path: Vec<Selector>,
     pub model: Rc<Model>,
@@ -62,6 +63,7 @@ impl Component for NodeComponent {
         log::debug!("creating node");
         Self {
             input_node_ref: NodeRef::default(),
+            old_props: None,
         }
     }
 
@@ -172,7 +174,7 @@ impl Component for NodeComponent {
                 // Make it look like an actual field.
                 let onupdatemodel0 = ctx.props().updatemodel.clone();
                 html! {
-                    <div class="pl-3">
+                    <div class="pl-3 absolute bg-white">
                         <CommandLine
                             input_node_ref={ self.input_node_ref.clone() }
                             entries={ entries }
@@ -233,7 +235,23 @@ impl Component for NodeComponent {
     }
 
     fn changed(&mut self, ctx: &Context<Self>) -> bool {
-        true
+        let same = self.old_props == Some(ctx.props().clone());
+        log::debug!("Node changed");
+        log::debug!("same props: {:?}", same);
+        if let Some(old_props) = &self.old_props {
+            log::debug!("same path: {:?}", old_props.path == ctx.props().path);
+            log::debug!("same model: {:?}", old_props.model == ctx.props().model);
+            log::debug!("same hash: {:?}", old_props.hash == ctx.props().hash);
+            log::debug!(
+                "same updatemodel: {:?}",
+                old_props.updatemodel == ctx.props().updatemodel
+            );
+            return old_props.path != ctx.props().path
+                || old_props.model != ctx.props().model
+                || old_props.hash != ctx.props().hash;
+        }
+        self.old_props = Some(ctx.props().clone());
+        !same
     }
 }
 
