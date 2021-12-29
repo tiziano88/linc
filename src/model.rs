@@ -491,19 +491,6 @@ impl Model {
         }
     }
 
-    pub fn current_field(&self) -> Option<Field> {
-        self.field(&self.cursor)
-    }
-
-    pub fn field(&self, path: &Path) -> Option<Field> {
-        path.split_last().and_then(|(selector, parent_path)| {
-            let parent = self.file.lookup(parent_path).unwrap();
-            SCHEMA
-                .get_kind(&parent.kind)
-                .and_then(|f| f.get_field(&selector.field))
-        })
-    }
-
     fn view_action(&self, ctx: &Context<Self>, action: &Action) -> Html {
         let msg = action.msg.clone();
         let callback = ctx.link().callback(move |_: MouseEvent| msg.clone());
@@ -517,7 +504,7 @@ impl Model {
         };
         html! {
             <button
-              class="action hover:bg-blue-200 hover:text-blue-800 group flex items-center rounded-md bg-blue-100 text-blue-600 text-sm font-medium px-4 py-2"
+              class="action hover:bg-green-200 hover:text-green-800 group flex items-center bg-green-100 text-green-600 text-sm font-medium px-4 py-2"
               onclick={ callback }>
                 { img }
                 { &action.text }
