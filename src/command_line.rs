@@ -3,6 +3,7 @@ use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
 pub struct CommandLine {
+    all_entries: Vec<Entry>,
     valid_entries: Vec<Entry>,
     // Among valid (filtered) entries.
     selected_command_index: usize,
@@ -44,15 +45,17 @@ impl Component for CommandLine {
 
     fn create(ctx: &Context<Self>) -> Self {
         Self {
-            valid_entries: ctx.props().entries.clone(),
+            all_entries: ctx.props().entries.clone(),
+            valid_entries: vec![],
             selected_command_index: 0,
             value: ctx.props().value.clone(),
         }
     }
 
     fn changed(&mut self, ctx: &Context<Self>) -> bool {
-        self.valid_entries = ctx.props().entries.clone();
+        self.all_entries = ctx.props().entries.clone();
         self.value = ctx.props().value.clone();
+        self.update_valid_entries();
         true
     }
 
@@ -222,13 +225,7 @@ impl Component for CommandLine {
             }
             CommandLineMsg::Input(value) => {
                 self.value = value.clone();
-                self.valid_entries = ctx
-                    .props()
-                    .entries
-                    .clone()
-                    .into_iter()
-                    .filter(|v| v.label.starts_with(&value))
-                    .collect();
+                self.update_valid_entries();
                 true
             }
             CommandLineMsg::Key(e) => {
@@ -273,5 +270,17 @@ impl Component for CommandLine {
                 true
             }
         }
+    }
+}
+
+impl CommandLine {
+    fn update_valid_entries(&mut self) {
+        self.valid_entries = ctx
+            .props()
+            .entries
+            .clone()
+            .into_iter()
+            .filter(|v| v.label.starts_with(&self.value))
+            .collect();
     }
 }
