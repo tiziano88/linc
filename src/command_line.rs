@@ -33,7 +33,6 @@ pub struct Entry {
 
 #[derive(Debug)]
 pub enum CommandLineMsg {
-    Noop,
     Click,
     Key(KeyboardEvent),
     Input(String),
@@ -77,9 +76,8 @@ impl Component for CommandLine {
                     // let node = v.to_node();
                     let action = v.action.clone();
                     let onselect = props.onselect.clone();
-                    let onclick = ctx.link().callback(move |_e: MouseEvent| {
+                    let onclick = Callback::from(move |_e: MouseEvent| {
                         onselect.emit(action.clone());
-                        CommandLineMsg::Noop
                     });
                     let mut classes_item = vec!["block", "border"];
                     if i == self.selected_command_index {
@@ -207,7 +205,6 @@ impl Component for CommandLine {
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            CommandLineMsg::Noop => false,
             CommandLineMsg::Click => {
                 let input_node = ctx.props().input_node_ref.clone();
                 input_node
