@@ -169,6 +169,7 @@ impl Component for NodeComponent {
                     })
                     .unwrap_or_default();
                 // Make it look like an actual field.
+                let onupdatemodel0 = ctx.props().updatemodel.clone();
                 html! {
                     <div class="pl-3">
                         <CommandLine
@@ -176,6 +177,9 @@ impl Component for NodeComponent {
                             entries={ entries }
                             value={ node.value.clone() }
                             onselect={ ctx.props().updatemodel.clone() }
+                            ondelete={ Callback::from(move |()| {
+                                onupdatemodel0.emit(Msg::Parent);
+                            }) }
                             enabled=true
                         />
                     </div>
