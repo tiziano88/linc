@@ -22,6 +22,8 @@ pub struct CommandLineProperties {
     pub onselect: Callback<Msg>,
     #[prop_or_default]
     pub onenter: Callback<()>,
+    #[prop_or_default]
+    pub ondelete: Callback<()>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -231,6 +233,7 @@ impl Component for CommandLine {
                 true
             }
             CommandLineMsg::Key(e) => {
+                log::debug!("key: {:?}", e.key());
                 let props = ctx.props();
                 let entries = &self.valid_entries;
                 let selected_command_index = self.selected_command_index;
@@ -238,6 +241,11 @@ impl Component for CommandLine {
                     return false;
                 }
                 match e.key().as_ref() {
+                    "Backspace" => {
+                        if self.value.is_empty() {
+                            props.ondelete.emit(());
+                        }
+                    }
                     "ArrowUp" => {
                         if entries.len() > 0 {
                             self.selected_command_index = if selected_command_index > 0 {

@@ -116,6 +116,7 @@ impl Component for NodeComponent {
                     onupdatemodel.emit(Msg::Parent);
                 })
             };
+            let onupdatemodel0 = onupdatemodel.clone();
             html! {
               <CommandLine
                 input_node_ref={ self.input_node_ref.clone() }
@@ -125,6 +126,9 @@ impl Component for NodeComponent {
                     onupdatemodel.emit(Msg::SetNodeValue(path.clone(), v));
                  }) }
                 onselect={ ctx.props().updatemodel.clone() }
+                ondelete={ Callback::from(move |()| {
+                    onupdatemodel0.emit(Msg::DeleteItem);
+                 }) }
                 onenter={ onenter }
                 enabled={ selected }
               />

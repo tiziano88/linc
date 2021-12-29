@@ -526,6 +526,8 @@ impl Component for Model {
                 if let Some(new_root) = self.file.replace_node(parent_path, parent) {
                     self.file.root = new_root;
                 }
+                // Select parent.
+                self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
             }
             Msg::CommandKey(path, e) => {
                 log::info!("key: {}", e.key());
