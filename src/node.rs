@@ -1,7 +1,7 @@
 use crate::{
     command_line::{CommandLine, Entry},
     schema::{default_renderer, FieldValidator, KindValue, ValidatorContext, SCHEMA},
-    types::{append, File, Hash, Model, Msg, Node, Selector},
+    types::{Hash, Model, Msg, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
 use web_sys::HtmlInputElement;
@@ -76,7 +76,6 @@ impl Component for NodeComponent {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        log::debug!("rendering node");
         let default_node = Node::default();
         let props = ctx.props();
         let hash = props.hash.clone().unwrap_or_default();
@@ -110,7 +109,6 @@ impl Component for NodeComponent {
                     FieldValidator::Literal(v) => None,
                 })
                 .collect();
-            log::info!("{:?}", entries);
             let onenter = {
                 let path = path.clone();
                 let onupdatemodel = onupdatemodel.clone();
@@ -226,13 +224,13 @@ impl Component for NodeComponent {
     }
 
     fn changed(&mut self, ctx: &Context<Self>) -> bool {
-        log::debug!("changed");
         true
     }
 }
 
 impl NodeComponent {
     fn focus_input(&self) {
+        log::info!("focusing input");
         let input_node = self.input_node_ref.clone();
         input_node
             .cast::<HtmlInputElement>()

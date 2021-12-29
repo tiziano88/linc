@@ -44,12 +44,14 @@ impl Component for CommandLine {
     type Properties = CommandLineProperties;
 
     fn create(ctx: &Context<Self>) -> Self {
-        Self {
+        let mut c = Self {
             all_entries: ctx.props().entries.clone(),
             valid_entries: vec![],
             selected_command_index: 0,
             value: ctx.props().value.clone(),
-        }
+        };
+        c.update_valid_entries();
+        c
     }
 
     fn changed(&mut self, ctx: &Context<Self>) -> bool {
