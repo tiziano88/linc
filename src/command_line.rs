@@ -275,9 +275,8 @@ impl Component for CommandLine {
 
 impl CommandLine {
     fn update_valid_entries(&mut self) {
-        self.valid_entries = ctx
-            .props()
-            .entries
+        self.valid_entries = self
+            .all_entries
             .clone()
             .into_iter()
             .filter(|v| v.label.starts_with(&self.value))
