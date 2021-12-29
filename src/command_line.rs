@@ -111,7 +111,7 @@ impl Component for CommandLine {
         } else {
             vec![]
         };
-        let classes_dropdown = vec!["absolute", "z-10", "bg-white"];
+        let classes_dropdown = vec!["absolute", "z-10", "bg-white", "w-64"];
         // let id = view::command_input_id(&path);
         let style = if value.len() > 0 {
             format!("width: {}ch;", value.len())

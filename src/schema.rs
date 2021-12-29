@@ -224,12 +224,112 @@ pub const SCHEMA: Schema = Schema {
                     multiplicity: Multiplicity::Repeated,
                     validators: &[
                         FieldValidator::Kind("git"),
+                        FieldValidator::Kind("docker"),
                         FieldValidator::Kind("rust_fragment"),
                         FieldValidator::Kind("markdown_fragment"),
                     ],
                 }],
                 inner: None,
                 constructors: &["root"],
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: default_renderer,
+            },
+        },
+        Kind {
+            name: "docker",
+            value: KindValue::Struct {
+                fields: &[Field {
+                    name: "command",
+                    multiplicity: Multiplicity::Repeated,
+                    validators: &[
+                        FieldValidator::Kind("docker_build"),
+                        FieldValidator::Kind("docker_run"),
+                    ],
+                }],
+                inner: None,
+                constructors: &["docker"],
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: default_renderer,
+            },
+        },
+        Kind {
+            name: "docker_build",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "add-host",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "build-arg",
+                        multiplicity: Multiplicity::Repeated,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "cache-from",
+                        multiplicity: Multiplicity::Repeated,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "compress",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "file",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "label",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                ],
+                inner: None,
+                constructors: &["docker_run"],
+                validator: |_c: &ValidatorContext| vec![],
+                renderer: default_renderer,
+            },
+        },
+        Kind {
+            name: "docker_run",
+            value: KindValue::Struct {
+                fields: &[
+                    Field {
+                        name: "add-host",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "attach",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "cap-add",
+                        multiplicity: Multiplicity::Repeated,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "cap-drop",
+                        multiplicity: Multiplicity::Repeated,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "cpu-count",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                    Field {
+                        name: "detach",
+                        multiplicity: Multiplicity::Single,
+                        validators: &[FieldValidator::Literal(any)],
+                    },
+                ],
+                inner: None,
+                constructors: &["docker_run"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: default_renderer,
             },
@@ -2293,12 +2393,14 @@ pub const SCHEMA: Schema = Schema {
                 constructors: &["heading"],
                 validator: |_c: &ValidatorContext| vec![],
                 renderer: |c: &ValidatorContext| {
-                    let level = c.view_child("level");
+                    let level = c.view_child("lang");
                     let text = c.view_child("text");
                     html! {
-                        <span>
-                        { "#" }{ level}{ text }
-                        </span>
+                        <div>
+                            <div>{ "```" }{ level}</div>
+                            { text }
+                            <div>{ "```" }</div>
+                        </div>
                     }
                 },
             },
@@ -2328,7 +2430,7 @@ pub const SCHEMA: Schema = Schema {
                     let text = c.view_child("text");
                     html! {
                         <span>
-                        { "#" }{ level}{ text }
+                        { "#" }{ level }{ text }
                         </span>
                     }
                 },
