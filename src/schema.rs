@@ -24,6 +24,7 @@ impl Schema {
 pub struct Kind {
     pub name: &'static str,
     pub fields: HashMap<usize, Field>,
+    pub renderer: Option<Renderer>,
 }
 
 impl Kind {
@@ -70,7 +71,7 @@ schema! {
         fields: hashmap!{
             0 => Field {
                 name: "root",
-                types: &[GIT, DOCKER],
+                types: &[GIT, DOCKER, RUST_FRAGMENT],
                 ..Default::default()
             },
         },
@@ -251,6 +252,21 @@ schema! {
                 ..Default::default()
             },
         },
+        renderer: Some(|c| {
+            let (items_head, items) = c.view_children(0);
+            let items = items.into_iter().map(|b| {
+                html! {
+                    <div>{ b }</div>
+                }
+            });
+            html! {
+                <div>
+                <div class="fragment-type">{ "rust" }</div>
+                { for items }
+                { items_head }
+                </div>
+            }
+        }),
         ..Default::default()
     },
     "4f837305-9e07-402b-a98f-563e34e29125" => RUST_VIS_ITEM @ Kind {
