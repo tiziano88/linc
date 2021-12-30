@@ -1,0 +1,110 @@
+3fad37b9-f3a5-48fa-a465-4c7b3d7ccf27 : root {
+    0: value [ git ]
+
+}
+
+8e2b2238-b4a1-45ef-b518-863b1a1ccf10 : git {
+
+}
+
+8b6a2ef4-d50e-4718-9ac7-37b3ae52cea9 : git_commit {
+
+}
+
+2ffb4bad-88ae-487f-9b0e-6106122bbfe0 : git_branch {
+
+}
+
+de051e62-6ba8-4ee2-9a04-0f244057c09e : docker {
+
+}
+
+3883fad2-08fe-4799-ae99-b844dd4cafb2 : docker_build {
+    0: add-host [ raw ]
+    1: build-arg [ raw ]
+    2: cache-from [ raw ]
+    3: context [ raw ]
+    4: dockerfile [ raw ]
+    5: extra-host [ raw ]
+    6: labels [ raw ]
+    7: network [ raw ]
+    8: no-cache [ raw ]
+    9: pull [ raw ]
+    10: rm [ raw ]
+    11: shmsize [ raw ]
+    12: target [ raw ]
+    13: workdir [ raw ]
+}
+
+f194ebb2-e5d4-4f64-a959-dcec73c5ed5e : docker_run {
+
+}
+
+---
+
+JSON:
+
+"types": {
+    "8e2b2238-b4a1-45ef-b518-863b1a1ccf10": {
+        "name": "root",
+        "fields": {
+            "0": {
+                "name": "value",
+                "repeated": true,
+                "types": [
+                    "3fad37b9-f3a5-48fa-a465-4c7b3d7ccf27"
+                ],
+            }
+        }
+    }
+    "3fad37b9-f3a5-48fa-a465-4c7b3d7ccf27": {
+        "name": "git",
+        "fields": {
+            "0": {
+                "name": "command",
+                "types": [
+                    "8b6a2ef4-d50e-4718-9ac7-37b3ae52cea9",
+                    "2ffb4bad-88ae-487f-9b0e-6106122bbfe0",
+                ],
+            }
+        }
+    }
+    "8b6a2ef4-d50e-4718-9ac7-37b3ae52cea9" : {
+        "name": "git_commit",
+        "fields": {
+            "0": {
+                "name": "message",
+                "raw": true,
+            },
+            "1": {
+                "name": "author",
+                "raw": true,
+            },
+        }
+    }
+    "2ffb4bad-88ae-487f-9b0e-6106122bbfe0" : {
+        "name": "git_status",
+        "fields": {
+            "0": {
+                "name": "short",
+                "raw": true,
+            },
+            "1": {
+                "name": "branch",
+                "raw": true,
+            },
+            "2": {
+                "name": "show-stash",
+                "raw": true,
+            },
+            "3": {
+                "name": "porcelain",
+                "raw": true,
+            },
+            "4": {
+                "name": "long",
+                "raw": true,
+            }
+        }
+    }
+}

@@ -3,6 +3,7 @@
 
 mod command_line;
 mod initial;
+mod meta_schema;
 mod model;
 mod node;
 mod schema;
