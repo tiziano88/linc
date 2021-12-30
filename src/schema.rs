@@ -69,7 +69,9 @@ static RUST_VISIBILITY: &[&'static str] = &[
     RUST_VISIBILITY_PUB_SELF,
 ];
 static RUST_EXPRESSION: &[&'static str] = &[RUST_IF, RUST_MATCH, RUST_STRING_LITERAL];
-static GO_STATEMENT: &[&'static str] = &[GO_ASSIGNMENT, GO_VARIABLE_DECLARATION];
+
+static GO_STATEMENT: &[&'static str] = &[GO_ASSIGNMENT, GO_VARIABLE_DECLARATION, GO_FUNCTION_CALL];
+static GO_EXPRESSION: &[&'static str] = &[GO_STRING_LITERAL, GO_FUNCTION_CALL];
 
 schema! {
     create_schema,
@@ -269,8 +271,7 @@ schema! {
             },
         },
         renderer: Some(|c| {
-            let (items_head, items) = c.view_children(0);
-            let items = items.into_iter().map(|b| {
+            let items = c.view_children(0).into_iter().map(|b| {
                 html! {
                     <div>{ b }</div>
                 }
@@ -279,7 +280,6 @@ schema! {
                 <div>
                 <div class="fragment-type">{ "rust" }</div>
                 { for items }
-                { items_head }
                 </div>
             }
         }),
@@ -353,8 +353,7 @@ schema! {
             },
         },
         renderer: Some(|c| {
-            let (_items_head, items) = c.view_children(3);
-            let items = items.into_iter().map(|v| {
+            let items = c.view_children(3).into_iter().map(|v| {
                 html! {
                     <div class="indent">{ v }{ "," }</div>
                 }
@@ -500,8 +499,7 @@ schema! {
             },
         },
         renderer: Some(|c| {
-            let (match_arms_head, match_arms) = c.view_children(1);
-            let match_arms = match_arms.into_iter().map(|v| {
+            let match_arms = c.view_children(1).into_iter().map(|v| {
                 html! {
                     <div class="indent">{ v }{ "," }</div>
                 }
@@ -512,7 +510,6 @@ schema! {
                         <span class="keyword">{ "match" }</span>{ c.view_child(0) }{ "{" }
                     </div>
                     { for match_arms }
-                    { match_arms_head }
                     <div>
                         { "}" }
                     </div>
@@ -541,13 +538,12 @@ schema! {
             },
         },
         renderer: Some(|c| {
-            let (patterns_head, patterns) = c.view_children(0);
-            let patterns = patterns.into_iter().intersperse(html! {
+            let patterns = c.view_children(0).into_iter().intersperse(html! {
                     <span>{ "|" }</span>
             });
             html! {
                 <span>
-                    <span>{ for patterns }{ patterns_head }</span>
+                    <span>{ for patterns }</span>
                     <span>{ "if" }{ c.view_child(1) }</span>
                     <span>{ "=>" }</span>
                     <span>{ c.view_child(2) }</span>
@@ -599,6 +595,24 @@ schema! {
         },
         ..Default::default()
     },
+    "a67915dd-68e8-4028-b165-ecb9abd9ea76" => GO_STRING_LITERAL @ Kind {
+        name: "go_string_literal",
+        fields: hashmap!{
+            0 => Field {
+                name: "value",
+                raw: true,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    { "\"" }{ c.view_child(0) }{ "\"" }
+                </span>
+            }
+        }),
+        ..Default::default()
+    },
     "ed98e2e6-6422-4737-a70f-22a1935b007f" => GO_FUNCTION @ Kind {
         name: "go_function",
         fields: hashmap!{
@@ -623,12 +637,10 @@ schema! {
             },
         },
         renderer: Some(|c| {
-            let (_, arguments) = c.view_children(1);
-            let arguments = arguments.into_iter().intersperse(html!{
+            let arguments = c.view_children(1).into_iter().intersperse(html!{
                 <span>{ "," }</span>
             });
-            let (_, body) = c.view_children(3);
-            let body = body.into_iter().map(|v| {
+            let body = c.view_children(3).into_iter().map(|v| {
                 html! {
                     <div class="indent">{ v }</div>
                 }
@@ -663,6 +675,71 @@ schema! {
             html! {
                 <div>
                     { c.view_child(0) }{ ":=" }{ c.view_child(1) }
+                </div>
+            }
+        }),
+        ..Default::default()
+    },
+    "c3befc7b-f618-4567-b629-863910646c3d" => GO_IF @ Kind {
+        name: "go_if",
+        fields: hashmap!{
+            0 => Field {
+                name: "condition",
+                types: GO_EXPRESSION,
+                repeated: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "true_body",
+                types: GO_EXPRESSION,
+                repeated: true,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "true_body",
+                types: GO_EXPRESSION,
+                repeated: true,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            let conditions = c.view_children(0).into_iter().intersperse(html!{
+                <span>{ "," }</span>
+            });
+            html! {
+                <div>
+                    <span class="keyword">{ "if" }</span>
+                    { for conditions }
+                    { "{" }
+                    { "}" }<span class="keyword">{ "else" }</span>{ "{" }
+                    { "}" }
+                </div>
+            }
+        }),
+        ..Default::default()
+    },
+    "122c3140-5104-4977-9ca9-dcca25b27394" => GO_FUNCTION_CALL @ Kind {
+        name: "go_function_call",
+        fields: hashmap!{
+            0 => Field {
+                name: "function",
+                types: GO_EXPRESSION,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "arguments",
+                types: GO_EXPRESSION,
+                repeated: true,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            let arguments = c.view_children(1).into_iter().intersperse(html!{
+                <span>{ "," }</span>
+            });
+            html! {
+                <div>
+                    { c.view_child(0) }{ "(" }{ for arguments }{ ")" }
                 </div>
             }
         }),
@@ -780,27 +857,22 @@ impl ValidatorContext {
             />
         }
     }
-    pub fn view_children(&self, field_id: usize) -> (Html, Vec<Html>) {
+    pub fn view_children(&self, field_id: usize) -> Vec<Html> {
         log::debug!("view_child: {:?}", field_id);
         if self.node.links.get(&field_id).is_none() {
-            return (html! {}, vec![]);
+            return vec![];
         }
         if self.node.links.get(&field_id).unwrap().is_empty() {
-            return (html! {}, vec![]);
+            return vec![];
         }
-        (
-            html! {},
-            self.node
-                .links
-                .get(&field_id)
-                .unwrap()
-                .iter()
-                .enumerate()
-                .map(|(i, _h)| self.view_child_index(field_id, i))
-                .collect(),
-        )
-        // self.model
-        //     .view_children(self.ctx, self.node, field_name, self.path)
+        self.node
+            .links
+            .get(&field_id)
+            .unwrap()
+            .iter()
+            .enumerate()
+            .map(|(i, _h)| self.view_child_index(field_id, i))
+            .collect()
     }
     // TODO: field / child.
 }
