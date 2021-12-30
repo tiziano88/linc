@@ -1,9 +1,9 @@
 #![recursion_limit = "512"]
 #![feature(iter_intersperse)]
+#![feature(once_cell)]
 
 mod command_line;
 mod initial;
-mod meta_schema;
 mod model;
 mod node;
 mod schema;

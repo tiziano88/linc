@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 
 pub fn initial() -> File {
     let node = Node {
-        kind: "root".to_string(),
+        kind: crate::schema::ROOT.to_string(),
         value: "".to_string(),
         links: BTreeMap::new(),
     };

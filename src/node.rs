@@ -1,7 +1,7 @@
 use crate::{
     command_line::{CommandLine, Entry},
     model::{Model, Msg},
-    schema::{default_renderer, FieldValidator, KindValue, ValidatorContext, SCHEMA},
+    schema::{default_renderer, Field, Kind, Schema, ValidatorContext, SCHEMA},
     types::{Hash, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
@@ -32,7 +32,7 @@ pub struct NodeProperties {
     #[prop_or_default]
     pub updatemodel: Callback<Msg>,
     #[prop_or_default]
-    pub validators: &'static [FieldValidator],
+    pub allowed_kinds: &'static [&'static str],
 }
 
 pub enum NodeMsg {
@@ -96,24 +96,25 @@ impl Component for NodeComponent {
             let onupdatemodel = ctx.props().updatemodel.clone();
             let path = path.clone();
             let entries: Vec<Entry> = props
-                .validators
+                .allowed_kinds
                 .iter()
-                .flat_map(|v| match v {
-                    FieldValidator::Kind(k) => Some(Entry {
-                        label: k.to_string(),
-                        description: "".to_string(),
-                        action: Msg::ReplaceNode(
-                            path.clone(),
-                            Node {
-                                kind: k.to_string(),
-                                value: "".to_string(),
-                                links: BTreeMap::new(),
-                            },
-                            false,
-                        ),
-                        valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
-                    }),
-                    FieldValidator::Literal(_v) => None,
+                .map(|kind_id| Entry {
+                    label: SCHEMA
+                        .get_kind(kind_id)
+                        .map(|k| k.name.clone())
+                        .unwrap_or("INVALID")
+                        .to_string(),
+                    description: "".to_string(),
+                    action: Msg::ReplaceNode(
+                        path.clone(),
+                        Node {
+                            kind: kind_id.to_string(),
+                            value: "".to_string(),
+                            links: BTreeMap::new(),
+                        },
+                        false,
+                    ),
+                    valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
                 })
                 .collect();
             let onenter = {
@@ -141,6 +142,8 @@ impl Component for NodeComponent {
               />
             }
         } else {
+            // TODO: renderer.
+            /*
             let renderer = if props.model.rich_render {
                 kind.map(|r| {
                     let KindValue::Struct { renderer, .. } = r.value;
@@ -150,6 +153,8 @@ impl Component for NodeComponent {
             } else {
                 default_renderer
             };
+            */
+            let renderer = default_renderer;
             let validator_context = ValidatorContext {
                 model: props.model.clone(),
                 path: path.clone(),
@@ -161,13 +166,12 @@ impl Component for NodeComponent {
             let footer = if selected {
                 let entries: Vec<Entry> = kind
                     .map(|k| {
-                        let KindValue::Struct { fields, .. } = k.value;
-                        fields
+                        k.get_fields()
                             .iter()
-                            .map(|f| Entry {
-                                label: f.name.to_string(),
+                            .map(|(field_id, field)| Entry {
+                                label: field.name.to_string(),
                                 description: "".to_string(),
-                                action: Msg::AddField(path.to_vec(), f.name.to_string()),
+                                action: Msg::AddField(path.to_vec(), **field_id),
                                 valid_classes: FIELD_CLASSES
                                     .iter()
                                     .map(|v| v.to_string())

@@ -1,6 +1,6 @@
 use crate::{
     node::NodeComponent,
-    schema::{Field, Multiplicity, ValidationError, SCHEMA},
+    schema::{Field, SCHEMA},
     types::*,
 };
 use gloo_storage::{LocalStorage, Storage};
@@ -44,7 +44,7 @@ pub enum Msg {
     SetMode(Mode),
 
     ReplaceNode(Path, Node, bool),
-    AddField(Path, String),
+    AddField(Path, usize),
 
     SetNodeValue(Path, String),
 
@@ -176,6 +176,7 @@ impl Component for Model {
                 }
             }
             Msg::Parse(v) => {
+                /*
                 log::debug!("parse {:?}", v);
                 let html = html_parser::Dom::parse(&v).unwrap();
                 log::debug!("parsed {:?}", html);
@@ -189,7 +190,7 @@ impl Component for Model {
                 fn add_node(model: &mut Model, node: &html_parser::Node) -> Hash {
                     match node {
                         html_parser::Node::Element(e) => {
-                            let mut children: BTreeMap<String, Vec<String>> = BTreeMap::new();
+                            let mut children: BTreeMap<usize, Vec<String>> = BTreeMap::new();
                             e.attributes.iter().for_each(|(k, v)| {
                                 children.entry(k.clone()).or_insert_with(Vec::new).push(
                                     add_string(model, &v.as_ref().cloned().unwrap_or_default()),
@@ -227,17 +228,18 @@ impl Component for Model {
                 }
                 let h = add_dom(self, &html);
                 self.file.root = h;
+                    */
             }
             Msg::SetMode(mode) => {
                 self.mode = mode;
             }
-            Msg::AddField(path, field) => {
+            Msg::AddField(path, field_id) => {
                 let mut node = self.file.lookup(&path).cloned().unwrap();
                 node.links
-                    .entry(field.clone())
+                    .entry(field_id)
                     .or_insert_with(Vec::new)
                     .push("".into());
-                let n = node.links[&field].len();
+                let n = node.links[&field_id].len();
                 let new_root = self.file.replace_node(&path, node);
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
@@ -245,7 +247,7 @@ impl Component for Model {
                 self.cursor = append(
                     &path,
                     Selector {
-                        field,
+                        field_id,
                         index: n - 1,
                     },
                 );
@@ -279,7 +281,7 @@ impl Component for Model {
                 });
                 let mut parent = self.file.lookup(parent_path).unwrap().clone();
                 // If the field does not exist, create a default one.
-                let children = parent.links.entry(selector.field.clone()).or_default();
+                let children = parent.links.entry(selector.field_id).or_default();
                 let new_index = selector.index + 1;
                 children.insert(new_index, new_ref);
                 self.file.replace_node(parent_path, parent);
@@ -291,7 +293,7 @@ impl Component for Model {
                 let (selector, parent_path) = self.cursor.split_last().unwrap();
                 let mut parent = self.file.lookup(parent_path).unwrap().clone();
                 // If the field does not exist, create a default one.
-                let children = parent.links.entry(selector.field.clone()).or_default();
+                let children = parent.links.entry(selector.field_id).or_default();
                 children.remove(selector.index);
                 if let Some(new_root) = self.file.replace_node(parent_path, parent) {
                     self.file.root = new_root;
@@ -398,6 +400,7 @@ impl Model {
         };
         let kind = &node.kind;
 
+        /*
         if let Some(kind) = SCHEMA.get_kind(kind) {
             let crate::schema::KindValue::Struct { validator: _, .. } = kind.value;
             // let errors = validator(&ValidatorContext {
@@ -409,7 +412,6 @@ impl Model {
             // });
             // log::info!("errors: {:?} {:?}", path, errors);
         }
-        /*
         for (_, children) in node.children.iter() {
             for child in children {
                 // TODO
@@ -521,7 +523,7 @@ impl Model {
         }
     }
 
-    pub fn traverse_fields(node: &Node) -> Vec<Field> {
+    pub fn traverse_fields(node: &Node) -> Vec<(&usize, &Field)> {
         let kind = &node.kind;
         match SCHEMA.get_kind(kind) {
             Some(kind) => kind.get_fields(),
@@ -534,21 +536,18 @@ impl Model {
         match &self.file.lookup(path) {
             Some(node) => {
                 let mut paths = vec![];
-                for field in Model::traverse_fields(node) {
-                    let mut children = node.links.get(field.name).cloned().unwrap_or_default();
-                    match field.multiplicity {
-                        Multiplicity::Single => {
-                            if children.is_empty() {
-                                children.push("".to_string());
-                            }
+                for (field_id, field) in Model::traverse_fields(node) {
+                    let mut children = node.links.get(field_id).cloned().unwrap_or_default();
+                    if !field.repeated {
+                        if children.is_empty() {
+                            children.push("".to_string());
                         }
-                        Multiplicity::Repeated => {}
                     };
                     for (n, _child) in children.iter().enumerate() {
                         let new_path = append(
                             path,
                             Selector {
-                                field: field.name.to_string(),
+                                field_id: *field_id,
                                 index: n,
                             },
                         );
@@ -556,31 +555,20 @@ impl Model {
                         // log::info!("child: {:?}[{:?}]->{:?}", path, field.name, child);
                         paths.extend(self.flatten_paths(&new_path));
                     }
-                    match field.multiplicity {
-                        // If repeated field, stay on the parent.
-                        Multiplicity::Repeated => {
-                            let new_base = append(
-                                path,
-                                Selector {
-                                    field: field.name.to_string(),
-                                    index: children.len(),
-                                },
-                            );
-                            paths.push(new_base.clone());
-                        }
-                        // If single field, skip directly to the first (and only) child.
-                        Multiplicity::Single => {}
+                    if field.repeated {
+                        let new_base = append(
+                            path,
+                            Selector {
+                                field_id: *field_id,
+                                index: children.len(),
+                            },
+                        );
+                        paths.push(new_base.clone());
                     }
                 }
                 paths
             }
             None => vec![],
-        }
-    }
-
-    pub fn view_error(&self, error: &ValidationError) -> Html {
-        html! {
-            <div class="error">{ format!("error: {:?}", error.message) }</div>
         }
     }
 }

@@ -19,7 +19,7 @@ pub fn new_ref() -> Ref {
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
 pub struct Selector {
-    pub field: String,
+    pub field_id: usize,
     pub index: usize,
 }
 
@@ -88,7 +88,7 @@ impl File {
             Some(base)
         } else {
             let (selector, rest) = path.split_first().unwrap();
-            let children = base.links.get(&selector.field)?;
+            let children = base.links.get(&selector.field_id)?;
             let child = children.get(selector.index)?;
             self.lookup_from(child, rest)
         }
@@ -119,19 +119,19 @@ impl File {
             let selector = path[0].clone();
             match base
                 .links
-                .get(&selector.field)
+                .get(&selector.field_id)
                 .and_then(|v| v.get(selector.index))
             {
                 Some(old_child_hash) => {
                     let new_child_hash =
                         self.replace_node_from(old_child_hash, &path[1..], node)?;
-                    base.links.get_mut(&selector.field)?[selector.index] = new_child_hash;
+                    base.links.get_mut(&selector.field_id)?[selector.index] = new_child_hash;
                 }
                 None => {
                     // WARN: Only works for one level of children.
                     let new_child_hash = self.add_node(&node);
                     base.links
-                        .entry(selector.field)
+                        .entry(selector.field_id)
                         .or_default()
                         .push(new_child_hash);
                 }
@@ -145,16 +145,23 @@ impl File {
 // when navigating.
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct Node {
+    // UUID.
     pub kind: String,
     pub value: String,
-    pub links: BTreeMap<String, Vec<Hash>>,
+    // Keyed by field id.
+    pub links: BTreeMap<usize, Vec<Hash>>,
 }
 
 pub fn display_selector(selector: &Selector) -> Html {
+    display_selector_text(&format!("{}", selector.field_id), selector.index)
+}
+
+pub fn display_selector_text(field_name: &str, index: usize) -> Html {
+    // TODO: lookup.
     html! {
         <div class={ FIELD_CLASSES.join(" ") }>
-          <span class="border-r border-black pr-1">{ selector.field.clone() }</span>
-          <span class="pl-1">{ format!("{}", selector.index) }</span>
+          <span class="border-r border-black pr-1">{ field_name }</span>
+          <span class="pl-1">{ format!("{}", index) }</span>
         </div>
     }
 }
