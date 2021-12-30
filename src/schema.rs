@@ -63,6 +63,13 @@ macro_rules! schema {
 pub static SCHEMA: std::lazy::SyncLazy<Schema> = std::lazy::SyncLazy::new(create_schema);
 
 static RUST_TYPE: &[&'static str] = &[RUST_ARRAY_TYPE];
+static RUST_VISIBILITY: &[&'static str] = &[
+    RUST_VISIBILITY_PUB,
+    RUST_VISIBILITY_PUB_CRATE,
+    RUST_VISIBILITY_PUB_SELF,
+];
+static RUST_EXPRESSION: &[&'static str] = &[RUST_IF, RUST_MATCH, RUST_STRING_LITERAL];
+static GO_STATEMENT: &[&'static str] = &[GO_ASSIGNMENT, GO_VARIABLE_DECLARATION];
 
 schema! {
     create_schema,
@@ -70,13 +77,20 @@ schema! {
         name: "root",
         fields: hashmap!{
             0 => Field {
-                name: "root",
-                types: &[GIT, DOCKER, RUST_FRAGMENT],
+                name: "item",
+                types: &[
+                    GIT,
+                    DOCKER,
+                    RUST_FRAGMENT,
+                    GO_FRAGMENT,
+                    MARKDOWN_FRAGMENT,
+                ],
                 ..Default::default()
             },
         },
         ..Default::default()
     },
+
     "7bd45e4c-3c25-48b7-b247-b7bd2c67c6cc" => DOCKER @ Kind {
         name: "docker",
         fields: hashmap!{
@@ -154,6 +168,7 @@ schema! {
         },
         ..Default::default()
     },
+
     "7505f498-c04f-4180-a99d-c39a1abb1590" => GIT @ Kind {
         name: "git",
         fields: hashmap!{
@@ -242,6 +257,7 @@ schema! {
         },
         ..Default::default()
     },
+
     "e9687f8a-f22c-4650-a3d6-d075428ee648" => RUST_FRAGMENT @ Kind {
         name: "rust_fragment",
         fields: hashmap!{
@@ -269,20 +285,116 @@ schema! {
         }),
         ..Default::default()
     },
+    "a3aac07e-c452-4e52-887a-530b1677cd13" => RUST_STRING_LITERAL @ Kind {
+        name: "rust_string_literal",
+        fields: hashmap!{
+            0 => Field {
+                name: "value",
+                raw: true,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    { "\"" }{ c.view_child(0) }{ "\"" }
+                </span>
+            }
+        }),
+        ..Default::default()
+    },
     "4f837305-9e07-402b-a98f-563e34e29125" => RUST_VIS_ITEM @ Kind {
         name: "rust_vis_item",
         fields: hashmap!{
             0 => Field {
                 name: "visibility",
-                types: &[],
+                types: RUST_VISIBILITY,
                 ..Default::default()
             },
             1 => Field {
                 name: "item",
-                types: &[],
+                types: &[
+                    RUST_CONSTANT,
+                    RUST_ENUM,
+                ],
                 ..Default::default()
             },
         },
+        renderer: Some(|c| {
+            html! {
+                <div>{ c.view_child(0) }{ c.view_child(1) }</div>
+            }
+        }),
+        ..Default::default()
+    },
+    "5599fb59-61bf-4216-87c3-e38aa4f6b109" => RUST_ENUM @ Kind {
+        name: "rust_enum",
+        fields: hashmap!{
+            0 => Field {
+                name: "identifier",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "generic",
+                types: RUST_TYPE,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "where",
+                types: &[],
+                ..Default::default()
+            },
+            3 => Field {
+                name: "items",
+                repeated: true,
+                types: &[RUST_ENUM_ITEM],
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            let (_items_head, items) = c.view_children(3);
+            let items = items.into_iter().map(|v| {
+                html! {
+                    <div class="indent">{ v }{ "," }</div>
+                }
+            });
+
+            html! {
+                <div>
+                    <span class="keyword">{ "enum" }</span>{ c.view_child(0) }{ c.view_child(1) }{ c.view_child(2) }
+                    { "{" }{ for items }{ "}" }
+                </div>
+            }
+        }),
+        ..Default::default()
+    },
+    "10ad3193-9f92-4dbc-baf5-e785440d4ca0" => RUST_ENUM_ITEM @ Kind {
+        name: "rust_enum_item",
+        fields: hashmap!{
+            0 => Field {
+                name: "visibility",
+                raw: true,
+                types: RUST_VISIBILITY,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "identifier",
+                raw: true,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "inner",
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    { c.view_child(0) }{ c.view_child(1) }{ c.view_child(2) }
+                </span>
+            }
+        }),
         ..Default::default()
     },
     "65e449f1-1ab8-4f5e-b3d8-064e7d9ed222" => RUST_CONSTANT @ Kind {
@@ -300,10 +412,23 @@ schema! {
             },
             2 => Field {
                 name: "expression",
-                types: &[],
+                types: RUST_EXPRESSION,
                 ..Default::default()
             },
         },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    <span class="keyword">{ "const" }</span>
+                    { c.view_child(0) }
+                    { ":" }
+                    { c.view_child(1) }
+                    { "=" }
+                    { c.view_child(2) }
+                    { ";" }
+                </span>
+            }
+        }),
         ..Default::default()
     },
     "476d88e5-5b6b-496e-86b4-480a688450f9" => RUST_ARRAY_TYPE @ Kind {
@@ -317,6 +442,258 @@ schema! {
         },
         ..Default::default()
     },
+    "e7c7dcd0-28b1-4efd-a0ce-1d18aa60919d" => RUST_IF @ Kind {
+        name: "rust_if",
+        fields: hashmap!{
+            0 => Field {
+                name: "condition",
+                types: RUST_EXPRESSION,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "true_body",
+                types: RUST_EXPRESSION,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "false_body",
+                types: RUST_EXPRESSION,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    <div>
+                        <span class="keyword">{ "if" }</span>{ c.view_child(0) }{ "{" }
+                    </div>
+                    <div class="indent">
+                        { c.view_child(1) }
+                    </div>
+                    <div>
+                        { "}" }<span class="keyword">{ "else" }</span>{ "{" }
+                    </div>
+                    <div class="indent">
+                        { c.view_child(2) }
+                    </div>
+                    <div>
+                        { "}" }
+                    </div>
+                </span>
+            }
+        }),
+        ..Default::default()
+    },
+    "5bfb45f3-df68-4f7c-a218-4dbd9bcc000a" => RUST_MATCH @ Kind {
+        name: "rust_match",
+        fields: hashmap!{
+            0 => Field {
+                name: "expression",
+                types: RUST_EXPRESSION,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "match_arms",
+                types: &[RUST_MATCH_ARM],
+                repeated: true,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            let (match_arms_head, match_arms) = c.view_children(1);
+            let match_arms = match_arms.into_iter().map(|v| {
+                html! {
+                    <div class="indent">{ v }{ "," }</div>
+                }
+            });
+            html! {
+                <span>
+                    <div>
+                        <span class="keyword">{ "match" }</span>{ c.view_child(0) }{ "{" }
+                    </div>
+                    { for match_arms }
+                    { match_arms_head }
+                    <div>
+                        { "}" }
+                    </div>
+                </span>
+            }
+        }),
+        ..Default::default()
+    },
+    "097de557-15f1-4341-aa0a-b92cfa01002f" => RUST_MATCH_ARM @ Kind {
+        name: "rust_match_arm",
+        fields: hashmap!{
+            0 => Field {
+                name: "patterns",
+                repeated: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "guard",
+                types: RUST_EXPRESSION,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "expression",
+                types: RUST_EXPRESSION,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            let (patterns_head, patterns) = c.view_children(0);
+            let patterns = patterns.into_iter().intersperse(html! {
+                    <span>{ "|" }</span>
+            });
+            html! {
+                <span>
+                    <span>{ for patterns }{ patterns_head }</span>
+                    <span>{ "if" }{ c.view_child(1) }</span>
+                    <span>{ "=>" }</span>
+                    <span>{ c.view_child(2) }</span>
+                </span>
+            }
+        }),
+        ..Default::default()
+    },
+    "003830a2-d0e4-4828-9d05-156cce62ef7a" => RUST_VISIBILITY_PUB @ Kind {
+        name: "rust_visibility_pub",
+        fields: hashmap!{},
+        renderer: Some(|_c| {
+            html! {
+                <span class="keyword">{ "pub" }</span>
+            }
+        }),
+        ..Default::default()
+    },
+    "dbcea439-1234-40d4-bd80-20ec35974168" => RUST_VISIBILITY_PUB_CRATE @ Kind {
+        name: "rust_visibility_pub_crate",
+        fields: hashmap!{},
+        renderer: Some(|_c| {
+            html! {
+                <span class="keyword">{ "pub(crate)" }</span>
+            }
+        }),
+        ..Default::default()
+    },
+    "52468e4a-f333-46b8-b814-ea2efc4d25c0" => RUST_VISIBILITY_PUB_SELF @ Kind {
+        name: "rust_visibility_pub_self",
+        fields: hashmap!{},
+        renderer: Some(|_c| {
+            html! {
+                <span class="keyword">{ "pub(self)" }</span>
+            }
+        }),
+        ..Default::default()
+    },
+
+    "5996fcf2-2277-40c8-8081-db9d5ca12be8" => GO_FRAGMENT @ Kind {
+        name: "go_fragment",
+        fields: hashmap!{
+            0 => Field {
+                name: "items",
+                types: &[GO_FUNCTION],
+                repeated: true,
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "ed98e2e6-6422-4737-a70f-22a1935b007f" => GO_FUNCTION @ Kind {
+        name: "go_function",
+        fields: hashmap!{
+            0 => Field {
+                name: "identifier",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "arguments",
+                ..Default::default()
+            },
+            2 => Field {
+                name: "return_type",
+                ..Default::default()
+            },
+            3 => Field {
+                name: "body",
+                types: GO_STATEMENT,
+                repeated: true,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            let (_, arguments) = c.view_children(1);
+            let arguments = arguments.into_iter().intersperse(html!{
+                <span>{ "," }</span>
+            });
+            let (_, body) = c.view_children(3);
+            let body = body.into_iter().map(|v| {
+                html! {
+                    <div class="indent">{ v }</div>
+                }
+            });
+            html! {
+                <div>
+                    <span class="keyword">{ "func" }</span>
+                    { c.view_child(0) }
+                    { "(" }{ for arguments }{ ")" }
+                    { c.view_child(2) }
+                    { "{" }
+                    { for body }
+                    { "}" }
+                </div>
+            }
+        }),
+        ..Default::default()
+    },
+    "1c91fa1d-2c46-459e-8dcd-897bf931df25" => GO_ASSIGNMENT @ Kind {
+        name: "go_assignment",
+        fields: hashmap!{
+            0 => Field {
+                name: "left",
+                ..Default::default()
+            },
+            1 => Field {
+                name: "right",
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <div>
+                    { c.view_child(0) }{ ":=" }{ c.view_child(1) }
+                </div>
+            }
+        }),
+        ..Default::default()
+    },
+    "4ca0de48-75df-42e1-823b-33e70d445a5a" => GO_VARIABLE_DECLARATION @ Kind {
+        name: "go_variable_declaration",
+        fields: hashmap!{
+            0 => Field {
+                name: "identifier",
+                ..Default::default()
+            },
+            1 => Field {
+                name: "type",
+                ..Default::default()
+            },
+            2 => Field {
+                name: "value",
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <div>
+                    <span class="keyword">{ "var" }</span>{ c.view_child(0) }{ c.view_child(1) }{ "=" }{ c.view_child(2) }
+                </div>
+            }
+        }),
+        ..Default::default()
+    },
+
     "72e31cba-ff86-4311-95f7-fe4d418c1bd3" => MARKDOWN_FRAGMENT @ Kind {
         name: "markdown_fragment",
         fields: hashmap!{
