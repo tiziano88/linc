@@ -70,7 +70,12 @@ static RUST_VISIBILITY: &[&'static str] = &[
 ];
 static RUST_EXPRESSION: &[&'static str] = &[RUST_IF, RUST_MATCH, RUST_STRING_LITERAL];
 
-static GO_STATEMENT: &[&'static str] = &[GO_ASSIGNMENT, GO_VARIABLE_DECLARATION, GO_FUNCTION_CALL];
+static GO_STATEMENT: &[&'static str] = &[
+    GO_ASSIGNMENT,
+    GO_VARIABLE_DECLARATION,
+    GO_FUNCTION_CALL,
+    GO_IF,
+];
 static GO_EXPRESSION: &[&'static str] = &[GO_STRING_LITERAL, GO_FUNCTION_CALL];
 
 schema! {
@@ -696,7 +701,7 @@ schema! {
                 ..Default::default()
             },
             2 => Field {
-                name: "true_body",
+                name: "false_body",
                 types: GO_EXPRESSION,
                 repeated: true,
                 ..Default::default()
@@ -706,12 +711,20 @@ schema! {
             let conditions = c.view_children(0).into_iter().intersperse(html!{
                 <span>{ "," }</span>
             });
+            let true_body = c.view_children(1).into_iter().map(|v| html!{
+                <div class="indent">{ v }</div>
+            });
+            let false_body = c.view_children(2).into_iter().map(|v| html!{
+                <div class="indent">{ v }</div>
+            });
             html! {
                 <div>
                     <span class="keyword">{ "if" }</span>
                     { for conditions }
                     { "{" }
+                    { for true_body }
                     { "}" }<span class="keyword">{ "else" }</span>{ "{" }
+                    { for false_body }
                     { "}" }
                 </div>
             }
