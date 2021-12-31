@@ -23,6 +23,7 @@ pub struct Model {
 
     pub show_serialized: bool,
     pub rich_render: bool,
+    pub stack: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -52,6 +53,10 @@ pub enum Msg {
 
     ToggleSerialized,
     ToggleRenderer,
+
+    Copy,
+    Cut,
+    Paste,
     /* EnterCommand,
      * EscapeCommand,
      */
@@ -88,7 +93,6 @@ impl Component for Model {
                     <div class="column">
                         <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
                         <div>{ display_cursor(&self.cursor) }</div>
-                        <div>{ format!("Ref: {:?}", self.file.lookup(&self.cursor)) }</div>
                     </div>
 
                     <div>{ self.view_actions(ctx) }</div>
@@ -103,6 +107,7 @@ impl Component for Model {
                     />
                 </div>
                 <div class="h-40">
+                    <div>{ format!("Ref: {:?}", self.file.lookup(&self.cursor)) }</div>
                     <textarea type="text" class="border-solid border-black border" oninput={ parse } />
                     { serialized }
                 </div>
@@ -128,6 +133,7 @@ impl Component for Model {
             node_state: HashMap::new(),
             show_serialized: false,
             rich_render: false,
+            stack: vec![],
         }
     }
 
@@ -167,6 +173,17 @@ impl Component for Model {
             Msg::Parent => {
                 self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
             }
+            Msg::Cut => {
+                if let Some(node) = self.file.lookup(&self.cursor) {
+                    self.stack.push(hash_node(node));
+                }
+            }
+            Msg::Copy => {
+                if let Some(node) = self.file.lookup(&self.cursor) {
+                    self.stack.push(hash_node(node));
+                }
+            }
+            Msg::Paste => if let Some(node_ref) = self.stack.last() {},
             Msg::Store => {
                 LocalStorage::set(KEY, &self.file).unwrap();
             }

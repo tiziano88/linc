@@ -258,10 +258,8 @@ impl NodeComponent {
     fn focus_input(&self) {
         log::info!("focusing input");
         let input_node = self.input_node_ref.clone();
-        input_node
-            .cast::<HtmlInputElement>()
-            .unwrap()
-            .focus()
-            .unwrap();
+        if let Some(i) = input_node.cast::<HtmlInputElement>() {
+            i.focus().unwrap();
+        }
     }
 }

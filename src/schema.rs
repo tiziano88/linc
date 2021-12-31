@@ -135,6 +135,8 @@ static RUST_OPERATOR: &[&'static str] = &[
     RUST_OPERATOR_GT,
     RUST_OPERATOR_LE,
     RUST_OPERATOR_GE,
+    RUST_OPERATOR_BOOL_OR,
+    RUST_OPERATOR_BOOL_AND,
 ];
 
 static GO_STATEMENT: &[&'static str] = &[
@@ -497,6 +499,9 @@ schema! {
     "eddd8b9b-5e7b-40ca-9426-efb54ebfc9e5" => RUST_OPERATOR_GT @ primitive!(rust_primitive_type, >),
     "0c081d05-7c34-4e5e-9757-88261ce0c854" => RUST_OPERATOR_LE @ primitive!(rust_primitive_type, <=),
     "c8b054e8-51d7-4065-b9ab-a53f1a8ed815" => RUST_OPERATOR_GE @ primitive!(rust_primitive_type, >=),
+
+    "19cb99f6-af8c-4a4b-bf56-c1ae8eadfe62" => RUST_OPERATOR_BOOL_OR @ primitive!(rust_primitive_type, ||),
+    "a8e31571-4570-4b77-9adb-544987ae1940" => RUST_OPERATOR_BOOL_AND @ primitive!(rust_primitive_type, &&),
 
     "30b95f1c-6c5f-4877-8047-ec84b570f6cf" => RUST_FUNCTION @ Kind {
         name: "rust_function",
