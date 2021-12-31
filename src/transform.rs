@@ -6,6 +6,8 @@ pub struct Transform {
     transform: fn(&Node) -> Node,
 }
 
+// TODO: could field additions be modelled as a transform?
+
 pub static TRANSFORMS: &[Transform] = &[Transform {
     from_kind: RUST_PRIMITIVE_TYPE_STR,
     to_kind: RUST_ARRAY_TYPE,
