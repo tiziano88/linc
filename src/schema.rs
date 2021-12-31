@@ -1106,8 +1106,6 @@ impl ValidatorContext {
         let child_path = append(&self.path, Selector { field_id, index });
         let kind = SCHEMA.get_kind(&self.node.kind);
         let field = kind.and_then(|k| k.get_field(field_id));
-        // TODO: validators.
-        // let validators = field_schema.map(|v| v.validators).unwrap_or_default();
         let allowed_kinds = field.map(|v| v.types).unwrap_or_default();
         html! {
             // <div>
