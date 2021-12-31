@@ -7,6 +7,7 @@ mod initial;
 mod model;
 mod node;
 mod schema;
+mod transform;
 mod types;
 
 fn main() {
