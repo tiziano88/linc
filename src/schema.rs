@@ -51,6 +51,12 @@ fn comma() -> Html {
     }
 }
 
+fn semicolon() -> Html {
+    html! {
+        <span>{ ";" }</span>
+    }
+}
+
 macro_rules! primitive {
     ($prefix:ident, $value:tt) => {
         Kind {
@@ -107,7 +113,29 @@ static RUST_VISIBILITY: &[&'static str] = &[
     RUST_VISIBILITY_PUB_CRATE,
     RUST_VISIBILITY_PUB_SELF,
 ];
-static RUST_EXPRESSION: &[&'static str] = &[RUST_IF, RUST_MATCH, RUST_STRING_LITERAL];
+static RUST_EXPRESSION: &[&'static str] = &[
+    RUST_IF,
+    RUST_MATCH,
+    RUST_STRING_LITERAL,
+    RUST_FUNCTION_CALL,
+    RUST_BINARY_OPERATOR,
+];
+static RUST_OPERATOR: &[&'static str] = &[
+    RUST_OPERATOR_PLUS,
+    RUST_OPERATOR_MINUS,
+    RUST_OPERATOR_MUL,
+    RUST_OPERATOR_DIV,
+    RUST_OPERATOR_MOD,
+    RUST_OPERATOR_AND,
+    RUST_OPERATOR_OR,
+    RUST_OPERATOR_XOR,
+    RUST_OPERATOR_EQ,
+    RUST_OPERATOR_NE,
+    RUST_OPERATOR_LT,
+    RUST_OPERATOR_GT,
+    RUST_OPERATOR_LE,
+    RUST_OPERATOR_GE,
+];
 
 static GO_STATEMENT: &[&'static str] = &[
     GO_ASSIGNMENT,
@@ -454,6 +482,22 @@ schema! {
     "f37bbd39-06ff-4734-8095-cde929558f16" => RUST_PRIMITIVE_TYPE_ISIZE @ primitive!(rust_primitive_type, isize),
     "18f4617a-1744-408c-86f8-eef3b0056917" => RUST_PRIMITIVE_TYPE_F32 @ primitive!(rust_primitive_type, f32),
     "a1e3b48f-b712-424a-af0a-8c07c7524181" => RUST_PRIMITIVE_TYPE_F64 @ primitive!(rust_primitive_type, f64),
+
+    "3eb326f6-769b-4998-acbc-4d9184d34360" => RUST_OPERATOR_PLUS @ primitive!(rust_primitive_type, +),
+    "3c0f8733-b295-4fbb-b573-7bb1ee2d4846" => RUST_OPERATOR_MINUS @ primitive!(rust_primitive_type, -),
+    "f93f85b8-09ce-4e80-8f4f-67555708c6b6" => RUST_OPERATOR_MUL @ primitive!(rust_primitive_type, *),
+    "919e365d-8599-461c-8dad-42506db2b1d9" => RUST_OPERATOR_DIV @ primitive!(rust_primitive_type, /),
+    "b814f4d9-285b-4124-895a-7c36ab386811" => RUST_OPERATOR_MOD @ primitive!(rust_primitive_type, %),
+    "8aa441cd-ab27-49c2-98d9-5a4144b1e7a9" => RUST_OPERATOR_AND @ primitive!(rust_primitive_type, &),
+    "1aa0cc0f-611c-4c2a-951c-df2e08396764" => RUST_OPERATOR_OR @ primitive!(rust_primitive_type, |),
+    "2bdc039e-2462-4c67-91fc-ba6634379764" => RUST_OPERATOR_XOR @ primitive!(rust_primitive_type, ^),
+    "7d0a7a81-1ed1-47fd-96d9-b320e35eb654" => RUST_OPERATOR_EQ @ primitive!(rust_primitive_type, ==),
+    "8150945f-2be0-4b92-9be9-f282af85b565" => RUST_OPERATOR_NE @ primitive!(rust_primitive_type, !=),
+    "1e3d0a7b-e683-4ac7-bb25-be911e2f22be" => RUST_OPERATOR_LT @ primitive!(rust_primitive_type, <),
+    "eddd8b9b-5e7b-40ca-9426-efb54ebfc9e5" => RUST_OPERATOR_GT @ primitive!(rust_primitive_type, >),
+    "0c081d05-7c34-4e5e-9757-88261ce0c854" => RUST_OPERATOR_LE @ primitive!(rust_primitive_type, <=),
+    "c8b054e8-51d7-4065-b9ab-a53f1a8ed815" => RUST_OPERATOR_GE @ primitive!(rust_primitive_type, >=),
+
     "30b95f1c-6c5f-4877-8047-ec84b570f6cf" => RUST_FUNCTION @ Kind {
         name: "rust_function",
         fields: hashmap!{
@@ -506,7 +550,8 @@ schema! {
             },
             9 => Field {
                 name: "body",
-                raw: true,
+                types: RUST_EXPRESSION,
+                repeated: true,
                 ..Default::default()
             },
         },
@@ -517,7 +562,7 @@ schema! {
                     { c.view_child(5) }
                     { "(" }{ for c.view_children(7).into_iter().intersperse(comma()) }{ ")" }
                     { "->" }{ c.view_child(8) }
-                    { "{" }{ c.view_child(9) }{ "}" }
+                    { "{" }{ for c.view_children(9).into_iter().intersperse(semicolon()) }{ "}" }
                 </span>
             }
         }),
@@ -589,6 +634,66 @@ schema! {
                 ..Default::default()
             },
         },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    { "[" }{ c.view_child(0) }{ "]" }
+                </span>
+            }
+        }),
+        ..Default::default()
+    },
+    "9b74572d-17ec-4b76-9166-3e1916e3289a" => RUST_FUNCTION_CALL @ Kind {
+        name: "rust_function_call",
+        fields: hashmap!{
+            0 => Field {
+                name: "function",
+                types: RUST_EXPRESSION,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "arguments",
+                types: RUST_EXPRESSION,
+                repeated: true,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    { c.view_child(0) }
+                    { "(" }{ for c.view_children(1).into_iter().intersperse(comma()) }{ ")" }
+                </span>
+            }
+        }),
+        ..Default::default()
+    },
+    "c4578237-eb44-47a9-a2c2-b451575fc660" => RUST_BINARY_OPERATOR @ Kind {
+        name: "rust_binary_operator",
+        fields: hashmap!{
+            0 => Field {
+                name: "operator",
+                types: RUST_OPERATOR,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "left",
+                types: RUST_EXPRESSION,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "right",
+                types: RUST_EXPRESSION,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    { c.view_child(1) }{ c.view_child(0) }{ c.view_child(2) }
+                </span>
+            }
+        }),
         ..Default::default()
     },
     "e7c7dcd0-28b1-4efd-a0ce-1d18aa60919d" => RUST_IF @ Kind {
@@ -602,11 +707,13 @@ schema! {
             1 => Field {
                 name: "true_body",
                 types: RUST_EXPRESSION,
+                repeated: true,
                 ..Default::default()
             },
             2 => Field {
                 name: "false_body",
                 types: RUST_EXPRESSION,
+                repeated: true,
                 ..Default::default()
             },
         },
