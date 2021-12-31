@@ -17,6 +17,8 @@ pub struct CommandLineProperties {
     pub enabled: bool,
     pub input_node_ref: NodeRef,
     #[prop_or_default]
+    pub placeholder: String,
+    #[prop_or_default]
     pub oninput: Callback<String>,
     #[prop_or_default]
     pub onselect: Callback<Msg>,
@@ -76,7 +78,7 @@ impl Component for CommandLine {
             .strip_prefix(value)
             .map(|v| v.to_string())
             .unwrap_or_default();
-        let selected = true;
+        let selected = enabled;
         // TODO: Fuzzy search.
         let entries: Vec<_> = if selected {
             valid_entries
@@ -122,13 +124,13 @@ impl Component for CommandLine {
         };
         let rows = value.split('\n').count();
         // XXX: Chrome inspector CSS color editor.
-        let placeholder = "";
-        let placeholder = if placeholder.is_empty() {
-            None
-        } else {
+        let placeholder = if value.is_empty() && !selected && !props.placeholder.is_empty() {
             Some(html! {
-                <div class="placeholder">{ placeholder }</div>
+                // <div class="placeholder">{ props.placeholder.clone() }</div>
+                <span>{ props.placeholder.clone() }</span>
             })
+        } else {
+            None
         };
         let suffix = if selected {
             selected_entry_suffix
@@ -190,24 +192,24 @@ impl Component for CommandLine {
               onclick={ onclick }
               onfocus={ onfocus }
             >
-                { for placeholder }
                 <span>
                     <span class={ classes } style="width: fit-content;">
                         <textarea
-                        rows={ format!("{}", rows) }
-                        ref={ ctx.props().input_node_ref.clone() }
-                        //   id={ id }
-                        class={ class }
-                        type="text"
-                        oninput={ oninput }
-                        onkeydown={ onkeydown }
-                        //   onfocus={ onfocus }
-                        value={ value.to_string() }
-                        style={ style }
-                        //   disabled={ model.mode != crate::types::Mode::Edit }
-                        autocomplete="off"
+                            rows={ format!("{}", rows) }
+                            ref={ ctx.props().input_node_ref.clone() }
+                            //   id={ id }
+                            class={ class }
+                            type="text"
+                            oninput={ oninput }
+                            onkeydown={ onkeydown }
+                            //   onfocus={ onfocus }
+                            value={ value.to_string() }
+                            style={ style }
+                            //   disabled={ model.mode != crate::types::Mode::Edit }
+                            autocomplete="off"
                         >
                         </textarea>
+                        { for placeholder }
                         { suffix }
                     </span>
                     { dropdown }

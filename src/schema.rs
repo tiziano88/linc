@@ -1092,34 +1092,39 @@ pub struct ValidatorContext {
 
 impl ValidatorContext {
     pub fn view_child(&self, field_id: usize) -> Html {
-        self.view_child_index(field_id, 0)
+        self.view_child_index(field_id, 0, true).unwrap_or_default()
     }
-    pub fn view_child_index(&self, field_id: usize, index: usize) -> Html {
+    pub fn view_child_with_placeholder(&self, field_id: usize) -> Html {
+        self.view_child_index(field_id, 0, true).unwrap_or_default()
+    }
+    fn view_child_index(&self, field_id: usize, index: usize, placeholder: bool) -> Option<Html> {
         log::debug!("view_child: {:?}", field_id);
-        if self.node.links.get(&field_id).is_none() {
-            return html! {};
+        let hash = &self
+            .node
+            .links
+            .get(&field_id)
+            .and_then(|fields| fields.get(index))
+            .cloned();
+        if hash.is_none() && !placeholder {
+            return None;
         }
-        if self.node.links.get(&field_id).unwrap().is_empty() {
-            return html! {};
-        }
-        let h = &self.node.links.get(&field_id).unwrap()[index];
         let child_path = append(&self.path, Selector { field_id, index });
         let kind = SCHEMA.get_kind(&self.node.kind);
         let field = kind.and_then(|k| k.get_field(field_id));
         let allowed_kinds = field.map(|v| v.types).unwrap_or_default();
-        html! {
+        Some(html! {
             // <div>
             //   { format!("{:?} {:?}", h, child_path) }
             // </div>
             <NodeComponent
                 model={ self.model.clone() }
-                hash={ h.clone() }
+                hash={ hash.clone() }
                 onselect={ self.onselect.clone() }
                 path={ child_path }
                 updatemodel={ self.updatemodel.clone() }
                 allowed_kinds={ allowed_kinds }
             />
-        }
+        })
     }
     pub fn view_children(&self, field_id: usize) -> Vec<Html> {
         log::debug!("view_child: {:?}", field_id);
@@ -1135,7 +1140,8 @@ impl ValidatorContext {
             .unwrap()
             .iter()
             .enumerate()
-            .map(|(i, _h)| self.view_child_index(field_id, i))
+            // TODO: placeholder for invalid ones?
+            .filter_map(|(i, _h)| self.view_child_index(field_id, i, true))
             .collect()
     }
     // TODO: field / child.
@@ -1190,7 +1196,7 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
                         <div class="">
                             { ":" }
                         </div>
-                        { c.view_child_index(*field_id, i) }
+                        { c.view_child_index(*field_id, i, true).unwrap_or_default() }
                     </div>
                 }
             })

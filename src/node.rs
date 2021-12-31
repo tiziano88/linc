@@ -87,12 +87,13 @@ impl Component for NodeComponent {
         let props = ctx.props();
         let hash = props.hash.clone().unwrap_or_default();
         let node = props.model.file.lookup_hash(&hash).unwrap_or(&default_node);
+        if props.hash.is_none() {}
         let path = props.path.clone();
         let cursor = props.model.cursor.clone();
         let _oninput = props.oninput.clone();
         let selected = path == cursor;
         let kind = SCHEMA.get_kind(&node.kind);
-        let inner = if node.kind.is_empty() {
+        let inner = if props.hash.is_none() || node.kind.is_empty() {
             let onupdatemodel = ctx.props().updatemodel.clone();
             let path = path.clone();
             let entries: Vec<Entry> = props
@@ -125,11 +126,17 @@ impl Component for NodeComponent {
                 })
             };
             let onupdatemodel0 = onupdatemodel.clone();
+            let placeholder = if props.hash.is_none() {
+                "***".to_string()
+            } else {
+                "".to_string()
+            };
             html! {
               <CommandLine
                 input_node_ref={ self.input_node_ref.clone() }
                 entries={ entries }
                 value={ node.value.clone() }
+                placeholder={ placeholder }
                 oninput={ Callback::from(move |v| {
                     onupdatemodel.emit(Msg::SetNodeValue(path.clone(), v));
                  }) }
