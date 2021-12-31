@@ -165,7 +165,9 @@ impl Component for NodeComponent {
             let footer = if selected {
                 let entries: Vec<Entry> = kind
                     .map(|k| {
-                        k.get_fields()
+                        let mut all_entries = vec![];
+                        let mut field_entries = k
+                            .get_fields()
                             .iter()
                             .map(|(field_id, field)| Entry {
                                 label: field.name.to_string(),
@@ -176,7 +178,12 @@ impl Component for NodeComponent {
                                     .map(|v| v.to_string())
                                     .collect(),
                             })
-                            .collect()
+                            .collect();
+                        // TODO: macros
+                        let mut macro_entries = vec![];
+                        all_entries.append(&mut field_entries);
+                        all_entries.append(&mut macro_entries);
+                        all_entries
                     })
                     .unwrap_or_default();
                 // Make it look like an actual field.
