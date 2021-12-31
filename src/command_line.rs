@@ -89,7 +89,9 @@ impl Component for CommandLine {
                     // let node = v.to_node();
                     let action = v.action.clone();
                     let onselect = props.onselect.clone();
-                    let onclick = Callback::from(move |_e: MouseEvent| {
+                    let onclick = Callback::from(move |e: MouseEvent| {
+                        // Avoid moving the focus away from the input.
+                        e.prevent_default();
                         onselect.emit(action.clone());
                     });
                     let mut classes_item = vec!["block", "border"];
@@ -181,9 +183,7 @@ impl Component for CommandLine {
 
         let onclick = ctx.link().callback(|_| CommandLineMsg::Click);
         let onfocus = ctx.link().callback(|_| CommandLineMsg::Click);
-        let onkeydown = ctx
-            .link()
-            .callback(CommandLineMsg::Key);
+        let onkeydown = ctx.link().callback(CommandLineMsg::Key);
 
         html! {
             <span

@@ -45,6 +45,28 @@ pub struct Field {
     pub types: &'static [&'static str],
 }
 
+fn comma() -> Html {
+    html! {
+        <span>{ "," }</span>
+    }
+}
+
+macro_rules! primitive {
+    ($prefix:ident, $value:tt) => {
+        Kind {
+            name: concat!(stringify!($prefix), "_", stringify!($value)),
+            fields: hashmap! {},
+            renderer: Some(|_c| {
+                html! {
+                    <span class="type">
+                        { stringify!($value) }
+                    </span>
+                }
+            }),
+        }
+    };
+}
+
 macro_rules! schema {
     ( $n:ident,
         $($type_uuid:literal => $type_ident:ident @ $it:expr ,)*
@@ -60,9 +82,26 @@ macro_rules! schema {
     }
 }
 
+// TODO: transformations between nodes, e.g. type -> array.
+
 pub static SCHEMA: std::lazy::SyncLazy<Schema> = std::lazy::SyncLazy::new(create_schema);
 
-static RUST_TYPE: &[&'static str] = &[RUST_ARRAY_TYPE];
+static RUST_TYPE: &[&'static str] = &[
+    RUST_ARRAY_TYPE,
+    RUST_PRIMITIVE_TYPE_BOOL,
+    RUST_PRIMITIVE_TYPE_CHAR,
+    RUST_PRIMITIVE_TYPE_STR,
+    RUST_PRIMITIVE_TYPE_U8,
+    RUST_PRIMITIVE_TYPE_I8,
+    RUST_PRIMITIVE_TYPE_U32,
+    RUST_PRIMITIVE_TYPE_I32,
+    RUST_PRIMITIVE_TYPE_U64,
+    RUST_PRIMITIVE_TYPE_I64,
+    RUST_PRIMITIVE_TYPE_USIZE,
+    RUST_PRIMITIVE_TYPE_ISIZE,
+    RUST_PRIMITIVE_TYPE_F32,
+    RUST_PRIMITIVE_TYPE_F64,
+];
 static RUST_VISIBILITY: &[&'static str] = &[
     RUST_VISIBILITY_PUB,
     RUST_VISIBILITY_PUB_CRATE,
@@ -321,6 +360,7 @@ schema! {
                 types: &[
                     RUST_CONSTANT,
                     RUST_ENUM,
+                    RUST_FUNCTION,
                 ],
                 ..Default::default()
             },
@@ -396,6 +436,111 @@ schema! {
             html! {
                 <span>
                     { c.view_child(0) }{ c.view_child(1) }{ c.view_child(2) }
+                </span>
+            }
+        }),
+        ..Default::default()
+    },
+    "9cbb3d22-1a64-4c71-9675-e1d8231222f1" => RUST_PRIMITIVE_TYPE_BOOL @ primitive!(rust_primitive_type, bool),
+    "8c829b5a-52e1-45ca-978a-3e0fa0d5663d" => RUST_PRIMITIVE_TYPE_CHAR @ primitive!(rust_primitive_type, char),
+    "f3c3af21-8cb4-4c2e-9076-a926b4fab56d" => RUST_PRIMITIVE_TYPE_STR @ primitive!(rust_primitive_type, str),
+    "df6d27ac-9d32-46e5-b8dd-bb3c43243a55" => RUST_PRIMITIVE_TYPE_U8 @ primitive!(rust_primitive_type, u8),
+    "110d9227-5ae2-4be1-bda7-30c20eee18b9" => RUST_PRIMITIVE_TYPE_I8 @ primitive!(rust_primitive_type, i8),
+    "80cfb5fe-d296-48da-9b9e-b3c8a2cdce68" => RUST_PRIMITIVE_TYPE_U32 @ primitive!(rust_primitive_type, u32),
+    "3e1a7508-a56c-4e1f-8c38-60864815752a" => RUST_PRIMITIVE_TYPE_I32 @ primitive!(rust_primitive_type, i32),
+    "4f5d623c-fdcf-4818-9dc3-d0e651968200" => RUST_PRIMITIVE_TYPE_U64 @ primitive!(rust_primitive_type, u64),
+    "c3032ed2-d82d-4cc2-8964-d128394b4185" => RUST_PRIMITIVE_TYPE_I64 @ primitive!(rust_primitive_type, i64),
+    "2a92015e-2790-413a-a595-6e61ea0e9441" => RUST_PRIMITIVE_TYPE_USIZE @ primitive!(rust_primitive_type, usize),
+    "f37bbd39-06ff-4734-8095-cde929558f16" => RUST_PRIMITIVE_TYPE_ISIZE @ primitive!(rust_primitive_type, isize),
+    "18f4617a-1744-408c-86f8-eef3b0056917" => RUST_PRIMITIVE_TYPE_F32 @ primitive!(rust_primitive_type, f32),
+    "a1e3b48f-b712-424a-af0a-8c07c7524181" => RUST_PRIMITIVE_TYPE_F64 @ primitive!(rust_primitive_type, f64),
+    "30b95f1c-6c5f-4877-8047-ec84b570f6cf" => RUST_FUNCTION @ Kind {
+        name: "rust_function",
+        fields: hashmap!{
+            0 => Field {
+                name: "comment",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "const",
+                raw: true,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "async",
+                raw: true,
+                ..Default::default()
+            },
+            3 => Field {
+                name: "unsafe",
+                raw: true,
+                ..Default::default()
+            },
+            4 => Field {
+                name: "extern",
+                raw: true,
+                ..Default::default()
+            },
+            5 => Field {
+                name: "identifier",
+                raw: true,
+                ..Default::default()
+            },
+            6 => Field {
+                name: "generic",
+                raw: true,
+                ..Default::default()
+            },
+            7 => Field {
+                name: "parameters",
+                types: &[RUST_FUNCTION_PARAMETER],
+                repeated: true,
+                ..Default::default()
+            },
+            8 => Field {
+                name: "return_type",
+                types: RUST_TYPE,
+                raw: true,
+                ..Default::default()
+            },
+            9 => Field {
+                name: "body",
+                raw: true,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    <span class="keyword">{ "fn" }</span>
+                    { c.view_child(5) }
+                    { "(" }{ for c.view_children(7).into_iter().intersperse(comma()) }{ ")" }
+                    { "->" }{ c.view_child(8) }
+                    { "{" }{ c.view_child(9) }{ "}" }
+                </span>
+            }
+        }),
+        ..Default::default()
+    },
+    "895c624e-7308-4ebd-83c8-644076613e08" => RUST_FUNCTION_PARAMETER @ Kind {
+        name: "rust_function_parameter",
+        fields: hashmap!{
+            0 => Field {
+                name: "pattern",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "type",
+                types: RUST_TYPE,
+                ..Default::default()
+            },
+        },
+        renderer: Some(|c| {
+            html! {
+                <span>
+                    { c.view_child(0) }{ ":" }{ c.view_child(1) }
                 </span>
             }
         }),
@@ -708,9 +853,7 @@ schema! {
             },
         },
         renderer: Some(|c| {
-            let conditions = c.view_children(0).into_iter().intersperse(html!{
-                <span>{ "," }</span>
-            });
+            let conditions = c.view_children(0).into_iter().intersperse(comma());
             let true_body = c.view_children(1).into_iter().map(|v| html!{
                 <div class="indent">{ v }</div>
             });
@@ -747,9 +890,7 @@ schema! {
             },
         },
         renderer: Some(|c| {
-            let arguments = c.view_children(1).into_iter().intersperse(html!{
-                <span>{ "," }</span>
-            });
+            let arguments = c.view_children(1).into_iter().intersperse(comma());
             html! {
                 <div>
                     { c.view_child(0) }{ "(" }{ for arguments }{ ")" }
