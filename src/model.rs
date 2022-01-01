@@ -132,7 +132,7 @@ impl Component for Model {
             hover: vec![],
             node_state: HashMap::new(),
             show_serialized: false,
-            rich_render: false,
+            rich_render: true,
             stack: vec![],
         }
     }
@@ -278,6 +278,8 @@ impl Component for Model {
                 }
                 if mv {
                     ctx.link().send_message(Msg::Next);
+                } else {
+                    ctx.link().send_message(Msg::Select(path));
                 }
             }
             Msg::SetNodeValue(path, value) => {

@@ -1,8 +1,10 @@
 use crate::{
     command_line::{CommandLine, Entry},
     model::{Model, Msg},
-    schema::{default_renderer, Field, Kind, Schema, ValidatorContext, RUST_FUNCTION_CALL, SCHEMA},
-    types::{Hash, Node, Selector},
+    schema::{
+        default_renderer, Field, Kind, Schema, ValidatorContext, RUST_FUNCTION_CALL, SCHEMA, *,
+    },
+    types::{parent, Hash, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
 use web_sys::HtmlInputElement;
@@ -204,6 +206,32 @@ impl Component for NodeComponent {
                                 ),
                                 valid_classes: vec![],
                             },
+                            Entry {
+                                label: "array".to_string(),
+                                description: "".to_string(),
+                                action: Msg::ReplaceNode(
+                                    path.clone(),
+                                    Node {
+                                        kind: RUST_ARRAY_TYPE.to_string(),
+                                        value: "".to_string(),
+                                        links: maplit::btreemap! {
+                                            0 => vec![hash.clone()],
+                                        },
+                                    },
+                                    false,
+                                ),
+                                valid_classes: vec![],
+                            },
+                            Entry {
+                                label: "move up".to_string(),
+                                description: "".to_string(),
+                                action: Msg::ReplaceNode(
+                                    parent(&path).to_vec(),
+                                    node.clone(),
+                                    false,
+                                ),
+                                valid_classes: vec![],
+                            },
                         ];
                         all_entries.append(&mut field_entries);
                         all_entries.append(&mut macro_entries);
@@ -272,7 +300,7 @@ impl Component for NodeComponent {
     }
 
     fn changed(&mut self, ctx: &Context<Self>) -> bool {
-        let same = self.old_props == Some(ctx.props().clone());
+        let same = false;
         log::debug!("Node changed");
         log::debug!("same props: {:?}", same);
         if let Some(old_props) = &self.old_props {
