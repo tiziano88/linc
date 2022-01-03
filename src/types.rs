@@ -89,24 +89,35 @@ impl Cursor {
             .map(|(parent_cursor, _selector)| (**parent_cursor).clone())
     }
     pub fn traverse(&self, node_store: &NodeStore, path: &[Selector]) -> Option<Cursor> {
-        path.first().and_then(|selector| {
-            // child_hash may or may not be valid at this point.
-            let child_hash = self
-                .node(node_store)?
-                .links
-                .get(&selector.field_id)?
-                .get(selector.index)?;
-            Some(Cursor {
-                parent: Some((Box::new(self.clone()), selector.clone())),
-                hash: child_hash.clone(),
-            })
-        })
+        match path.split_first() {
+            Some((selector, rest)) => {
+                // child_hash may or may not be valid at this point.
+                let child_hash = self
+                    .node(node_store)?
+                    .links
+                    .get(&selector.field_id)?
+                    .get(selector.index)?;
+                let child = Cursor {
+                    parent: Some((Box::new(self.clone()), selector.clone())),
+                    hash: child_hash.clone(),
+                };
+                child.traverse(node_store, rest)
+            }
+            None => Some(self.clone()),
+        }
     }
     pub fn node<'a>(&self, node_store: &'a NodeStore) -> Option<&'a Node> {
         node_store.lookup_hash(&self.hash)
     }
     pub fn path(&self) -> Vec<Selector> {
-        todo!()
+        match &self.parent {
+            Some((parent_cursor, selector)) => {
+                let mut path = parent_cursor.path();
+                path.push(selector.clone());
+                path
+            }
+            None => vec![],
+        }
     }
 }
 
