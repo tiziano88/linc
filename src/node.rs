@@ -90,7 +90,11 @@ impl Component for NodeComponent {
         let props = ctx.props();
         let model = &props.model;
         let hash = props.hash.clone().unwrap_or_default();
-        let node = props.model.file.lookup_hash(&hash).unwrap_or(&default_node);
+        let node = props
+            .model
+            .node_store
+            .lookup_hash(&hash)
+            .unwrap_or(&default_node);
         if props.hash.is_none() {}
         let path = props.path.clone();
         let cursor = model.cursor.clone();

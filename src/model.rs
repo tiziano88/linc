@@ -13,7 +13,7 @@ use yew::{html, prelude::*, Html, KeyboardEvent};
 
 #[derive(PartialEq, Clone)]
 pub struct Model {
-    pub file: File,
+    pub node_store: NodeStore,
 
     pub cursor: Path,
     pub hover: Path,
@@ -77,7 +77,7 @@ impl Component for Model {
 
         let serialized = if self.show_serialized {
             html! {
-                <div class="column">{ self.view_file_json(&self.file) }</div>
+                <div class="column">{ self.view_node_store(&self.node_store) }</div>
             }
         } else {
             html! {}
@@ -105,14 +105,14 @@ impl Component for Model {
                 <div class="flex">
                     <NodeComponent
                       model={ Rc::from(self.clone()) }
-                      hash={ self.file.root.clone() }
+                      hash={ self.node_store.root.clone() }
                       onselect={ ctx.link().callback(Msg::Select) }
                       updatemodel={ ctx.link().callback(|m| m) }
                       path={ vec![] }
                     />
                 </div>
                 <div class="h-40">
-                    <div>{ format!("Ref: {:?}", self.file.root().traverse(&self.file, &self.cursor).unwrap().hash) }</div>
+                    <div>{ format!("Ref: {:?}", self.node_store.root().traverse(&self.node_store, &self.cursor).unwrap().hash) }</div>
                     <textarea type="text" class="border-solid border-black border" oninput={ parse } />
                     { serialized }
                 </div>
@@ -131,7 +131,7 @@ impl Component for Model {
         //     }),
         // );
         Model {
-            file: super::initial::initial(),
+            node_store: super::initial::initial(),
             mode: Mode::Normal,
             cursor: vec![],
             hover: vec![],
@@ -179,23 +179,31 @@ impl Component for Model {
                 self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
             }
             Msg::Cut => {
-                if let Some(cursor) = self.file.root().traverse(&self.file, &self.cursor) {
+                if let Some(cursor) = self
+                    .node_store
+                    .root()
+                    .traverse(&self.node_store, &self.cursor)
+                {
                     self.stack.push(cursor.hash);
                 }
             }
             Msg::Copy => {
-                if let Some(cursor) = self.file.root().traverse(&self.file, &self.cursor) {
+                if let Some(cursor) = self
+                    .node_store
+                    .root()
+                    .traverse(&self.node_store, &self.cursor)
+                {
                     self.stack.push(cursor.hash);
                 }
             }
             Msg::Paste => if let Some(node_ref) = self.stack.last() {},
             Msg::Store => {
-                LocalStorage::set(KEY, &self.file).unwrap();
+                LocalStorage::set(KEY, &self.node_store).unwrap();
             }
             Msg::Load => {
-                let res: gloo_storage::Result<File> = LocalStorage::get(KEY);
-                if let Ok(file) = res {
-                    self.file = file;
+                let res: gloo_storage::Result<NodeStore> = LocalStorage::get(KEY);
+                if let Ok(node_store) = res {
+                    self.node_store = node_store;
                 }
             }
             Msg::Parse(v) => {
@@ -204,7 +212,7 @@ impl Component for Model {
                 let html = html_parser::Dom::parse(&v).unwrap();
                 log::debug!("parsed {:?}", html);
                 fn add_string(model: &mut Model, value: &str) -> Hash {
-                    model.file.add_node(&Node {
+                    model.node_store.add_node(&Node {
                         kind: "string".into(),
                         value: value.into(),
                         links: BTreeMap::new(),
@@ -225,7 +233,7 @@ impl Component for Model {
                                     .or_insert_with(Vec::new)
                                     .push(add_node(model, v));
                             });
-                            model.file.add_node(&Node {
+                            model.node_store.add_node(&Node {
                                 kind: e.name.clone(),
                                 value: "".into(),
                                 links: children,
@@ -243,14 +251,14 @@ impl Component for Model {
                             .or_insert_with(Vec::new)
                             .push(add_node(model, v));
                     });
-                    model.file.add_node(&Node {
+                    model.node_store.add_node(&Node {
                         kind: "dom".into(),
                         value: "".to_string(),
                         links: children,
                     })
                 }
                 let h = add_dom(self, &html);
-                self.file.root = h;
+                self.node_store.root = h;
                     */
             }
             Msg::SetMode(mode) => {
@@ -258,11 +266,11 @@ impl Component for Model {
             }
             Msg::AddField(path, field_id) => {
                 let mut node = self
-                    .file
+                    .node_store
                     .root()
-                    .traverse(&self.file, &path)
+                    .traverse(&self.node_store, &path)
                     .unwrap()
-                    .node(&self.file)
+                    .node(&self.node_store)
                     .unwrap()
                     .clone();
                 node.links
@@ -270,9 +278,9 @@ impl Component for Model {
                     .or_insert_with(Vec::new)
                     .push("".into());
                 let n = node.links[&field_id].len();
-                let new_root = self.file.replace_node(&path, &node);
+                let new_root = self.node_store.replace_node(&path, &node);
                 if let Some(new_root) = new_root {
-                    self.file.root = new_root;
+                    self.node_store.root = new_root;
                 }
                 self.cursor = append(
                     &path,
@@ -284,10 +292,10 @@ impl Component for Model {
             }
             Msg::ReplaceNode(path, node, mv) => {
                 log::info!("replace node {:?} {:?}", path, node);
-                let new_root = self.file.replace_node(&path, &node);
+                let new_root = self.node_store.replace_node(&path, &node);
                 log::info!("new root: {:?}", new_root);
                 if let Some(new_root) = new_root {
-                    self.file.root = new_root;
+                    self.node_store.root = new_root;
                 }
                 if mv {
                     ctx.link().send_message(Msg::Next);
@@ -298,39 +306,39 @@ impl Component for Model {
             Msg::SetNodeValue(path, value) => {
                 self.cursor = path.clone();
                 let mut node = self
-                    .file
+                    .node_store
                     .root()
-                    .traverse(&self.file, &path)
+                    .traverse(&self.node_store, &path)
                     .unwrap()
-                    .node(&self.file)
+                    .node(&self.node_store)
                     .cloned()
                     .unwrap_or_default();
                 node.value = value;
-                let new_root = self.file.replace_node(&path, &node);
+                let new_root = self.node_store.replace_node(&path, &node);
                 if let Some(new_root) = new_root {
-                    self.file.root = new_root;
+                    self.node_store.root = new_root;
                 }
             }
             Msg::AddItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap();
-                let new_ref = self.file.add_node(&Node {
+                let new_ref = self.node_store.add_node(&Node {
                     kind: "invalid".to_string(),
                     value: "invalid".to_string(),
                     links: BTreeMap::new(),
                 });
                 let mut parent = self
-                    .file
+                    .node_store
                     .root()
-                    .traverse(&self.file, parent_path)
+                    .traverse(&self.node_store, parent_path)
                     .unwrap()
-                    .node(&self.file)
+                    .node(&self.node_store)
                     .unwrap()
                     .clone();
                 // If the field does not exist, create a default one.
                 let children = parent.links.entry(selector.field_id).or_default();
                 let new_index = selector.index + 1;
                 children.insert(new_index, new_ref);
-                self.file.replace_node(parent_path, &parent);
+                self.node_store.replace_node(parent_path, &parent);
                 // Select newly created element.
                 self.cursor.last_mut().unwrap().index = new_index;
                 // self.next();
@@ -338,18 +346,18 @@ impl Component for Model {
             Msg::DeleteItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap();
                 let mut parent = self
-                    .file
+                    .node_store
                     .root()
-                    .traverse(&self.file, parent_path)
+                    .traverse(&self.node_store, parent_path)
                     .unwrap()
-                    .node(&self.file)
+                    .node(&self.node_store)
                     .unwrap()
                     .clone();
                 // If the field does not exist, create a default one.
                 let children = parent.links.entry(selector.field_id).or_default();
                 children.remove(selector.index);
-                if let Some(new_root) = self.file.replace_node(parent_path, &parent) {
-                    self.file.root = new_root;
+                if let Some(new_root) = self.node_store.replace_node(parent_path, &parent) {
+                    self.node_store.root = new_root;
                 }
                 // Select parent.
                 self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
@@ -358,11 +366,11 @@ impl Component for Model {
                 log::info!("key: {}", e.key());
                 self.cursor = path.clone();
                 let node = self
-                    .file
+                    .node_store
                     .root()
-                    .traverse(&self.file, &path)
+                    .traverse(&self.node_store, &path)
                     .unwrap()
-                    .node(&self.file)
+                    .node(&self.node_store)
                     .cloned()
                     .unwrap_or_default();
 
@@ -421,8 +429,12 @@ impl Component for Model {
 
 impl Model {
     fn prev(&mut self) {
-        if let Some(cursor) = self.file.root().traverse(&self.file, &self.cursor) {
-            if let Some(prev) = cursor.prev(&self.file) {
+        if let Some(cursor) = self
+            .node_store
+            .root()
+            .traverse(&self.node_store, &self.cursor)
+        {
+            if let Some(prev) = cursor.prev(&self.node_store) {
                 self.cursor = prev.path.clone();
             }
         }
@@ -442,8 +454,12 @@ impl Model {
     }
 
     fn next(&mut self) {
-        if let Some(cursor) = self.file.root().traverse(&self.file, &self.cursor) {
-            if let Some(next) = cursor.next(&self.file) {
+        if let Some(cursor) = self
+            .node_store
+            .root()
+            .traverse(&self.node_store, &self.cursor)
+        {
+            if let Some(next) = cursor.next(&self.node_store) {
                 self.cursor = next.path.clone();
             }
             /*
@@ -456,7 +472,7 @@ impl Model {
                 }
             } else {
                 if let Some((last, parent_path)) = self.cursor.split_last() {
-                    if let Some(parent) = self.file.lookup(parent_path) {
+                    if let Some(parent) = self.node_store.lookup(parent_path) {
                         let children_len =
                             parent.links.get(&last.field_id).map(Vec::len).unwrap_or(0);
                         if last.index < children_len - 1 {
@@ -489,7 +505,7 @@ impl Model {
 
     pub fn update_errors_node(&mut self, _ctx: &Context<Self>, path: &[Selector]) {
         /*
-        let node = match self.file.lookup(path) {
+        let node = match self.node_store.lookup(path) {
             Some(node) => node.clone(),
             None => return,
         };
@@ -608,10 +624,10 @@ impl Model {
         }
     }
 
-    pub fn view_file_json(&self, file: &File) -> Html {
-        // let serialized = serde_json::to_string_pretty(file).expect("could not serialize to
+    pub fn view_node_store(&self, node_store: &NodeStore) -> Html {
+        // let serialized = serde_json::to_string_pretty(node_store).expect("could not serialize to
         // JSON");
-        let serialized = format!("root: {:?}\nfile: {:#?}", file.root, file);
+        let serialized = format!("root: {:?}\nnode_store: {:#?}", node_store.root, node_store);
         html! {
             <pre>{ serialized }</pre>
         }

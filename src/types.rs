@@ -64,7 +64,7 @@ pub struct NodeState {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct File {
+pub struct NodeStore {
     pub nodes: HashMap<Hash, Node>,
     pub root: Hash,
     pub log: Vec<(Ref, Node)>,
@@ -79,29 +79,28 @@ pub struct Cursor {
 }
 
 impl Cursor {
-    pub fn next(&self, file: &File) -> Option<Cursor> {
+    pub fn next(&self, node_store: &NodeStore) -> Option<Cursor> {
         todo!()
     }
-    pub fn prev(&self, file: &File) -> Option<Cursor> {
+    pub fn prev(&self, node_store: &NodeStore) -> Option<Cursor> {
         todo!()
     }
-    pub fn parent(&self, file: &File) -> Option<Cursor> {
-        let parent_hash = self.parents.last()?;
-        let parent_node = file.lookup_hash(parent_hash)?;
+    pub fn parent(&self, node_store: &NodeStore) -> Option<Cursor> {
+        let (parent_hash, parent_parents) = self.parents.split_last()?;
         Some(Cursor {
             path: self.path[..self.path.len() - 1].to_vec(),
-            parents: self.parents[..self.parents.len() - 1].to_vec(),
+            parents: parent_parents.to_vec(),
             hash: parent_hash.clone(),
         })
     }
-    pub fn traverse(&self, file: &File, path: &[Selector]) -> Option<Cursor> {
+    pub fn traverse(&self, node_store: &NodeStore, path: &[Selector]) -> Option<Cursor> {
         if path.is_empty() {
             Some(self.clone())
         } else {
             let selector = &path[0];
             // child_hash may or may not be valid at this point.
             let child_hash = self
-                .node(file)?
+                .node(node_store)?
                 .links
                 .get(&selector.field_id)?
                 .get(selector.index)?;
@@ -112,12 +111,12 @@ impl Cursor {
             })
         }
     }
-    pub fn node<'a>(&self, file: &'a File) -> Option<&'a Node> {
-        file.lookup_hash(&self.hash)
+    pub fn node<'a>(&self, node_store: &'a NodeStore) -> Option<&'a Node> {
+        node_store.lookup_hash(&self.hash)
     }
 }
 
-impl PartialEq for File {
+impl PartialEq for NodeStore {
     fn eq(&self, other: &Self) -> bool {
         // Only compare the size of the hashmap, since it is effectively append-only.
         self.nodes.len() == other.nodes.len()
@@ -126,7 +125,7 @@ impl PartialEq for File {
     }
 }
 
-impl File {
+impl NodeStore {
     pub fn root(&self) -> Cursor {
         Cursor {
             path: vec![],
