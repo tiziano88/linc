@@ -102,7 +102,7 @@ impl Cursor {
     fn child_after(&self, node_store: &NodeStore, selector: &Selector) -> Option<Cursor> {
         self.node(node_store).and_then(|node| {
             let children = node.links.get(&selector.field_id).unwrap();
-            if (selector.index + 1) < children.len() {
+            if selector.index < (children.len() - 1) {
                 //  Next index.
                 let next_selector = Selector {
                     field_id: selector.field_id,
@@ -132,7 +132,41 @@ impl Cursor {
         })
     }
     pub fn prev(&self, node_store: &NodeStore) -> Option<Cursor> {
-        todo!()
+        // TODO: not working
+        self.parent
+            .as_ref()
+            .and_then(|(parent, selector)| parent.child_before(node_store, &selector))
+    }
+    fn child_before(&self, node_store: &NodeStore, selector: &Selector) -> Option<Cursor> {
+        self.node(node_store).and_then(|node| {
+            if selector.index >= (0 + 1) {
+                //  Prev index.
+                let prev_selector = Selector {
+                    field_id: selector.field_id,
+                    index: selector.index - 1,
+                };
+                self.traverse(node_store, &[prev_selector])
+            } else if let Some((prev_field_id, _prev_children)) = node
+                .links
+                .range((
+                    std::ops::Bound::Unbounded,
+                    std::ops::Bound::Excluded(selector.field_id),
+                ))
+                .next_back()
+            {
+                // Next field.
+                let prev_selector = Selector {
+                    field_id: *prev_field_id,
+                    index: 0,
+                };
+                self.traverse(node_store, &[prev_selector])
+            } else {
+                // Go up.
+                self.parent
+                    .as_ref()
+                    .and_then(|(parent, selector)| parent.child_before(node_store, &selector))
+            }
+        })
     }
     pub fn parent(&self, _node_store: &NodeStore) -> Option<Cursor> {
         self.parent
