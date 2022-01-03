@@ -70,7 +70,7 @@ pub struct NodeStore {
     pub log: Vec<(Ref, Node)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Cursor {
     pub path: Path,
     // In same order as path.
@@ -85,31 +85,31 @@ impl Cursor {
     pub fn prev(&self, node_store: &NodeStore) -> Option<Cursor> {
         todo!()
     }
-    pub fn parent(&self, node_store: &NodeStore) -> Option<Cursor> {
-        let (parent_hash, parent_parents) = self.parents.split_last()?;
-        Some(Cursor {
-            path: self.path[..self.path.len() - 1].to_vec(),
-            parents: parent_parents.to_vec(),
-            hash: parent_hash.clone(),
-        })
+    pub fn parent(&self, _node_store: &NodeStore) -> Option<Cursor> {
+        self.parents
+            .split_last()
+            .map(|(parent_hash, parent_parents)| Cursor {
+                path: self.path[..self.path.len() - 1].to_vec(),
+                parents: parent_parents.to_vec(),
+                hash: parent_hash.clone(),
+            })
     }
     pub fn traverse(&self, node_store: &NodeStore, path: &[Selector]) -> Option<Cursor> {
-        if path.is_empty() {
-            Some(self.clone())
-        } else {
-            let selector = &path[0];
+        path.first().and_then(|selector| {
             // child_hash may or may not be valid at this point.
             let child_hash = self
                 .node(node_store)?
                 .links
                 .get(&selector.field_id)?
                 .get(selector.index)?;
+            let mut parents = self.parents.clone();
+            parents.push(self.hash.clone());
             Some(Cursor {
                 path: append(&self.path, selector.clone()),
-                parents: self.parents.clone(),
+                parents,
                 hash: child_hash.clone(),
             })
-        }
+        })
     }
     pub fn node<'a>(&self, node_store: &'a NodeStore) -> Option<&'a Node> {
         node_store.lookup_hash(&self.hash)

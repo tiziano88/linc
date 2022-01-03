@@ -112,7 +112,7 @@ impl Component for Model {
                     />
                 </div>
                 <div class="h-40">
-                    <div>{ format!("Ref: {:?}", self.node_store.path(&self.cursor).unwrap().hash) }</div>
+                    <div>{ format!("Ref: {:?}", self.node_store.path(&self.cursor).map(|c| c.hash)) }</div>
                     <textarea type="text" class="border-solid border-black border" oninput={ parse } />
                     { serialized }
                 </div>
@@ -176,7 +176,7 @@ impl Component for Model {
                 self.next();
             }
             Msg::Parent => {
-                self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
+                self.parent();
             }
             Msg::Cut => {
                 if let Some(cursor) = self.node_store.path(&self.cursor) {
@@ -415,10 +415,19 @@ impl Component for Model {
 }
 
 impl Model {
+    fn parent(&mut self) {
+        if let Some(current) = self.node_store.path(&self.cursor) {
+            log::debug!("current: {:?}", current);
+            if let Some(parent) = current.parent(&self.node_store) {
+                self.cursor = parent.path;
+            }
+        }
+    }
+
     fn prev(&mut self) {
         if let Some(cursor) = self.node_store.path(&self.cursor) {
             if let Some(prev) = cursor.prev(&self.node_store) {
-                self.cursor = prev.path.clone();
+                self.cursor = prev.path;
             }
         }
         /*
@@ -439,7 +448,7 @@ impl Model {
     fn next(&mut self) {
         if let Some(cursor) = self.node_store.path(&self.cursor) {
             if let Some(next) = cursor.next(&self.node_store) {
-                self.cursor = next.path.clone();
+                self.cursor = next.path;
             }
             /*
             if let Some((field_id, children)) = &node.links.iter().next() {
