@@ -110,7 +110,7 @@ impl Component for NodeComponent {
                 .map(|kind_id| Entry {
                     label: SCHEMA
                         .get_kind(kind_id)
-                        .map(|k| k.name.clone())
+                        .map(|k| &(*k.name))
                         .unwrap_or("INVALID")
                         .to_string(),
                     description: "".to_string(),
