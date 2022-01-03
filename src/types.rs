@@ -136,6 +136,11 @@ impl Cursor {
         self.parent
             .as_ref()
             .and_then(|(parent, selector)| parent.child_before(node_store, &selector))
+            .or_else(|| {
+                self.parent
+                    .as_ref()
+                    .map(|(parent, _selector)| (**parent).clone())
+            })
     }
     fn child_before(&self, node_store: &NodeStore, selector: &Selector) -> Option<Cursor> {
         self.node(node_store).and_then(|node| {
@@ -161,10 +166,7 @@ impl Cursor {
                 };
                 self.traverse(node_store, &[prev_selector])
             } else {
-                // Go up.
-                self.parent
-                    .as_ref()
-                    .and_then(|(parent, selector)| parent.child_before(node_store, &selector))
+                None
             }
         })
     }
