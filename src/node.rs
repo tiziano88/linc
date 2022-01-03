@@ -277,7 +277,7 @@ impl Component for NodeComponent {
         html! {
             <div
               class={ classes.join(" ") }
-              tabindex="0"
+            //   tabindex="0"
               onclick={ onclick }
             >
               { inner }

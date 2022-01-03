@@ -103,6 +103,7 @@ impl Component for Model {
         });
         html! {
             <div
+              tabindex="0"
               onkeydown={ onkeypress }
               onmouseover={ onmouseover }
               >
@@ -362,16 +363,17 @@ impl Component for Model {
                 // Select parent.
                 self.selected_path = self.selected_path[..self.selected_path.len() - 1].to_vec();
             }
-            Msg::CommandKey(path, e) => {
+            Msg::CommandKey(_path, e) => {
                 log::info!("key: {}", e.key());
-                self.selected_path = path.clone();
+                // self.selected_path = self.selected_path
                 let node = self
-                    .path(&path)
+                    .path(&self.selected_path)
                     .unwrap()
                     .node(&self.global_state.node_store)
                     .cloned()
                     .unwrap_or_default();
 
+                /*
                 let selection = window().unwrap().get_selection().unwrap().unwrap();
                 let anchor_node = selection.anchor_node().unwrap();
                 let _anchor_offset = selection.anchor_offset();
@@ -382,6 +384,7 @@ impl Component for Model {
                     selection.anchor_offset(),
                     anchor_node_value
                 );
+                */
 
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match e.key().as_ref() {
@@ -500,8 +503,10 @@ impl Model {
     }
 
     fn next(&mut self) {
+        log::warn!("old selected_path: {:?}", self.selected_path);
         if let Some(cursor) = self.path(&self.selected_path) {
             if let Some(next) = cursor.next(&self.global_state.node_store) {
+                log::warn!("new selected_path: {:?}", next.path());
                 self.selected_path = next.path();
             }
         }
