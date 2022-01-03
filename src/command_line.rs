@@ -202,6 +202,7 @@ impl Component for CommandLine {
                             type="text"
                             oninput={ oninput }
                             onkeydown={ onkeydown }
+                            disabled={ !enabled }
                             //   onfocus={ onfocus }
                             value={ value.to_string() }
                             style={ style }
