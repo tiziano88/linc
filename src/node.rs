@@ -91,14 +91,14 @@ impl Component for NodeComponent {
         let cursor = &props.cursor;
         let hash = &cursor.hash;
         let node = cursor.node(&node_store).unwrap_or(&default_node);
-        let path = cursor.path();
+        let node_path = cursor.path();
         let _oninput = props.oninput.clone();
         let selected_path = &props.selected_path;
-        let selected = selected_path == &cursor.path();
+        let selected = selected_path == &node_path;
         let kind = SCHEMA.get_kind(&node.kind);
         let inner = if hash.is_empty() || node.kind.is_empty() {
             let onupdatemodel = ctx.props().updatemodel.clone();
-            let path = path.clone();
+            let node_path = node_path.clone();
             let entries: Vec<Entry> = props
                 .allowed_kinds
                 .iter()
@@ -110,7 +110,7 @@ impl Component for NodeComponent {
                         .to_string(),
                     description: "".to_string(),
                     action: Msg::ReplaceNode(
-                        path.clone(),
+                        node_path.clone(),
                         Node {
                             kind: kind_id.to_string(),
                             value: "".to_string(),
@@ -122,7 +122,6 @@ impl Component for NodeComponent {
                 })
                 .collect();
             let onenter = {
-                let _path = path.clone();
                 let onupdatemodel = onupdatemodel.clone();
                 Callback::from(move |()| {
                     onupdatemodel.emit(Msg::Parent);
@@ -141,7 +140,7 @@ impl Component for NodeComponent {
                 value={ node.value.clone() }
                 placeholder={ placeholder }
                 oninput={ Callback::from(move |v| {
-                    onupdatemodel.emit(Msg::SetNodeValue(path.clone(), v));
+                    onupdatemodel.emit(Msg::SetNodeValue(node_path.clone(), v));
                  }) }
                 onselect={ ctx.props().updatemodel.clone() }
                 ondelete={ Callback::from(move |()| {
@@ -175,7 +174,7 @@ impl Component for NodeComponent {
                             .map(|(field_id, field)| Entry {
                                 label: field.name.to_string(),
                                 description: "".to_string(),
-                                action: Msg::AddField(path.to_vec(), **field_id),
+                                action: Msg::AddField(node_path.to_vec(), **field_id),
                                 valid_classes: FIELD_CLASSES
                                     .iter()
                                     .map(|v| v.to_string())
@@ -195,7 +194,7 @@ impl Component for NodeComponent {
                                 label: "call".to_string(),
                                 description: "".to_string(),
                                 action: Msg::ReplaceNode(
-                                    path.clone(),
+                                    node_path.clone(),
                                     Node {
                                         kind: RUST_FUNCTION_CALL.to_string(),
                                         value: "".to_string(),
@@ -211,7 +210,7 @@ impl Component for NodeComponent {
                                 label: "array".to_string(),
                                 description: "".to_string(),
                                 action: Msg::ReplaceNode(
-                                    path.clone(),
+                                    node_path.clone(),
                                     Node {
                                         kind: RUST_ARRAY_TYPE.to_string(),
                                         value: "".to_string(),
@@ -227,7 +226,7 @@ impl Component for NodeComponent {
                                 label: "move up".to_string(),
                                 description: "".to_string(),
                                 action: Msg::ReplaceNode(
-                                    parent(&path).to_vec(),
+                                    parent(&node_path).to_vec(),
                                     node.clone(),
                                     false,
                                 ),
@@ -265,10 +264,10 @@ impl Component for NodeComponent {
         };
         let onselect = ctx.props().onselect.clone();
         let onclick = {
-            let path = path;
+            let node_path = node_path;
             ctx.link().callback(move |e: MouseEvent| {
                 e.stop_propagation();
-                onselect.emit(path.clone());
+                onselect.emit(node_path.clone());
                 NodeMsg::Click
             })
         };
@@ -301,9 +300,7 @@ impl Component for NodeComponent {
     }
 
     fn changed(&mut self, ctx: &Context<Self>) -> bool {
-        let same = false;
         log::debug!("Node changed");
-        log::debug!("same props: {:?}", same);
         let new_props = ctx.props();
         let same = if let Some(old_props) = &self.old_props {
             log::debug!(
@@ -315,6 +312,7 @@ impl Component for NodeComponent {
                 "same selected_path: {:?}",
                 old_props.selected_path == new_props.selected_path
             );
+            log::debug!("new selected_path: {:?}", new_props.selected_path);
             log::debug!(
                 "same updatemodel: {:?}",
                 old_props.updatemodel == new_props.updatemodel
