@@ -112,7 +112,7 @@ impl Component for Model {
                     />
                 </div>
                 <div class="h-40">
-                    <div>{ format!("Ref: {:?}", self.file.lookup(&self.cursor)) }</div>
+                    <div>{ format!("Ref: {:?}", self.file.root().traverse(&self.file, &self.cursor).unwrap().hash) }</div>
                     <textarea type="text" class="border-solid border-black border" oninput={ parse } />
                     { serialized }
                 </div>
@@ -179,13 +179,13 @@ impl Component for Model {
                 self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
             }
             Msg::Cut => {
-                if let Some(node) = self.file.lookup(&self.cursor) {
-                    self.stack.push(hash_node(node));
+                if let Some(cursor) = self.file.root().traverse(&self.file, &self.cursor) {
+                    self.stack.push(cursor.hash);
                 }
             }
             Msg::Copy => {
-                if let Some(node) = self.file.lookup(&self.cursor) {
-                    self.stack.push(hash_node(node));
+                if let Some(cursor) = self.file.root().traverse(&self.file, &self.cursor) {
+                    self.stack.push(cursor.hash);
                 }
             }
             Msg::Paste => if let Some(node_ref) = self.stack.last() {},
@@ -193,7 +193,8 @@ impl Component for Model {
                 LocalStorage::set(KEY, &self.file).unwrap();
             }
             Msg::Load => {
-                if let Ok(file) = LocalStorage::get(KEY) {
+                let res: gloo_storage::Result<File> = LocalStorage::get(KEY);
+                if let Ok(file) = res {
                     self.file = file;
                 }
             }
@@ -256,13 +257,20 @@ impl Component for Model {
                 self.mode = mode;
             }
             Msg::AddField(path, field_id) => {
-                let mut node = self.file.lookup(&path).cloned().unwrap();
+                let mut node = self
+                    .file
+                    .root()
+                    .traverse(&self.file, &path)
+                    .unwrap()
+                    .node(&self.file)
+                    .unwrap()
+                    .clone();
                 node.links
                     .entry(field_id)
                     .or_insert_with(Vec::new)
                     .push("".into());
                 let n = node.links[&field_id].len();
-                let new_root = self.file.replace_node(&path, node);
+                let new_root = self.file.replace_node(&path, &node);
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
                 }
@@ -276,7 +284,7 @@ impl Component for Model {
             }
             Msg::ReplaceNode(path, node, mv) => {
                 log::info!("replace node {:?} {:?}", path, node);
-                let new_root = self.file.replace_node(&path, node);
+                let new_root = self.file.replace_node(&path, &node);
                 log::info!("new root: {:?}", new_root);
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
@@ -289,9 +297,16 @@ impl Component for Model {
             }
             Msg::SetNodeValue(path, value) => {
                 self.cursor = path.clone();
-                let mut node = self.file.lookup(&path).cloned().unwrap_or_default();
+                let mut node = self
+                    .file
+                    .root()
+                    .traverse(&self.file, &path)
+                    .unwrap()
+                    .node(&self.file)
+                    .cloned()
+                    .unwrap_or_default();
                 node.value = value;
-                let new_root = self.file.replace_node(&path, node);
+                let new_root = self.file.replace_node(&path, &node);
                 if let Some(new_root) = new_root {
                     self.file.root = new_root;
                 }
@@ -303,23 +318,37 @@ impl Component for Model {
                     value: "invalid".to_string(),
                     links: BTreeMap::new(),
                 });
-                let mut parent = self.file.lookup(parent_path).unwrap().clone();
+                let mut parent = self
+                    .file
+                    .root()
+                    .traverse(&self.file, parent_path)
+                    .unwrap()
+                    .node(&self.file)
+                    .unwrap()
+                    .clone();
                 // If the field does not exist, create a default one.
                 let children = parent.links.entry(selector.field_id).or_default();
                 let new_index = selector.index + 1;
                 children.insert(new_index, new_ref);
-                self.file.replace_node(parent_path, parent);
+                self.file.replace_node(parent_path, &parent);
                 // Select newly created element.
                 self.cursor.last_mut().unwrap().index = new_index;
                 // self.next();
             }
             Msg::DeleteItem => {
                 let (selector, parent_path) = self.cursor.split_last().unwrap();
-                let mut parent = self.file.lookup(parent_path).unwrap().clone();
+                let mut parent = self
+                    .file
+                    .root()
+                    .traverse(&self.file, parent_path)
+                    .unwrap()
+                    .node(&self.file)
+                    .unwrap()
+                    .clone();
                 // If the field does not exist, create a default one.
                 let children = parent.links.entry(selector.field_id).or_default();
                 children.remove(selector.index);
-                if let Some(new_root) = self.file.replace_node(parent_path, parent) {
+                if let Some(new_root) = self.file.replace_node(parent_path, &parent) {
                     self.file.root = new_root;
                 }
                 // Select parent.
@@ -328,7 +357,14 @@ impl Component for Model {
             Msg::CommandKey(path, e) => {
                 log::info!("key: {}", e.key());
                 self.cursor = path.clone();
-                let node = self.file.lookup(&path).cloned().unwrap_or_default();
+                let node = self
+                    .file
+                    .root()
+                    .traverse(&self.file, &path)
+                    .unwrap()
+                    .node(&self.file)
+                    .cloned()
+                    .unwrap_or_default();
 
                 let selection = window().unwrap().get_selection().unwrap().unwrap();
                 let anchor_node = selection.anchor_node().unwrap();
@@ -385,6 +421,12 @@ impl Component for Model {
 
 impl Model {
     fn prev(&mut self) {
+        if let Some(cursor) = self.file.root().traverse(&self.file, &self.cursor) {
+            if let Some(prev) = cursor.prev(&self.file) {
+                self.cursor = prev.path.clone();
+            }
+        }
+        /*
         let flattened_paths = self.flatten_paths(&[]);
         log::info!("paths: {:?}", flattened_paths);
         let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
@@ -396,10 +438,15 @@ impl Model {
                 }
             }
         }
+        */
     }
 
     fn next(&mut self) {
-        if let Some(node) = self.file.lookup(&self.cursor) {
+        if let Some(cursor) = self.file.root().traverse(&self.file, &self.cursor) {
+            if let Some(next) = cursor.next(&self.file) {
+                self.cursor = next.path.clone();
+            }
+            /*
             if let Some((field_id, children)) = &node.links.iter().next() {
                 if !children.is_empty() {
                     self.cursor.push(Selector {
@@ -432,6 +479,7 @@ impl Model {
                     }
                 }
             }
+            */
         }
     }
 
@@ -440,13 +488,13 @@ impl Model {
     }
 
     pub fn update_errors_node(&mut self, _ctx: &Context<Self>, path: &[Selector]) {
+        /*
         let node = match self.file.lookup(path) {
             Some(node) => node.clone(),
             None => return,
         };
         let kind = &node.kind;
 
-        /*
         if let Some(kind) = SCHEMA.get_kind(kind) {
             let crate::schema::KindValue::Struct { validator: _, .. } = kind.value;
             // let errors = validator(&ValidatorContext {
@@ -566,55 +614,6 @@ impl Model {
         let serialized = format!("root: {:?}\nfile: {:#?}", file.root, file);
         html! {
             <pre>{ serialized }</pre>
-        }
-    }
-
-    pub fn traverse_fields(node: &Node) -> Vec<(&usize, &Field)> {
-        let kind = &node.kind;
-        match SCHEMA.get_kind(kind) {
-            Some(kind) => kind.get_fields(),
-            None => vec![],
-        }
-    }
-
-    pub fn flatten_paths(&self, path: &[Selector]) -> Vec<Path> {
-        // log::info!("flatten: {:?}", path);
-        match &self.file.lookup(path) {
-            Some(node) => {
-                let mut paths = vec![];
-                for (field_id, field) in Model::traverse_fields(node) {
-                    let mut children = node.links.get(field_id).cloned().unwrap_or_default();
-                    if !field.repeated {
-                        if children.is_empty() {
-                            children.push("".to_string());
-                        }
-                    };
-                    for (n, _child) in children.iter().enumerate() {
-                        let new_path = append(
-                            path,
-                            Selector {
-                                field_id: *field_id,
-                                index: n,
-                            },
-                        );
-                        paths.push(new_path.clone());
-                        // log::info!("child: {:?}[{:?}]->{:?}", path, field.name, child);
-                        paths.extend(self.flatten_paths(&new_path));
-                    }
-                    if field.repeated {
-                        let new_base = append(
-                            path,
-                            Selector {
-                                field_id: *field_id,
-                                index: children.len(),
-                            },
-                        );
-                        paths.push(new_base.clone());
-                    }
-                }
-                paths
-            }
-            None => vec![],
         }
     }
 }

@@ -4,6 +4,8 @@ use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, HashMap},
     convert::TryInto,
+    ops::Deref,
+    rc::Rc,
 };
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{HtmlInputElement, HtmlTextAreaElement, InputEvent};
@@ -68,6 +70,53 @@ pub struct File {
     pub log: Vec<(Ref, Node)>,
 }
 
+#[derive(Clone)]
+pub struct Cursor {
+    pub path: Path,
+    // In same order as path.
+    pub parents: Vec<Ref>,
+    pub hash: Hash,
+}
+
+impl Cursor {
+    pub fn next(&self, file: &File) -> Option<Cursor> {
+        todo!()
+    }
+    pub fn prev(&self, file: &File) -> Option<Cursor> {
+        todo!()
+    }
+    pub fn parent(&self, file: &File) -> Option<Cursor> {
+        let parent_hash = self.parents.last()?;
+        let parent_node = file.lookup_hash(parent_hash)?;
+        Some(Cursor {
+            path: self.path[..self.path.len() - 1].to_vec(),
+            parents: self.parents[..self.parents.len() - 1].to_vec(),
+            hash: parent_hash.clone(),
+        })
+    }
+    pub fn traverse(&self, file: &File, path: &[Selector]) -> Option<Cursor> {
+        if path.is_empty() {
+            Some(self.clone())
+        } else {
+            let selector = &path[0];
+            // child_hash may or may not be valid at this point.
+            let child_hash = self
+                .node(file)?
+                .links
+                .get(&selector.field_id)?
+                .get(selector.index)?;
+            Some(Cursor {
+                path: append(&self.path, selector.clone()),
+                parents: self.parents.clone(),
+                hash: child_hash.clone(),
+            })
+        }
+    }
+    pub fn node<'a>(&self, file: &'a File) -> Option<&'a Node> {
+        file.lookup_hash(&self.hash)
+    }
+}
+
 impl PartialEq for File {
     fn eq(&self, other: &Self) -> bool {
         // Only compare the size of the hashmap, since it is effectively append-only.
@@ -78,22 +127,15 @@ impl PartialEq for File {
 }
 
 impl File {
-    pub fn lookup(&self, path: &[Selector]) -> Option<&Node> {
-        self.lookup_from(&self.root, path)
-    }
-
-    fn lookup_from(&self, base: &Hash, path: &[Selector]) -> Option<&Node> {
-        let base = self.nodes.get(base)?;
-        if path.is_empty() {
-            Some(base)
-        } else {
-            let (selector, rest) = path.split_first().unwrap();
-            let children = base.links.get(&selector.field_id)?;
-            let child = children.get(selector.index)?;
-            self.lookup_from(child, rest)
+    pub fn root(&self) -> Cursor {
+        Cursor {
+            path: vec![],
+            parents: vec![],
+            hash: self.root.clone(),
         }
     }
 
+    // TODO: remove.
     pub fn lookup_hash(&self, hash: &Hash) -> Option<&Node> {
         self.nodes.get(hash)
     }
@@ -106,14 +148,14 @@ impl File {
     }
 
     #[must_use]
-    pub fn replace_node(&mut self, path: &[Selector], node: Node) -> Option<Hash> {
+    pub fn replace_node(&mut self, path: &[Selector], node: &Node) -> Option<Hash> {
         self.replace_node_from(&self.root.clone(), path, node)
     }
 
     #[must_use]
-    fn replace_node_from(&mut self, base: &Hash, path: &[Selector], node: Node) -> Option<Hash> {
+    fn replace_node_from(&mut self, base: &Hash, path: &[Selector], node: &Node) -> Option<Hash> {
         if path.is_empty() {
-            Some(self.add_node(&node))
+            Some(self.add_node(node))
         } else {
             let mut base = self.nodes.get(base)?.clone();
             let selector = path[0].clone();
@@ -129,7 +171,7 @@ impl File {
                 }
                 None => {
                     // WARN: Only works for one level of children.
-                    let new_child_hash = self.add_node(&node);
+                    let new_child_hash = self.add_node(node);
                     base.links
                         .entry(selector.field_id)
                         .or_default()
