@@ -419,7 +419,7 @@ impl Model {
         if let Some(current) = self.node_store.path(&self.cursor) {
             log::debug!("current: {:?}", current);
             if let Some(parent) = current.parent(&self.node_store) {
-                self.cursor = parent.path;
+                self.cursor = parent.path();
             }
         }
     }
@@ -427,7 +427,7 @@ impl Model {
     fn prev(&mut self) {
         if let Some(cursor) = self.node_store.path(&self.cursor) {
             if let Some(prev) = cursor.prev(&self.node_store) {
-                self.cursor = prev.path;
+                self.cursor = prev.path();
             }
         }
         /*
@@ -448,7 +448,7 @@ impl Model {
     fn next(&mut self) {
         if let Some(cursor) = self.node_store.path(&self.cursor) {
             if let Some(next) = cursor.next(&self.node_store) {
-                self.cursor = next.path;
+                self.cursor = next.path();
             }
             /*
             if let Some((field_id, children)) = &node.links.iter().next() {

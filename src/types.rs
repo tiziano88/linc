@@ -72,9 +72,7 @@ pub struct NodeStore {
 
 #[derive(Clone, Debug)]
 pub struct Cursor {
-    pub path: Path,
-    // In same order as path.
-    pub parents: Vec<Ref>,
+    pub parent: Option<(Box<Cursor>, Selector)>,
     pub hash: Hash,
 }
 
@@ -86,13 +84,9 @@ impl Cursor {
         todo!()
     }
     pub fn parent(&self, _node_store: &NodeStore) -> Option<Cursor> {
-        self.parents
-            .split_last()
-            .map(|(parent_hash, parent_parents)| Cursor {
-                path: self.path[..self.path.len() - 1].to_vec(),
-                parents: parent_parents.to_vec(),
-                hash: parent_hash.clone(),
-            })
+        self.parent
+            .as_ref()
+            .map(|(parent_cursor, _selector)| (**parent_cursor).clone())
     }
     pub fn traverse(&self, node_store: &NodeStore, path: &[Selector]) -> Option<Cursor> {
         path.first().and_then(|selector| {
@@ -102,17 +96,17 @@ impl Cursor {
                 .links
                 .get(&selector.field_id)?
                 .get(selector.index)?;
-            let mut parents = self.parents.clone();
-            parents.push(self.hash.clone());
             Some(Cursor {
-                path: append(&self.path, selector.clone()),
-                parents,
+                parent: Some((Box::new(self.clone()), selector.clone())),
                 hash: child_hash.clone(),
             })
         })
     }
     pub fn node<'a>(&self, node_store: &'a NodeStore) -> Option<&'a Node> {
         node_store.lookup_hash(&self.hash)
+    }
+    pub fn path(&self) -> Vec<Selector> {
+        todo!()
     }
 }
 
@@ -128,8 +122,7 @@ impl PartialEq for NodeStore {
 impl NodeStore {
     pub fn root(&self) -> Cursor {
         Cursor {
-            path: vec![],
-            parents: vec![],
+            parent: None,
             hash: self.root.clone(),
         }
     }
