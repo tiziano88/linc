@@ -41,7 +41,7 @@ pub fn parent(path: &[Selector]) -> &[Selector] {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub enum Mode {
     Normal,
     Edit,

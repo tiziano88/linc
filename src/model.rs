@@ -4,6 +4,7 @@ use crate::{
     types::*,
 };
 use gloo_storage::{LocalStorage, Storage};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
     rc::Rc,
@@ -11,7 +12,7 @@ use std::{
 use web_sys::{window, InputEvent, MouseEvent};
 use yew::{html, prelude::*, Html, KeyboardEvent};
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Serialize, Deserialize)]
 pub struct GlobalState {
     pub node_store: Rc<NodeStore>,
     pub mode: Mode,
@@ -174,7 +175,8 @@ impl Component for Model {
             return false;
         }
         log::info!("update {:?}", msg);
-        const KEY: &str = "linc_file";
+        const GLOBAL_STATE_KEY: &str = "linc_global_state";
+        const ROOT_NODE_KEY: &str = "linc_root_node";
         match msg {
             Msg::ToggleSerialized => {
                 self.global_state_mut().show_serialized = !self.global_state.show_serialized;
@@ -211,13 +213,15 @@ impl Component for Model {
             }
             Msg::Paste => if let Some(node_ref) = self.stack.last() {},
             Msg::Store => {
-                LocalStorage::set(KEY, &*self.global_state.node_store).unwrap();
+                LocalStorage::set(GLOBAL_STATE_KEY, &*self.global_state).unwrap();
+                LocalStorage::set(ROOT_NODE_KEY, self.root.clone()).unwrap();
             }
             Msg::Load => {
-                let res: gloo_storage::Result<NodeStore> = LocalStorage::get(KEY);
-                if let Ok(node_store) = res {
-                    self.global_state_mut().node_store = Rc::new(node_store);
+                let res: gloo_storage::Result<GlobalState> = LocalStorage::get(GLOBAL_STATE_KEY);
+                if let Ok(global_state) = res {
+                    self.global_state = Rc::new(global_state);
                 }
+                self.root = LocalStorage::get(ROOT_NODE_KEY).unwrap();
             }
             Msg::Parse(v) => {
                 /*

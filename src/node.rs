@@ -304,25 +304,29 @@ impl Component for NodeComponent {
         let same = false;
         log::debug!("Node changed");
         log::debug!("same props: {:?}", same);
-        if let Some(old_props) = &self.old_props {
+        let new_props = ctx.props();
+        let same = if let Some(old_props) = &self.old_props {
             log::debug!(
                 "same global_state: {:?}",
-                old_props.global_state == ctx.props().global_state
+                old_props.global_state == new_props.global_state
             );
-            log::debug!("same cursor: {:?}", old_props.cursor == ctx.props().cursor);
+            log::debug!("same cursor: {:?}", old_props.cursor == new_props.cursor);
             log::debug!(
                 "same selected_path: {:?}",
-                old_props.selected_path == ctx.props().selected_path
+                old_props.selected_path == new_props.selected_path
             );
             log::debug!(
                 "same updatemodel: {:?}",
-                old_props.updatemodel == ctx.props().updatemodel
+                old_props.updatemodel == new_props.updatemodel
             );
-            return old_props.global_state != ctx.props().global_state
-                || old_props.cursor != ctx.props().cursor
-                || old_props.selected_path != ctx.props().selected_path;
-        }
-        self.old_props = Some(ctx.props().clone());
+            log::debug!("same oninput: {:?}", old_props.oninput == new_props.oninput);
+            old_props.global_state == new_props.global_state
+                || old_props.cursor == new_props.cursor
+                || old_props.selected_path == new_props.selected_path
+        } else {
+            false
+        };
+        self.old_props = Some(new_props.clone());
         !same
     }
 }
