@@ -3,12 +3,14 @@ use crate::{
     schema::{Field, SCHEMA},
     types::*,
 };
+use gloo_events::EventListener;
 use gloo_storage::{LocalStorage, Storage};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
     rc::Rc,
 };
+use wasm_bindgen::JsCast;
 use web_sys::{window, InputEvent, MouseEvent};
 use yew::{html, prelude::*, Html, KeyboardEvent};
 
@@ -26,7 +28,6 @@ impl GlobalState {
     }
 }
 
-#[derive(PartialEq, Clone)]
 pub struct Model {
     pub global_state: Rc<GlobalState>,
 
@@ -38,6 +39,8 @@ pub struct Model {
     pub node_state: HashMap<Path, NodeState>,
 
     pub stack: Vec<String>,
+
+    pub document_keydown_listener: EventListener,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -101,6 +104,7 @@ impl Component for Model {
             e.stop_propagation();
             Msg::CommandKey(vec![], e)
         });
+
         html! {
             <div
               tabindex="0"
@@ -136,16 +140,21 @@ impl Component for Model {
         }
     }
 
-    fn create(_ctx: &Context<Self>) -> Self {
-        // let key_listener = KeyboardService::register_key_down(
-        //     &window().unwrap(),
-        //     ctx.link().callback(move |e: KeyboardEvent| {
-        //         // e.stop_propagation();
-        //         // e.stop_immediate_propagation();
-        //         // e.prevent_default();
-        //         Msg::CommandKey(e)
-        //     }),
-        // );
+    fn create(ctx: &Context<Self>) -> Self {
+        let document_callback = ctx
+            .link()
+            .callback(move |e: KeyboardEvent| Msg::CommandKey(vec![], e));
+
+        let document_keydown_listener = gloo_events::EventListener::new(
+            &gloo_utils::document(),
+            "keydown",
+            move |e: &Event| {
+                e.stop_propagation();
+                e.dyn_ref::<KeyboardEvent>().map(|e| {
+                    document_callback.emit(e.clone());
+                });
+            },
+        );
         let (node_store, root) = super::initial::initial();
         Model {
             global_state: Rc::new(GlobalState {
@@ -163,6 +172,8 @@ impl Component for Model {
             node_state: HashMap::new(),
 
             stack: vec![],
+
+            document_keydown_listener,
         }
     }
 

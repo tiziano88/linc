@@ -404,7 +404,9 @@ name = "linc"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "gloo-events",
  "gloo-storage",
+ "gloo-utils",
  "hex",
  "html_parser",
  "itertools",

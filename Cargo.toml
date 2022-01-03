@@ -7,6 +7,8 @@ edition = "2021"
 [dependencies]
 console_error_panic_hook = "*"
 gloo-storage = "*"
+gloo-events = "*"
+gloo-utils = "*"
 hex = "*"
 html_parser = "*"
 itertools = "*"
