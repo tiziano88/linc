@@ -112,7 +112,7 @@ impl Component for Model {
                     />
                 </div>
                 <div class="h-40">
-                    <div>{ format!("Ref: {:?}", self.node_store.root().traverse(&self.node_store, &self.cursor).unwrap().hash) }</div>
+                    <div>{ format!("Ref: {:?}", self.node_store.path(&self.cursor).unwrap().hash) }</div>
                     <textarea type="text" class="border-solid border-black border" oninput={ parse } />
                     { serialized }
                 </div>
@@ -179,20 +179,12 @@ impl Component for Model {
                 self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
             }
             Msg::Cut => {
-                if let Some(cursor) = self
-                    .node_store
-                    .root()
-                    .traverse(&self.node_store, &self.cursor)
-                {
+                if let Some(cursor) = self.node_store.path(&self.cursor) {
                     self.stack.push(cursor.hash);
                 }
             }
             Msg::Copy => {
-                if let Some(cursor) = self
-                    .node_store
-                    .root()
-                    .traverse(&self.node_store, &self.cursor)
-                {
+                if let Some(cursor) = self.node_store.path(&self.cursor) {
                     self.stack.push(cursor.hash);
                 }
             }
@@ -267,8 +259,7 @@ impl Component for Model {
             Msg::AddField(path, field_id) => {
                 let mut node = self
                     .node_store
-                    .root()
-                    .traverse(&self.node_store, &path)
+                    .path(&path)
                     .unwrap()
                     .node(&self.node_store)
                     .unwrap()
@@ -307,8 +298,7 @@ impl Component for Model {
                 self.cursor = path.clone();
                 let mut node = self
                     .node_store
-                    .root()
-                    .traverse(&self.node_store, &path)
+                    .path(&path)
                     .unwrap()
                     .node(&self.node_store)
                     .cloned()
@@ -328,8 +318,7 @@ impl Component for Model {
                 });
                 let mut parent = self
                     .node_store
-                    .root()
-                    .traverse(&self.node_store, parent_path)
+                    .path(parent_path)
                     .unwrap()
                     .node(&self.node_store)
                     .unwrap()
@@ -347,8 +336,7 @@ impl Component for Model {
                 let (selector, parent_path) = self.cursor.split_last().unwrap();
                 let mut parent = self
                     .node_store
-                    .root()
-                    .traverse(&self.node_store, parent_path)
+                    .path(parent_path)
                     .unwrap()
                     .node(&self.node_store)
                     .unwrap()
@@ -367,8 +355,7 @@ impl Component for Model {
                 self.cursor = path.clone();
                 let node = self
                     .node_store
-                    .root()
-                    .traverse(&self.node_store, &path)
+                    .path(&path)
                     .unwrap()
                     .node(&self.node_store)
                     .cloned()
@@ -429,11 +416,7 @@ impl Component for Model {
 
 impl Model {
     fn prev(&mut self) {
-        if let Some(cursor) = self
-            .node_store
-            .root()
-            .traverse(&self.node_store, &self.cursor)
-        {
+        if let Some(cursor) = self.node_store.path(&self.cursor) {
             if let Some(prev) = cursor.prev(&self.node_store) {
                 self.cursor = prev.path.clone();
             }
@@ -454,11 +437,7 @@ impl Model {
     }
 
     fn next(&mut self) {
-        if let Some(cursor) = self
-            .node_store
-            .root()
-            .traverse(&self.node_store, &self.cursor)
-        {
+        if let Some(cursor) = self.node_store.path(&self.cursor) {
             if let Some(next) = cursor.next(&self.node_store) {
                 self.cursor = next.path.clone();
             }

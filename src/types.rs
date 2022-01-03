@@ -134,6 +134,10 @@ impl NodeStore {
         }
     }
 
+    pub fn path(&self, path: &[Selector]) -> Option<Cursor> {
+        self.root().traverse(self, path)
+    }
+
     // TODO: remove.
     pub fn lookup_hash(&self, hash: &Hash) -> Option<&Node> {
         self.nodes.get(hash)
