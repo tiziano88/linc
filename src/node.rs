@@ -300,8 +300,8 @@ impl Component for NodeComponent {
     }
 
     fn changed(&mut self, ctx: &Context<Self>) -> bool {
-        log::debug!("Node changed");
         let new_props = ctx.props();
+        log::debug!("Node changed {:?}", new_props.cursor);
         let same = if let Some(old_props) = &self.old_props {
             log::debug!(
                 "same global_state: {:?}",
@@ -325,7 +325,8 @@ impl Component for NodeComponent {
             false
         };
         self.old_props = Some(new_props.clone());
-        !same
+        // !same
+        true
     }
 }
 
