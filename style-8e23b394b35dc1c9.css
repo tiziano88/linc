@@ -1,11 +1,3 @@
-.node {
-  display: inline-block;
-  border: 1px solid;
-  border-color: lightgray;
-  cursor: default;
-  font-family: monospace;
-}
-
 .row {
   display: block;
 }
