@@ -111,7 +111,7 @@ impl Component for Model {
                     <div>{ "click on an empty node to see list of possible completions" }</div>
                     <div class="column">
                         <div>{ "Mode: " }{ format!("{:?}", self.global_state.mode) }</div>
-                        <div>{ display_cursor(&self.selected_path) }</div>
+                        <div class="h-8">{ display_cursor(&self.selected_path) }</div>
                     </div>
 
                     <div>{ self.view_actions(ctx) }</div>
@@ -385,7 +385,9 @@ impl Component for Model {
 
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match e.key().as_ref() {
-                    "Enter" => {}
+                    "Enter" => {
+                        self.global_state_mut().mode = Mode::Edit;
+                    }
                     "Escape" => {
                         self.global_state_mut().mode = Mode::Normal;
                         // If it is a pure value, select the parent again so another field may be
@@ -398,7 +400,9 @@ impl Component for Model {
                     // "Enter" if self.mode == Mode::Edit =>
                     // self.link.send_message(Msg::EnterCommand), "Escape" =>
                     // self.link.send_message(Msg::EscapeCommand),
-                    "ArrowUp" => {}
+                    "ArrowUp" if self.global_state.mode == Mode::Normal => {
+                        ctx.link().send_message(Msg::Parent)
+                    }
                     "ArrowDown" => {}
                     "ArrowLeft" if self.global_state.mode == Mode::Normal => {
                         ctx.link().send_message(Msg::Prev)

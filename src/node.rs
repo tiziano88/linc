@@ -264,12 +264,15 @@ impl Component for NodeComponent {
             })
         };
         let mut classes = vec![
-            "node".to_string(),
-            "align-top".to_string(),
-            "flex-auto".to_string(),
+            "align-top",
+            "flex-auto",
+            "border-4",
+            "cursor-default",
+            "inline-block",
+            "font-mono",
         ];
         if selected {
-            classes.push("selected".to_string());
+            classes.push("border-blue-500")
         }
         html! {
             <div
