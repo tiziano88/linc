@@ -109,15 +109,7 @@ impl Component for NodeComponent {
                         .unwrap_or("INVALID")
                         .to_string(),
                     description: "".to_string(),
-                    action: Msg::ReplaceNode(
-                        node_path.clone(),
-                        Node {
-                            kind: kind_id.to_string(),
-                            value: "".to_string(),
-                            links: BTreeMap::new(),
-                        },
-                        false,
-                    ),
+                    action: Msg::ReplaceNode(node_path.clone(), create_node(kind_id), false),
                     valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
                 })
                 .collect();

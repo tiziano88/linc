@@ -4,7 +4,10 @@ use crate::{
     types::{append, display_selector_text, Cursor, Node, Path, Selector},
 };
 use maplit::hashmap;
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    rc::Rc,
+};
 use yew::prelude::*;
 
 type UUID = String;
@@ -1082,6 +1085,17 @@ schema! {
     },
 }
 
+pub fn create_node(kind_id: &str) -> Node {
+    SCHEMA
+        .get_kind(kind_id)
+        .map(|kind| Node {
+            kind: kind_id.to_string(),
+            value: "".to_string(),
+            links: BTreeMap::new(),
+        })
+        .unwrap_or_else(|| panic!("Unknown kind: {}", kind_id))
+}
+
 pub struct ValidatorContext {
     pub global_state: Rc<GlobalState>,
     pub selected_path: Vec<Selector>,
@@ -1103,6 +1117,7 @@ impl ValidatorContext {
     }
     fn view_child_index(&self, field_id: usize, index: usize, placeholder: bool) -> Option<Html> {
         log::debug!("view_child: {:?}", field_id);
+        log::debug!("cursor: {:?}", self.cursor);
         let node = &self.node().unwrap();
         let hash = node
             .links

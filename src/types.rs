@@ -142,12 +142,9 @@ impl Cursor {
     pub fn traverse(&self, node_store: &NodeStore, path: &[Selector]) -> Option<Cursor> {
         match path.split_first() {
             Some((selector, rest)) => {
+                let node = self.node(node_store)?;
                 // child_hash may or may not be valid at this point.
-                let child_hash = self
-                    .node(node_store)?
-                    .links
-                    .get(&selector.field_id)?
-                    .get(selector.index)?;
+                let child_hash = node.links.get(&selector.field_id)?.get(selector.index)?;
                 let child = Cursor {
                     parent: Some((Box::new(self.clone()), selector.clone())),
                     hash: child_hash.clone(),
