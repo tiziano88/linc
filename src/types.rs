@@ -78,7 +78,60 @@ pub struct Cursor {
 
 impl Cursor {
     pub fn next(&self, node_store: &NodeStore) -> Option<Cursor> {
-        todo!()
+        // This must work even if the current hash / reference is invalid.
+        self.node(node_store)
+            .and_then(|node| {
+                node.links.iter().next().map(|(field_id, children)| {
+                    // Depth first.
+                    Cursor {
+                        parent: Some((
+                            Box::new(self.clone()),
+                            Selector {
+                                field_id: *field_id,
+                                index: 0,
+                            },
+                        )),
+                        hash: children[0].clone(),
+                    }
+                })
+            })
+            .or_else(||
+                // Try one level up.
+                self.parent
+                .as_ref()
+                    .and_then(|(parent, selector)| parent.child_after(node_store, &selector)))
+    }
+    fn child_after(&self, node_store: &NodeStore, selector: &Selector) -> Option<Cursor> {
+        self.node(node_store).and_then(|node| {
+            let children = node.links.get(&selector.field_id).unwrap();
+            if (selector.index + 1) < children.len() {
+                //  Next index.
+                let next_selector = Selector {
+                    field_id: selector.field_id,
+                    index: selector.index + 1,
+                };
+                self.traverse(node_store, &[next_selector])
+            } else if let Some((next_field_id, _next_children)) = node
+                .links
+                .range((
+                    std::ops::Bound::Excluded(selector.field_id),
+                    std::ops::Bound::Unbounded,
+                ))
+                .next()
+            {
+                // Next field.
+                let next_selector = Selector {
+                    field_id: *next_field_id,
+                    index: 0,
+                };
+                self.traverse(node_store, &[next_selector])
+            } else {
+                // Go up.
+                self.parent
+                    .as_ref()
+                    .and_then(|(parent, selector)| parent.child_after(node_store, &selector))
+            }
+        })
     }
     pub fn prev(&self, node_store: &NodeStore) -> Option<Cursor> {
         todo!()
