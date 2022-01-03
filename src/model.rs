@@ -82,9 +82,14 @@ impl Component for Model {
         } else {
             html! {}
         };
+
+        let onkeypress = ctx.link().callback(move |e: KeyboardEvent| {
+            e.stop_propagation();
+            Msg::CommandKey(vec![], e)
+        });
         html! {
             <div
-            //   onkeydown=onkeypress
+              onkeydown={ onkeypress }
               onmouseover={ onmouseover }
               >
                 <div class="sticky top-0 bg-white">
@@ -394,17 +399,39 @@ impl Model {
     }
 
     fn next(&mut self) {
-        let flattened_paths = self.flatten_paths(&[]);
-        log::info!("paths: {:?}", flattened_paths);
-        let current_path_index = flattened_paths.iter().position(|x| *x == self.cursor);
-        log::info!("current: {:?}", current_path_index);
-        if let Some(current_path_index) = current_path_index {
-            if let Some(path) = flattened_paths.get(current_path_index + 1) {
-                log::info!("new path: {:?}", path);
-                self.cursor = path.clone();
+        if let Some(node) = self.file.lookup(&self.cursor) {
+            if let Some((field_id, children)) = &node.links.iter().next() {
+                if !children.is_empty() {
+                    self.cursor.push(Selector {
+                        field_id: **field_id,
+                        index: 0,
+                    });
+                }
+            } else {
+                if let Some((last, parent_path)) = self.cursor.split_last() {
+                    if let Some(parent) = self.file.lookup(parent_path) {
+                        let children_len =
+                            parent.links.get(&last.field_id).map(Vec::len).unwrap_or(0);
+                        if last.index < children_len - 1 {
+                            let mut new_cursor = parent_path.to_vec();
+                            new_cursor.push(Selector {
+                                field_id: last.field_id,
+                                index: last.index + 1,
+                            });
+                            self.cursor = new_cursor;
+                        } else {
+                            if let Some((next_field_id, next_children)) = parent
+                                .links
+                                .range((
+                                    std::ops::Bound::Excluded(last.field_id),
+                                    std::ops::Bound::Unbounded,
+                                ))
+                                .next()
+                            {}
+                        }
+                    }
+                }
             }
-        } else if let Some(path) = flattened_paths.get(0) {
-            self.cursor = path.clone();
         }
     }
 

@@ -4,7 +4,7 @@ use crate::{
     schema::{
         default_renderer, Field, Kind, Schema, ValidatorContext, RUST_FUNCTION_CALL, SCHEMA, *,
     },
-    types::{parent, Hash, Node, Selector},
+    types::{parent, Hash, Mode, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
 use web_sys::HtmlInputElement;
@@ -76,10 +76,11 @@ impl Component for NodeComponent {
 
     fn rendered(&mut self, ctx: &Context<Self>, _first_render: bool) {
         let props = ctx.props();
+        let model = &props.model;
         let path = props.path.clone();
         let cursor = props.model.cursor.clone();
         let selected = path == cursor;
-        if selected {
+        if selected && model.mode == Mode::Edit {
             self.focus_input();
         }
     }
@@ -87,11 +88,12 @@ impl Component for NodeComponent {
     fn view(&self, ctx: &Context<Self>) -> Html {
         let default_node = Node::default();
         let props = ctx.props();
+        let model = &props.model;
         let hash = props.hash.clone().unwrap_or_default();
         let node = props.model.file.lookup_hash(&hash).unwrap_or(&default_node);
         if props.hash.is_none() {}
         let path = props.path.clone();
-        let cursor = props.model.cursor.clone();
+        let cursor = model.cursor.clone();
         let _oninput = props.oninput.clone();
         let selected = path == cursor;
         let kind = SCHEMA.get_kind(&node.kind);
@@ -147,7 +149,7 @@ impl Component for NodeComponent {
                     onupdatemodel0.emit(Msg::DeleteItem);
                  }) }
                 onenter={ onenter }
-                enabled={ selected }
+                enabled={ selected && model.mode == Mode::Edit }
               />
             }
         } else {
@@ -157,14 +159,14 @@ impl Component for NodeComponent {
                 default_renderer
             };
             let validator_context = ValidatorContext {
-                model: props.model.clone(),
+                model: model.clone(),
                 path: path.clone(),
                 node: node.clone(),
                 onselect: props.onselect.clone(),
                 updatemodel: props.updatemodel.clone(),
             };
             let content = renderer(&validator_context);
-            let footer = if selected {
+            let footer = if model.mode == Mode::Edit && selected {
                 let entries: Vec<Entry> = kind
                     .map(|k| {
                         let mut all_entries = vec![];

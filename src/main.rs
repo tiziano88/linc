@@ -1,6 +1,7 @@
 #![recursion_limit = "512"]
 #![feature(iter_intersperse)]
 #![feature(once_cell)]
+#![feature(map_first_last)]
 
 mod command_line;
 mod initial;
