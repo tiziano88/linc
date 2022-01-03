@@ -12,17 +12,30 @@ use web_sys::{window, InputEvent, MouseEvent};
 use yew::{html, prelude::*, Html, KeyboardEvent};
 
 #[derive(PartialEq, Clone)]
-pub struct Model {
-    pub node_store: NodeStore,
-
-    pub cursor: Path,
-    pub hover: Path,
+pub struct GlobalState {
+    pub node_store: Rc<NodeStore>,
     pub mode: Mode,
+    pub show_serialized: bool,
+    pub rich_render: bool,
+}
+
+impl GlobalState {
+    fn node_store_mut(&mut self) -> &mut NodeStore {
+        Rc::make_mut(&mut self.node_store)
+    }
+}
+
+#[derive(PartialEq, Clone)]
+pub struct Model {
+    pub global_state: Rc<GlobalState>,
+
+    pub root: Hash,
+
+    pub selected_path: Path,
+    pub hover_path: Path,
 
     pub node_state: HashMap<Path, NodeState>,
 
-    pub show_serialized: bool,
-    pub rich_render: bool,
     pub stack: Vec<String>,
 }
 
@@ -75,9 +88,9 @@ impl Component for Model {
             .link()
             .callback(move |e: InputEvent| Msg::Parse(get_value_from_input_event(e)));
 
-        let serialized = if self.show_serialized {
+        let serialized = if self.global_state.show_serialized {
             html! {
-                <div class="column">{ self.view_node_store(&self.node_store) }</div>
+                <div class="column">{ self.view_node_store(&self.global_state.node_store) }</div>
             }
         } else {
             html! {}
@@ -96,23 +109,23 @@ impl Component for Model {
                     <div>{ "LINC" }</div>
                     <div>{ "click on an empty node to see list of possible completions" }</div>
                     <div class="column">
-                        <div>{ "Mode: " }{ format!("{:?}", self.mode) }</div>
-                        <div>{ display_cursor(&self.cursor) }</div>
+                        <div>{ "Mode: " }{ format!("{:?}", self.global_state.mode) }</div>
+                        <div>{ display_cursor(&self.selected_path) }</div>
                     </div>
 
                     <div>{ self.view_actions(ctx) }</div>
                 </div>
                 <div class="flex">
                     <NodeComponent
-                      model={ Rc::from(self.clone()) }
-                      hash={ self.node_store.root.clone() }
+                      global_state={ self.global_state.clone() }
+                      cursor={ self.root().clone() }
+                      selected_path={ self.selected_path.clone() }
                       onselect={ ctx.link().callback(Msg::Select) }
                       updatemodel={ ctx.link().callback(|m| m) }
-                      path={ vec![] }
                     />
                 </div>
                 <div class="h-40">
-                    <div>{ format!("Ref: {:?}", self.node_store.path(&self.cursor).map(|c| c.hash)) }</div>
+                    <div>{ format!("Ref: {:?}", self.path(&self.selected_path).map(|c| c.hash)) }</div>
                     <textarea type="text" class="border-solid border-black border" oninput={ parse } />
                     { serialized }
                 </div>
@@ -130,14 +143,22 @@ impl Component for Model {
         //         Msg::CommandKey(e)
         //     }),
         // );
+        let (node_store, root) = super::initial::initial();
         Model {
-            node_store: super::initial::initial(),
-            mode: Mode::Normal,
-            cursor: vec![],
-            hover: vec![],
+            global_state: Rc::new(GlobalState {
+                node_store: Rc::new(node_store),
+                mode: Mode::Normal,
+                show_serialized: false,
+                rich_render: true,
+            }),
+
+            root,
+
+            selected_path: vec![],
+            hover_path: vec![],
+
             node_state: HashMap::new(),
-            show_serialized: false,
-            rich_render: true,
+
             stack: vec![],
         }
     }
@@ -156,16 +177,16 @@ impl Component for Model {
         const KEY: &str = "linc_file";
         match msg {
             Msg::ToggleSerialized => {
-                self.show_serialized = !self.show_serialized;
+                self.global_state_mut().show_serialized = !self.global_state.show_serialized;
             }
             Msg::ToggleRenderer => {
-                self.rich_render = !self.rich_render;
+                self.global_state_mut().rich_render = !self.global_state.rich_render;
             }
             Msg::Select(path) => {
-                self.cursor = path;
+                self.selected_path = path;
             }
             Msg::Hover(path) => {
-                self.hover = path;
+                self.hover_path = path;
             }
             // TODO: sibling vs inner
             Msg::Prev => {
@@ -179,23 +200,23 @@ impl Component for Model {
                 self.parent();
             }
             Msg::Cut => {
-                if let Some(cursor) = self.node_store.path(&self.cursor) {
+                if let Some(cursor) = self.path(&self.selected_path) {
                     self.stack.push(cursor.hash);
                 }
             }
             Msg::Copy => {
-                if let Some(cursor) = self.node_store.path(&self.cursor) {
+                if let Some(cursor) = self.path(&self.selected_path) {
                     self.stack.push(cursor.hash);
                 }
             }
             Msg::Paste => if let Some(node_ref) = self.stack.last() {},
             Msg::Store => {
-                LocalStorage::set(KEY, &self.node_store).unwrap();
+                LocalStorage::set(KEY, &*self.global_state.node_store).unwrap();
             }
             Msg::Load => {
                 let res: gloo_storage::Result<NodeStore> = LocalStorage::get(KEY);
                 if let Ok(node_store) = res {
-                    self.node_store = node_store;
+                    self.global_state_mut().node_store = Rc::new(node_store);
                 }
             }
             Msg::Parse(v) => {
@@ -254,14 +275,13 @@ impl Component for Model {
                     */
             }
             Msg::SetMode(mode) => {
-                self.mode = mode;
+                Rc::make_mut(&mut self.global_state).mode = mode;
             }
             Msg::AddField(path, field_id) => {
                 let mut node = self
-                    .node_store
                     .path(&path)
                     .unwrap()
-                    .node(&self.node_store)
+                    .node(&self.global_state.node_store)
                     .unwrap()
                     .clone();
                 node.links
@@ -269,11 +289,8 @@ impl Component for Model {
                     .or_insert_with(Vec::new)
                     .push("".into());
                 let n = node.links[&field_id].len();
-                let new_root = self.node_store.replace_node(&path, &node);
-                if let Some(new_root) = new_root {
-                    self.node_store.root = new_root;
-                }
-                self.cursor = append(
+                self.replace_node(&path, &node);
+                self.selected_path = append(
                     &path,
                     Selector {
                         field_id,
@@ -283,11 +300,7 @@ impl Component for Model {
             }
             Msg::ReplaceNode(path, node, mv) => {
                 log::info!("replace node {:?} {:?}", path, node);
-                let new_root = self.node_store.replace_node(&path, &node);
-                log::info!("new root: {:?}", new_root);
-                if let Some(new_root) = new_root {
-                    self.node_store.root = new_root;
-                }
+                self.replace_node(&path, &node);
                 if mv {
                     ctx.link().send_message(Msg::Next);
                 } else {
@@ -295,69 +308,62 @@ impl Component for Model {
                 }
             }
             Msg::SetNodeValue(path, value) => {
-                self.cursor = path.clone();
+                self.selected_path = path.clone();
                 let mut node = self
-                    .node_store
                     .path(&path)
                     .unwrap()
-                    .node(&self.node_store)
+                    .node(&self.global_state.node_store)
                     .cloned()
                     .unwrap_or_default();
                 node.value = value;
-                let new_root = self.node_store.replace_node(&path, &node);
-                if let Some(new_root) = new_root {
-                    self.node_store.root = new_root;
-                }
+                self.replace_node(&path, &node);
             }
             Msg::AddItem => {
-                let (selector, parent_path) = self.cursor.split_last().unwrap();
-                let new_ref = self.node_store.add_node(&Node {
+                let selected_path = self.selected_path.clone();
+                let (selector, parent_path) = selected_path.split_last().unwrap();
+                let new_ref = self.global_state_mut().node_store_mut().put(&Node {
                     kind: "invalid".to_string(),
                     value: "invalid".to_string(),
                     links: BTreeMap::new(),
                 });
                 let mut parent = self
-                    .node_store
                     .path(parent_path)
                     .unwrap()
-                    .node(&self.node_store)
+                    .node(&self.global_state.node_store)
                     .unwrap()
                     .clone();
                 // If the field does not exist, create a default one.
                 let children = parent.links.entry(selector.field_id).or_default();
                 let new_index = selector.index + 1;
                 children.insert(new_index, new_ref);
-                self.node_store.replace_node(parent_path, &parent);
+                self.replace_node(parent_path, &parent);
                 // Select newly created element.
-                self.cursor.last_mut().unwrap().index = new_index;
+                self.selected_path.last_mut().unwrap().index = new_index;
                 // self.next();
             }
             Msg::DeleteItem => {
-                let (selector, parent_path) = self.cursor.split_last().unwrap();
+                let selected_path = self.selected_path.clone();
+                let (selector, parent_path) = selected_path.split_last().unwrap();
                 let mut parent = self
-                    .node_store
                     .path(parent_path)
                     .unwrap()
-                    .node(&self.node_store)
+                    .node(&self.global_state.node_store)
                     .unwrap()
                     .clone();
                 // If the field does not exist, create a default one.
                 let children = parent.links.entry(selector.field_id).or_default();
                 children.remove(selector.index);
-                if let Some(new_root) = self.node_store.replace_node(parent_path, &parent) {
-                    self.node_store.root = new_root;
-                }
+                self.replace_node(parent_path, &parent);
                 // Select parent.
-                self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
+                self.selected_path = self.selected_path[..self.selected_path.len() - 1].to_vec();
             }
             Msg::CommandKey(path, e) => {
                 log::info!("key: {}", e.key());
-                self.cursor = path.clone();
+                self.selected_path = path.clone();
                 let node = self
-                    .node_store
                     .path(&path)
                     .unwrap()
-                    .node(&self.node_store)
+                    .node(&self.global_state.node_store)
                     .cloned()
                     .unwrap_or_default();
 
@@ -376,11 +382,12 @@ impl Component for Model {
                 match e.key().as_ref() {
                     "Enter" => {}
                     "Escape" => {
-                        self.mode = Mode::Normal;
+                        self.global_state_mut().mode = Mode::Normal;
                         // If it is a pure value, select the parent again so another field may be
                         // added.
                         if node.kind.is_empty() {
-                            self.cursor = self.cursor[..self.cursor.len() - 1].to_vec();
+                            self.selected_path =
+                                self.selected_path[..self.selected_path.len() - 1].to_vec();
                         }
                     }
                     // "Enter" if self.mode == Mode::Edit =>
@@ -388,8 +395,12 @@ impl Component for Model {
                     // self.link.send_message(Msg::EscapeCommand),
                     "ArrowUp" => {}
                     "ArrowDown" => {}
-                    "ArrowLeft" if self.mode == Mode::Normal => ctx.link().send_message(Msg::Prev),
-                    "ArrowRight" if self.mode == Mode::Normal => ctx.link().send_message(Msg::Next),
+                    "ArrowLeft" if self.global_state.mode == Mode::Normal => {
+                        ctx.link().send_message(Msg::Prev)
+                    }
+                    "ArrowRight" if self.global_state.mode == Mode::Normal => {
+                        ctx.link().send_message(Msg::Next)
+                    }
                     /*
                     "i" if self.mode == Mode::Normal => {
                         e.prevent_default();
@@ -415,33 +426,84 @@ impl Component for Model {
 }
 
 impl Model {
+    fn root(&self) -> Cursor {
+        Cursor {
+            parent: None,
+            hash: self.root.clone(),
+        }
+    }
+
+    pub fn path(&self, path: &[Selector]) -> Option<Cursor> {
+        self.root().traverse(&self.global_state.node_store, path)
+    }
+
+    pub fn replace_node(&mut self, path: &[Selector], node: &Node) {
+        if let Some(root) = self.replace_node_from(&self.root.clone(), path, node) {
+            self.root = root;
+        }
+    }
+
+    #[must_use]
+    fn replace_node_from(&mut self, base: &Hash, path: &[Selector], node: &Node) -> Option<Hash> {
+        if path.is_empty() {
+            Some(self.global_state_mut().node_store_mut().put(node))
+        } else {
+            let mut base = self.global_state.node_store.get(base)?.clone();
+            let selector = path[0].clone();
+            match base
+                .links
+                .get(&selector.field_id)
+                .and_then(|v| v.get(selector.index))
+            {
+                Some(old_child_hash) => {
+                    let new_child_hash =
+                        self.replace_node_from(old_child_hash, &path[1..], node)?;
+                    base.links.get_mut(&selector.field_id)?[selector.index] = new_child_hash;
+                }
+                None => {
+                    // WARN: Only works for one level of children.
+                    let new_child_hash = self.global_state_mut().node_store_mut().put(node);
+                    base.links
+                        .entry(selector.field_id)
+                        .or_default()
+                        .push(new_child_hash);
+                }
+            };
+            Some(self.global_state_mut().node_store_mut().put(&base))
+        }
+    }
+
     fn parent(&mut self) {
-        if let Some(current) = self.node_store.path(&self.cursor) {
+        if let Some(current) = self.path(&self.selected_path) {
             log::debug!("current: {:?}", current);
-            if let Some(parent) = current.parent(&self.node_store) {
-                self.cursor = parent.path();
+            if let Some(parent) = current.parent(&self.global_state.node_store) {
+                self.selected_path = parent.path();
             }
         }
     }
 
     fn prev(&mut self) {
-        if let Some(cursor) = self.node_store.path(&self.cursor) {
-            if let Some(prev) = cursor.prev(&self.node_store) {
-                self.cursor = prev.path();
+        if let Some(cursor) = self.path(&self.selected_path) {
+            if let Some(prev) = cursor.prev(&self.global_state.node_store) {
+                self.selected_path = prev.path();
             }
         }
     }
 
     fn next(&mut self) {
-        if let Some(cursor) = self.node_store.path(&self.cursor) {
-            if let Some(next) = cursor.next(&self.node_store) {
-                self.cursor = next.path();
+        if let Some(cursor) = self.path(&self.selected_path) {
+            if let Some(next) = cursor.next(&self.global_state.node_store) {
+                self.selected_path = next.path();
             }
         }
     }
 
+    fn global_state_mut(&mut self) -> &mut GlobalState {
+        Rc::make_mut(&mut self.global_state)
+    }
+
     pub fn update_errors(&mut self, ctx: &Context<Self>) {
-        self.update_errors_node(ctx, &self.cursor.clone());
+        self.update_errors_node(ctx, &self.selected_path.clone());
     }
 
     pub fn update_errors_node(&mut self, _ctx: &Context<Self>, path: &[Selector]) {
@@ -568,7 +630,7 @@ impl Model {
     pub fn view_node_store(&self, node_store: &NodeStore) -> Html {
         // let serialized = serde_json::to_string_pretty(node_store).expect("could not serialize to
         // JSON");
-        let serialized = format!("root: {:?}\nnode_store: {:#?}", node_store.root, node_store);
+        let serialized = format!("root: {:?}\nnode_store: {:#?}", self.root, node_store);
         html! {
             <pre>{ serialized }</pre>
         }

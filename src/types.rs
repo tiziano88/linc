@@ -63,14 +63,12 @@ pub struct NodeState {
     // TODO: Errors.
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct NodeStore {
-    pub nodes: HashMap<Hash, Node>,
-    pub root: Hash,
-    pub log: Vec<(Ref, Node)>,
+    nodes: HashMap<Hash, Node>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Cursor {
     pub parent: Option<(Box<Cursor>, Selector)>,
     pub hash: Hash,
@@ -160,7 +158,7 @@ impl Cursor {
         }
     }
     pub fn node<'a>(&self, node_store: &'a NodeStore) -> Option<&'a Node> {
-        node_store.lookup_hash(&self.hash)
+        node_store.get(&self.hash)
     }
     pub fn path(&self) -> Vec<Selector> {
         match &self.parent {
@@ -178,68 +176,20 @@ impl PartialEq for NodeStore {
     fn eq(&self, other: &Self) -> bool {
         // Only compare the size of the hashmap, since it is effectively append-only.
         self.nodes.len() == other.nodes.len()
-            && self.root == other.root
-            && self.log.len() == other.log.len()
     }
 }
 
 impl NodeStore {
-    pub fn root(&self) -> Cursor {
-        Cursor {
-            parent: None,
-            hash: self.root.clone(),
-        }
-    }
-
-    pub fn path(&self, path: &[Selector]) -> Option<Cursor> {
-        self.root().traverse(self, path)
-    }
-
     // TODO: remove.
-    pub fn lookup_hash(&self, hash: &Hash) -> Option<&Node> {
+    pub fn get(&self, hash: &Hash) -> Option<&Node> {
         self.nodes.get(hash)
     }
 
     #[must_use]
-    pub fn add_node(&mut self, node: &Node) -> Hash {
+    pub fn put(&mut self, node: &Node) -> Hash {
         let h = hash_node(node);
         self.nodes.insert(h.clone(), node.clone());
         h
-    }
-
-    #[must_use]
-    pub fn replace_node(&mut self, path: &[Selector], node: &Node) -> Option<Hash> {
-        self.replace_node_from(&self.root.clone(), path, node)
-    }
-
-    #[must_use]
-    fn replace_node_from(&mut self, base: &Hash, path: &[Selector], node: &Node) -> Option<Hash> {
-        if path.is_empty() {
-            Some(self.add_node(node))
-        } else {
-            let mut base = self.nodes.get(base)?.clone();
-            let selector = path[0].clone();
-            match base
-                .links
-                .get(&selector.field_id)
-                .and_then(|v| v.get(selector.index))
-            {
-                Some(old_child_hash) => {
-                    let new_child_hash =
-                        self.replace_node_from(old_child_hash, &path[1..], node)?;
-                    base.links.get_mut(&selector.field_id)?[selector.index] = new_child_hash;
-                }
-                None => {
-                    // WARN: Only works for one level of children.
-                    let new_child_hash = self.add_node(node);
-                    base.links
-                        .entry(selector.field_id)
-                        .or_default()
-                        .push(new_child_hash);
-                }
-            };
-            Some(self.add_node(&base))
-        }
     }
 }
 

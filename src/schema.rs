@@ -1,7 +1,7 @@
 use crate::{
-    model::{Model, Msg},
+    model::{GlobalState, Model, Msg},
     node::{NodeComponent, KIND_CLASSES},
-    types::{append, display_selector_text, Node, Path, Selector},
+    types::{append, display_selector_text, Cursor, Node, Path, Selector},
 };
 use maplit::hashmap;
 use std::{collections::HashMap, rc::Rc};
@@ -1083,14 +1083,18 @@ schema! {
 }
 
 pub struct ValidatorContext {
-    pub model: Rc<Model>,
-    pub path: Vec<Selector>,
-    pub node: Node,
+    pub global_state: Rc<GlobalState>,
+    pub selected_path: Vec<Selector>,
+    pub cursor: Cursor,
     pub onselect: Callback<Vec<Selector>>,
     pub updatemodel: Callback<Msg>,
 }
 
 impl ValidatorContext {
+    pub fn node(&self) -> Option<&Node> {
+        self.cursor.node(&self.global_state.node_store)
+    }
+
     pub fn view_child(&self, field_id: usize) -> Html {
         self.view_child_index(field_id, 0, true).unwrap_or_default()
     }
@@ -1099,8 +1103,8 @@ impl ValidatorContext {
     }
     fn view_child_index(&self, field_id: usize, index: usize, placeholder: bool) -> Option<Html> {
         log::debug!("view_child: {:?}", field_id);
-        let hash = &self
-            .node
+        let node = &self.node().unwrap();
+        let hash = node
             .links
             .get(&field_id)
             .and_then(|fields| fields.get(index))
@@ -1108,19 +1112,22 @@ impl ValidatorContext {
         if hash.is_none() && !placeholder {
             return None;
         }
-        let child_path = append(&self.path, Selector { field_id, index });
-        let kind = SCHEMA.get_kind(&self.node.kind);
+        let child_cursor = self
+            .cursor
+            .traverse(
+                &self.global_state.node_store,
+                &[Selector { field_id, index }],
+            )
+            .unwrap();
+        let kind = SCHEMA.get_kind(&node.kind);
         let field = kind.and_then(|k| k.get_field(field_id));
         let allowed_kinds = field.map(|v| v.types).unwrap_or_default();
         Some(html! {
-            // <div>
-            //   { format!("{:?} {:?}", h, child_path) }
-            // </div>
             <NodeComponent
-                model={ self.model.clone() }
-                hash={ hash.clone() }
+                global_state={ self.global_state.clone() }
+                cursor={ child_cursor }
+                selected_path={ self.selected_path.clone() }
                 onselect={ self.onselect.clone() }
-                path={ child_path }
                 updatemodel={ self.updatemodel.clone() }
                 allowed_kinds={ allowed_kinds }
             />
@@ -1128,14 +1135,14 @@ impl ValidatorContext {
     }
     pub fn view_children(&self, field_id: usize) -> Vec<Html> {
         log::debug!("view_child: {:?}", field_id);
-        if self.node.links.get(&field_id).is_none() {
+        let node = &self.node().unwrap();
+        if node.links.get(&field_id).is_none() {
             return vec![];
         }
-        if self.node.links.get(&field_id).unwrap().is_empty() {
+        if node.links.get(&field_id).unwrap().is_empty() {
             return vec![];
         }
-        self.node
-            .links
+        node.links
             .get(&field_id)
             .unwrap()
             .iter()
@@ -1151,8 +1158,9 @@ impl ValidatorContext {
 type Renderer = fn(&ValidatorContext) -> Html;
 
 pub fn default_renderer(c: &ValidatorContext) -> Html {
-    let node = &c.node;
-    let path = &c.path;
+    let cursor = &c.cursor;
+    let node = c.node().unwrap();
+    let path = cursor.path();
     log::debug!("default_renderer: {:?}", path);
     let kind = SCHEMA.get_kind(&node.kind);
     let _hash = "xxx";
