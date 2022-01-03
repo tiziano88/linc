@@ -237,6 +237,8 @@ impl Component for CommandLine {
             }
             CommandLineMsg::Key(e) => {
                 log::debug!("key: {:?}", e.key());
+                // Otherwise it will bubble up to the model root.
+                e.stop_propagation();
                 let props = ctx.props();
                 let entries = &self.valid_entries;
                 let selected_command_index = self.selected_command_index;

@@ -127,6 +127,7 @@ impl Component for Model {
                 </div>
                 <div class="h-40">
                     <div>{ format!("Ref: {:?}", self.path(&self.selected_path).map(|c| c.hash)) }</div>
+                    <div>{ format!("Node: {:?}", self.path(&self.selected_path).and_then(|c| c.node(&self.global_state.node_store))) }</div>
                     <textarea type="text" class="border-solid border-black border" oninput={ parse } />
                     { serialized }
                 </div>
