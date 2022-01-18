@@ -48,14 +48,24 @@ pub enum Mode {
 }
 
 pub fn hash(value: &[u8]) -> Hash {
-    let bytes: [u8; 32] = Sha256::digest(&value).try_into().unwrap();
-    hex::encode(bytes)
+    let bytes: [u8; 32] = Sha256::digest(value).try_into().unwrap();
+    "sha256:".to_string() + &hex::encode(bytes)
+}
+
+pub fn serialize_node(node: &Node) -> Vec<u8> {
+    serde_json::to_string_pretty(node)
+        .unwrap()
+        .as_bytes()
+        .to_vec()
+}
+
+pub fn deserialize_node(raw: &[u8]) -> Option<Node> {
+    serde_json::from_slice(raw).ok()
 }
 
 pub fn hash_node(node: &Node) -> Hash {
-    let node_json = serde_json::to_string_pretty(node).unwrap();
-    let node_bytes = node_json.as_bytes();
-    hash(node_bytes)
+    let node_bytes = serialize_node(node);
+    hash(&node_bytes)
 }
 
 #[derive(Default, PartialEq, Clone)]
@@ -65,7 +75,8 @@ pub struct NodeState {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct NodeStore {
-    nodes: HashMap<Hash, Node>,
+    raw_nodes: HashMap<Hash, Vec<u8>>,
+    parsed_nodes: HashMap<Hash, Node>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -191,7 +202,7 @@ impl Cursor {
         }
     }
     pub fn node<'a>(&self, node_store: &'a NodeStore) -> Option<&'a Node> {
-        node_store.get(&self.hash)
+        node_store.get_parsed(&self.hash)
     }
     pub fn path(&self) -> Vec<Selector> {
         match &self.parent {
@@ -208,21 +219,51 @@ impl Cursor {
 impl PartialEq for NodeStore {
     fn eq(&self, other: &Self) -> bool {
         // Only compare the size of the hashmap, since it is effectively append-only.
-        self.nodes.len() == other.nodes.len()
+        self.raw_nodes.len() == other.raw_nodes.len()
     }
 }
 
 impl NodeStore {
     // TODO: remove.
-    pub fn get(&self, hash: &Hash) -> Option<&Node> {
-        self.nodes.get(hash)
+    pub fn get_raw(&self, hash: &Hash) -> Option<&Vec<u8>> {
+        self.raw_nodes.get(hash)
+    }
+
+    pub fn get_parsed(&self, hash: &Hash) -> Option<&Node> {
+        match self.parsed_nodes.get(hash) {
+            Some(node) => Some(node),
+            None => {
+                // let raw_node = self.raw_nodes.get(hash)?;
+                // let node = crate::types::deserialize_node(raw_node)?;
+                // self.parsed_nodes.insert(hash.clone(), node.clone());
+                // Some(&node)
+                None
+            }
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Hash, &Vec<u8>)> {
+        self.raw_nodes.iter()
     }
 
     #[must_use]
-    pub fn put(&mut self, node: &Node) -> Hash {
+    pub fn put_parsed(&mut self, node: &Node) -> Hash {
         let h = hash_node(node);
-        self.nodes.insert(h.clone(), node.clone());
+        self.parsed_nodes.insert(h.clone(), node.clone());
         h
+    }
+
+    #[must_use]
+    pub fn put_raw(&mut self, node: &Node) -> Hash {
+        let h = hash_node(node);
+        self.parsed_nodes.insert(h.clone(), node.clone());
+        h
+    }
+
+    pub fn put_many(&mut self, nodes: &[Node]) {
+        for node in nodes {
+            self.put_parsed(node);
+        }
     }
 }
 
@@ -246,7 +287,7 @@ pub fn display_selector_text(field_name: &str, index: usize) -> Html {
     html! {
         <div class={ FIELD_CLASSES.join(" ") }>
           <span class="border-r border-black pr-1">{ field_name }</span>
-          <span class="pl-1">{ format!("{}", index) }</span>
+          <span class="pl-1">{ format!("[{}]", index) }</span>
         </div>
     }
 }

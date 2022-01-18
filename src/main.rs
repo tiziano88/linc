@@ -1,8 +1,11 @@
 #![recursion_limit = "512"]
 #![feature(iter_intersperse)]
 #![feature(once_cell)]
+#![feature(bool_to_option)]
 
+// mod generated;
 mod command_line;
+mod ent;
 mod initial;
 mod model;
 mod node;

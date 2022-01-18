@@ -41,6 +41,7 @@ pub struct Model {
     pub stack: Vec<String>,
 
     pub document_keydown_listener: EventListener,
+    pub window_hashchange_listener: EventListener,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -48,8 +49,18 @@ pub enum Msg {
     Select(Path),
     Hover(Path),
 
-    Store,
-    Load,
+    StoreLocal,
+    LoadLocal,
+
+    StoreRemote,
+    LoadRemote,
+
+    // Add nodes to the store.
+    AddNodes(Vec<Node>),
+
+    // Set root node from hash fragment.
+    SetRoot(String),
+
     Parse(String),
 
     Prev,
@@ -155,6 +166,17 @@ impl Component for Model {
                 });
             },
         );
+
+        let window_listener = ctx.link().callback(move |e: String| Msg::SetRoot(e));
+        let window_hashchange_listener = gloo_events::EventListener::new(
+            &gloo_utils::window(),
+            "hashchange",
+            move |e: &Event| {
+                e.stop_propagation();
+                window_listener.emit(get_location_hash());
+            },
+        );
+
         let (node_store, root) = super::initial::initial();
         Model {
             global_state: Rc::new(GlobalState {
@@ -174,6 +196,7 @@ impl Component for Model {
             stack: vec![],
 
             document_keydown_listener,
+            window_hashchange_listener,
         }
     }
 
@@ -181,7 +204,11 @@ impl Component for Model {
         false
     }
 
-    fn rendered(&mut self, _ctx: &Context<Self>, _first_render: bool) {}
+    fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
+        if first_render {
+            ctx.link().send_message(Msg::SetRoot(get_location_hash()));
+        }
+    }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         if let Msg::Hover(_) = msg {
@@ -225,16 +252,57 @@ impl Component for Model {
                 }
             }
             Msg::Paste => if let Some(node_ref) = self.stack.last() {},
-            Msg::Store => {
+            Msg::StoreLocal => {
                 LocalStorage::set(GLOBAL_STATE_KEY, &*self.global_state).unwrap();
                 LocalStorage::set(ROOT_NODE_KEY, self.root.clone()).unwrap();
             }
-            Msg::Load => {
+            Msg::LoadLocal => {
                 let res: gloo_storage::Result<GlobalState> = LocalStorage::get(GLOBAL_STATE_KEY);
                 if let Ok(global_state) = res {
                     self.global_state = Rc::new(global_state);
                 }
                 self.root = LocalStorage::get(ROOT_NODE_KEY).unwrap();
+            }
+            Msg::StoreRemote => {
+                let req = crate::ent::PutRequest {
+                    blobs: self
+                        .global_state
+                        .node_store
+                        .iter()
+                        .map(|(_k, v)| v.clone())
+                        .collect(),
+                };
+                ctx.link().send_future(async move {
+                    let c = crate::ent::EntClient;
+                    c.upload_blobs(&req).await;
+                    Msg::Next
+                });
+            }
+            Msg::LoadRemote => {
+                let req = crate::ent::GetRequest {
+                    items: vec![crate::ent::GetItem {
+                        root: self.root.clone(),
+                    }],
+                };
+                ctx.link().send_future(async move {
+                    let c = crate::ent::EntClient;
+                    let res = c.get_blobs(&req).await.unwrap();
+                    Msg::AddNodes(
+                        res.items
+                            .values()
+                            .filter_map(|v| {
+                                let b = base64::decode(&v).unwrap();
+                                crate::types::deserialize_node(&b)
+                            })
+                            .collect(),
+                    )
+                });
+            }
+            Msg::AddNodes(nodes) => {
+                self.global_state_mut().node_store_mut().put_many(&nodes);
+            }
+            Msg::SetRoot(root) => {
+                self.root = root;
             }
             Msg::Parse(v) => {
                 /*
@@ -338,7 +406,7 @@ impl Component for Model {
             Msg::AddItem => {
                 let selected_path = self.selected_path.clone();
                 let (selector, parent_path) = selected_path.split_last().unwrap();
-                let new_ref = self.global_state_mut().node_store_mut().put(&Node {
+                let new_ref = self.global_state_mut().node_store_mut().put_parsed(&Node {
                     kind: "invalid".to_string(),
                     value: "invalid".to_string(),
                     links: BTreeMap::new(),
@@ -444,8 +512,26 @@ impl Component for Model {
         };
         // self.focus_command_line();
         self.update_errors(ctx);
+        /*
+        web_sys::window()
+            .unwrap()
+            .history()
+            .unwrap()
+            .replace_state_with_url(
+                &wasm_bindgen::JsValue::NULL,
+                "",
+                Some(&format!("#{}", self.root)),
+            )
+            .unwrap();
+            */
         true
     }
+}
+
+fn get_location_hash() -> String {
+    let state = web_sys::window().unwrap().location().hash().unwrap();
+    log::info!("state: {:?}", state);
+    state.strip_prefix("#").unwrap().to_string()
 }
 
 impl Model {
@@ -469,9 +555,9 @@ impl Model {
     #[must_use]
     fn replace_node_from(&mut self, base: &Hash, path: &[Selector], node: &Node) -> Option<Hash> {
         if path.is_empty() {
-            Some(self.global_state_mut().node_store_mut().put(node))
+            Some(self.global_state_mut().node_store_mut().put_parsed(node))
         } else {
-            let mut base = self.global_state.node_store.get(base)?.clone();
+            let mut base = self.global_state.node_store.get_parsed(base)?.clone();
             let selector = path[0].clone();
             match base
                 .links
@@ -485,14 +571,14 @@ impl Model {
                 }
                 None => {
                     // WARN: Only works for one level of children.
-                    let new_child_hash = self.global_state_mut().node_store_mut().put(node);
+                    let new_child_hash = self.global_state_mut().node_store_mut().put_parsed(node);
                     base.links
                         .entry(selector.field_id)
                         .or_default()
                         .push(new_child_hash);
                 }
             };
-            Some(self.global_state_mut().node_store_mut().put(&base))
+            Some(self.global_state_mut().node_store_mut().put_parsed(&base))
         }
     }
 
@@ -565,13 +651,23 @@ impl Model {
         let actions = vec![
             Action {
                 image: None,
-                text: "store".to_string(),
-                msg: Msg::Store,
+                text: "store(local)".to_string(),
+                msg: Msg::StoreLocal,
             },
             Action {
                 image: None,
-                text: "load".to_string(),
-                msg: Msg::Load,
+                text: "load(local)".to_string(),
+                msg: Msg::LoadLocal,
+            },
+            Action {
+                image: None,
+                text: "store(remote)".to_string(),
+                msg: Msg::StoreRemote,
+            },
+            Action {
+                image: None,
+                text: "load(remote)".to_string(),
+                msg: Msg::LoadRemote,
             },
             Action {
                 image: None,

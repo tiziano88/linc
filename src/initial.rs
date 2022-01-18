@@ -8,6 +8,6 @@ pub fn initial() -> (NodeStore, String) {
         links: BTreeMap::new(),
     };
     let mut node_store = NodeStore::default();
-    let h = node_store.put(&node);
+    let h = node_store.put_parsed(&node);
     (node_store, h)
 }
