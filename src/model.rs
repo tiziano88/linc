@@ -7,7 +7,7 @@ use gloo_events::EventListener;
 use gloo_storage::{LocalStorage, Storage};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     rc::Rc,
 };
 use wasm_bindgen::JsCast;
@@ -24,6 +24,8 @@ pub struct GlobalState {
 
 impl GlobalState {
     fn node_store_mut(&mut self) -> &mut NodeStore {
+        let c = Rc::strong_count(&self.node_store);
+        log::info!("strong count: {}", c);
         Rc::make_mut(&mut self.node_store)
     }
 }
@@ -56,7 +58,8 @@ pub enum Msg {
     LoadRemote,
 
     // Add nodes to the store.
-    AddNodes(Vec<Node>),
+    AddNodesRequest(Vec<Hash>),
+    AddNodesResponse(Vec<Node>),
 
     // Set root node from hash fragment.
     SetRoot(String),
@@ -279,15 +282,20 @@ impl Component for Model {
                 });
             }
             Msg::LoadRemote => {
+                ctx.link()
+                    .send_message(Msg::AddNodesRequest(vec![self.root.clone()]));
+            }
+            Msg::AddNodesRequest(hashes) => {
                 let req = crate::ent::GetRequest {
-                    items: vec![crate::ent::GetItem {
-                        root: self.root.clone(),
-                    }],
+                    items: hashes
+                        .into_iter()
+                        .map(|hash| crate::ent::GetItem { root: hash })
+                        .collect(),
                 };
                 ctx.link().send_future(async move {
                     let c = crate::ent::EntClient;
                     let res = c.get_blobs(&req).await.unwrap();
-                    Msg::AddNodes(
+                    Msg::AddNodesResponse(
                         res.items
                             .values()
                             .filter_map(|v| {
@@ -298,8 +306,16 @@ impl Component for Model {
                     )
                 });
             }
-            Msg::AddNodes(nodes) => {
+            Msg::AddNodesResponse(nodes) => {
                 self.global_state_mut().node_store_mut().put_many(&nodes);
+                let mut all_hashes: Vec<_> = nodes
+                    .into_iter()
+                    .flat_map(|n| n.links.into_values().flatten())
+                    .collect();
+                all_hashes.retain(|h| !self.global_state.node_store.has_raw_node(h));
+                if !all_hashes.is_empty() {
+                    ctx.link().send_message(Msg::AddNodesRequest(all_hashes));
+                }
             }
             Msg::SetRoot(root) => {
                 self.root = root;

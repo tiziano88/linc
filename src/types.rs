@@ -242,6 +242,10 @@ impl NodeStore {
         }
     }
 
+    pub fn has_raw_node(&self, hash: &Hash) -> bool {
+        self.raw_nodes.contains_key(hash)
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (&Hash, &Vec<u8>)> {
         self.raw_nodes.iter()
     }
