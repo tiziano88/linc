@@ -163,6 +163,7 @@ schema! {
                     RUST_FRAGMENT,
                     GO_FRAGMENT,
                     MARKDOWN_FRAGMENT,
+                    RUST_CARGO_TOML,
                 ],
                 ..Default::default()
             },
@@ -1077,6 +1078,69 @@ schema! {
             },
             1 => Field {
                 name: "code",
+                raw: true,
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "e2a79822-f044-418a-998a-9bee7c5965bc" => RUST_CARGO_TOML @ Kind {
+        name: "rust_cargo_toml",
+        fields: hashmap!{
+            0 => Field {
+                name: "package",
+                types: &[RUST_CARGO_TOML_PACKAGE],
+                ..Default::default()
+            },
+            1 => Field {
+                name: "dependencies",
+                types: &[RUST_CARGO_TOML_DEP],
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "26cd8d0d-512a-4734-a902-6e3cf65e92e4" => RUST_CARGO_TOML_PACKAGE @ Kind {
+        name: "rust_cargo_toml_package",
+        fields: hashmap!{
+            0 => Field {
+                name: "name",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "version",
+                raw: true,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "authors",
+                raw: true,
+                ..Default::default()
+            },
+            3 => Field {
+                name: "edition",
+                raw: true,
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "e7b77123-bcfd-40b5-8ca9-bf96c7f34aad" => RUST_CARGO_TOML_DEP @ Kind {
+        name: "rust_cargo_toml_dep",
+        fields: hashmap!{
+            0 => Field {
+                name: "name",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "version",
+                raw: true,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "features",
                 raw: true,
                 ..Default::default()
             },

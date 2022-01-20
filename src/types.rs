@@ -250,10 +250,16 @@ impl NodeStore {
         self.raw_nodes.iter()
     }
 
+    pub fn len(&self) -> usize {
+        self.raw_nodes.len()
+    }
+
     #[must_use]
     pub fn put_parsed(&mut self, node: &Node) -> Hash {
         let h = hash_node(node);
         self.parsed_nodes.insert(h.clone(), node.clone());
+        self.raw_nodes
+            .insert(h.clone(), crate::types::serialize_node(node));
         h
     }
 

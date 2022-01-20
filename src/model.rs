@@ -209,7 +209,8 @@ impl Component for Model {
 
     fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
         if first_render {
-            ctx.link().send_message(Msg::SetRoot(get_location_hash()));
+            ctx.link()
+                .send_message_batch(vec![Msg::SetRoot(get_location_hash()), Msg::LoadRemote]);
         }
     }
 
@@ -267,6 +268,11 @@ impl Component for Model {
                 self.root = LocalStorage::get(ROOT_NODE_KEY).unwrap();
             }
             Msg::StoreRemote => {
+                log::info!(
+                    "store remote {} entries -- root {}",
+                    self.global_state.node_store.len(),
+                    self.root
+                );
                 let req = crate::ent::PutRequest {
                     blobs: self
                         .global_state
@@ -308,17 +314,18 @@ impl Component for Model {
             }
             Msg::AddNodesResponse(nodes) => {
                 self.global_state_mut().node_store_mut().put_many(&nodes);
-                let mut all_hashes: Vec<_> = nodes
+                let all_hashes: Vec<_> = nodes
                     .into_iter()
                     .flat_map(|n| n.links.into_values().flatten())
+                    .filter(|h| !self.global_state.node_store.has_raw_node(h))
                     .collect();
-                all_hashes.retain(|h| !self.global_state.node_store.has_raw_node(h));
                 if !all_hashes.is_empty() {
                     ctx.link().send_message(Msg::AddNodesRequest(all_hashes));
                 }
             }
             Msg::SetRoot(root) => {
                 self.root = root;
+                set_location_hash(&self.root);
             }
             Msg::Parse(v) => {
                 /*
@@ -398,6 +405,7 @@ impl Component for Model {
                         index: n - 1,
                     },
                 );
+                set_location_hash(&self.root);
             }
             Msg::ReplaceNode(path, node, mv) => {
                 log::info!("replace node {:?} {:?}", path, node);
@@ -407,6 +415,7 @@ impl Component for Model {
                 } else {
                     ctx.link().send_message(Msg::Select(path));
                 }
+                set_location_hash(&self.root);
             }
             Msg::SetNodeValue(path, value) => {
                 self.selected_path = path.clone();
@@ -418,6 +427,7 @@ impl Component for Model {
                     .unwrap_or_default();
                 node.value = value;
                 self.replace_node(&path, &node);
+                set_location_hash(&self.root);
             }
             Msg::AddItem => {
                 let selected_path = self.selected_path.clone();
@@ -444,19 +454,29 @@ impl Component for Model {
             }
             Msg::DeleteItem => {
                 let selected_path = self.selected_path.clone();
-                let (selector, parent_path) = selected_path.split_last().unwrap();
-                let mut parent = self
-                    .path(parent_path)
-                    .unwrap()
-                    .node(&self.global_state.node_store)
-                    .unwrap()
-                    .clone();
-                // If the field does not exist, create a default one.
-                let children = parent.links.entry(selector.field_id).or_default();
-                children.remove(selector.index);
-                self.replace_node(parent_path, &parent);
-                // Select parent.
-                self.selected_path = self.selected_path[..self.selected_path.len() - 1].to_vec();
+                if selected_path.is_empty() {
+                    let node = Node {
+                        kind: crate::schema::ROOT.to_string(),
+                        value: "".to_string(),
+                        links: BTreeMap::new(),
+                    };
+                    self.replace_node(&[], &node);
+                } else {
+                    let (selector, parent_path) = selected_path.split_last().unwrap();
+                    let mut parent = self
+                        .path(parent_path)
+                        .unwrap()
+                        .node(&self.global_state.node_store)
+                        .unwrap()
+                        .clone();
+                    // If the field does not exist, create a default one.
+                    let children = parent.links.entry(selector.field_id).or_default();
+                    children.remove(selector.index);
+                    self.replace_node(parent_path, &parent);
+                    // Select parent.
+                    self.selected_path =
+                        self.selected_path[..self.selected_path.len() - 1].to_vec();
+                }
             }
             Msg::CommandKey(_path, e) => {
                 log::info!("key: {}", e.key());
@@ -528,18 +548,6 @@ impl Component for Model {
         };
         // self.focus_command_line();
         self.update_errors(ctx);
-        /*
-        web_sys::window()
-            .unwrap()
-            .history()
-            .unwrap()
-            .replace_state_with_url(
-                &wasm_bindgen::JsValue::NULL,
-                "",
-                Some(&format!("#{}", self.root)),
-            )
-            .unwrap();
-            */
         true
     }
 }
@@ -548,6 +556,15 @@ fn get_location_hash() -> String {
     let state = web_sys::window().unwrap().location().hash().unwrap();
     log::info!("state: {:?}", state);
     state.strip_prefix("#").unwrap().to_string()
+}
+
+fn set_location_hash(v: &str) {
+    web_sys::window()
+        .unwrap()
+        .history()
+        .unwrap()
+        .replace_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(&format!("#{}", v)))
+        .unwrap();
 }
 
 impl Model {
