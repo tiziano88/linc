@@ -573,7 +573,7 @@ impl Component for Model {
 fn get_location_hash() -> String {
     let state = web_sys::window().unwrap().location().hash().unwrap();
     log::info!("state: {:?}", state);
-    state.strip_prefix("#").unwrap().to_string()
+    state.strip_prefix("#").unwrap_or(&state).to_string()
 }
 
 fn set_location_hash(v: &str) {
