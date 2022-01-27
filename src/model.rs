@@ -54,12 +54,12 @@ pub enum Msg {
     StoreLocal,
     LoadLocal,
 
-    StoreRemote,
-    LoadRemote,
+    StoreRemote(String), // API_URL
+    LoadRemote(String),
 
     // Add nodes to the store.
-    AddNodesRequest(Vec<Hash>),
-    AddNodesResponse(Vec<Vec<u8>>),
+    AddNodesRequest(Vec<Hash>, String), // API_URL
+    AddNodesResponse(Vec<Vec<u8>>, String),
 
     // Set root node from hash fragment.
     SetRoot(String),
@@ -127,7 +127,14 @@ impl Component for Model {
               >
                 <div class="sticky top-0 bg-white">
                     <div>{ "LINC" }</div>
-                    <div>{ "click on an empty node to see list of possible completions" }</div>
+                    <div>{ "Normal mode keys:" }</div>
+                    <div>{ "j: select next node" }</div>
+                    <div>{ "k: select previous node" }</div>
+                    <div>{ "h: select parent node" }</div>
+                    <div>{ "Enter: switch to Edit mode" }</div>
+                    <div>{ "Or click on a node to select it, then press Enter to add a link to it" }</div>
+                    <div>{ "Edit mode keys:" }</div>
+                    <div>{ "Escape: switch to Normal mode" }</div>
                     <div class="column">
                         <div>{ "Mode: " }{ format!("{:?}", self.global_state.mode) }</div>
                         <div class="h-8">{ display_cursor(&self.selected_path) }</div>
@@ -209,8 +216,10 @@ impl Component for Model {
 
     fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
         if first_render {
-            ctx.link()
-                .send_message_batch(vec![Msg::SetRoot(get_location_hash()), Msg::LoadRemote]);
+            ctx.link().send_message_batch(vec![
+                Msg::SetRoot(get_location_hash()),
+                Msg::LoadRemote(crate::ent::API_URL_LOCALHOST.to_string()),
+            ]);
         }
     }
 
@@ -267,7 +276,7 @@ impl Component for Model {
                 }
                 self.root = LocalStorage::get(ROOT_NODE_KEY).unwrap();
             }
-            Msg::StoreRemote => {
+            Msg::StoreRemote(api_url) => {
                 log::info!(
                     "store remote {} entries -- root {}",
                     self.global_state.node_store.len(),
@@ -282,16 +291,16 @@ impl Component for Model {
                         .collect(),
                 };
                 ctx.link().send_future(async move {
-                    let c = crate::ent::EntClient;
+                    let c = crate::ent::EntClient { api_url };
                     c.upload_blobs(&req).await;
                     Msg::Next
                 });
             }
-            Msg::LoadRemote => {
+            Msg::LoadRemote(api_url) => {
                 ctx.link()
-                    .send_message(Msg::AddNodesRequest(vec![self.root.clone()]));
+                    .send_message(Msg::AddNodesRequest(vec![self.root.clone()], api_url));
             }
-            Msg::AddNodesRequest(hashes) => {
+            Msg::AddNodesRequest(hashes, api_url) => {
                 let req = crate::ent::GetRequest {
                     items: hashes
                         .into_iter()
@@ -299,17 +308,25 @@ impl Component for Model {
                         .collect(),
                 };
                 ctx.link().send_future(async move {
-                    let c = crate::ent::EntClient;
-                    let res = c.get_blobs(&req).await.unwrap();
-                    Msg::AddNodesResponse(
-                        res.items
-                            .values()
-                            .filter_map(|v| base64::decode(&v).map(|v| v.to_vec()).ok())
-                            .collect(),
-                    )
+                    let c = crate::ent::EntClient {
+                        api_url: api_url.clone(),
+                    };
+                    match c.get_blobs(&req).await {
+                        Ok(res) => Msg::AddNodesResponse(
+                            res.items
+                                .values()
+                                .filter_map(|v| base64::decode(&v).map(|v| v.to_vec()).ok())
+                                .collect(),
+                            api_url,
+                        ),
+                        Err(err) => {
+                            log::error!("{:?}", err);
+                            Msg::Next
+                        }
+                    }
                 });
             }
-            Msg::AddNodesResponse(nodes) => {
+            Msg::AddNodesResponse(nodes, api_url) => {
                 self.global_state_mut()
                     .node_store_mut()
                     .put_many_raw(&nodes);
@@ -321,12 +338,15 @@ impl Component for Model {
                     .map(|link| link.hash)
                     .collect();
                 if !all_hashes.is_empty() {
-                    ctx.link().send_message(Msg::AddNodesRequest(all_hashes));
+                    ctx.link()
+                        .send_message(Msg::AddNodesRequest(all_hashes, api_url));
                 }
             }
             Msg::SetRoot(root) => {
-                self.root = root;
-                set_location_hash(&self.root);
+                if !root.is_empty() {
+                    self.root = root;
+                    set_location_hash(&self.root);
+                }
             }
             Msg::Parse(v) => {
                 /*
@@ -730,23 +750,33 @@ impl Model {
         let actions = vec![
             Action {
                 image: None,
-                text: "store(local)".to_string(),
+                text: "store(localstorage)".to_string(),
                 msg: Msg::StoreLocal,
             },
             Action {
                 image: None,
-                text: "load(local)".to_string(),
+                text: "load(localstorage)".to_string(),
                 msg: Msg::LoadLocal,
             },
             Action {
                 image: None,
+                text: "store(localhost)".to_string(),
+                msg: Msg::StoreRemote(crate::ent::API_URL_LOCALHOST.to_string()),
+            },
+            Action {
+                image: None,
+                text: "load(localhost)".to_string(),
+                msg: Msg::LoadRemote(crate::ent::API_URL_LOCALHOST.to_string()),
+            },
+            Action {
+                image: None,
                 text: "store(remote)".to_string(),
-                msg: Msg::StoreRemote,
+                msg: Msg::StoreRemote(crate::ent::API_URL_REMOTE.to_string()),
             },
             Action {
                 image: None,
                 text: "load(remote)".to_string(),
-                msg: Msg::LoadRemote,
+                msg: Msg::LoadRemote(crate::ent::API_URL_REMOTE.to_string()),
             },
             Action {
                 image: None,

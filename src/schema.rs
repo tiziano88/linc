@@ -158,6 +158,7 @@ schema! {
             0 => Field {
                 name: "item",
                 types: &[
+                    K8S_MANIFEST,
                     LINC_SCHEMA,
                     GIT,
                     DOCKER,
@@ -1190,6 +1191,105 @@ schema! {
             },
             2 => Field {
                 name: "id",
+                raw: true,
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "9a5da43c-9dd7-4b31-a46f-5d236b0ebed1" => K8S_MANIFEST @ Kind {
+        name: "k8s_manifest",
+        fields: hashmap!{
+            0 => Field {
+                name: "api_version",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "kind",
+                raw: true,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "metadata",
+                raw: true,
+                ..Default::default()
+            },
+            3 => Field {
+                name: "spec",
+                types: &[K8S_MANIFEST_SPEC],
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "10822f7a-8abc-4241-be7b-b56e4683971b" => K8S_MANIFEST_SPEC @ Kind {
+        name: "k8s_manifest_spec",
+        fields: hashmap!{
+            0 => Field {
+                name: "selector",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "replicas",
+                raw: true,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "strategy",
+                raw: true,
+                ..Default::default()
+            },
+            3 => Field {
+                name: "template",
+                types: &[K8S_MANIFEST_TEMPLATE],
+                ..Default::default()
+            },
+            4 => Field {
+                name: "containers",
+                types: &[K8S_MANIFEST_CONTAINER],
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "e7a5192d-8412-4c78-b4cd-14a3a58ba0d9" => K8S_MANIFEST_TEMPLATE @ Kind {
+        name: "k8s_manifest_template",
+        fields: hashmap!{
+            0 => Field {
+                name: "metadata",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "spec",
+                types: &[K8S_MANIFEST_SPEC],
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "15d3cb00-1390-402e-8c34-6f593a80082d" => K8S_MANIFEST_CONTAINER @ Kind {
+        name: "k8s_manifest_container",
+        fields: hashmap!{
+            0 => Field {
+                name: "name",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "image",
+                raw: true,
+                ..Default::default()
+            },
+            2 => Field {
+                name: "args",
+                raw: true,
+                ..Default::default()
+            },
+            3 => Field {
+                name: "ports",
                 raw: true,
                 ..Default::default()
             },

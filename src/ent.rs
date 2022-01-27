@@ -22,8 +22,11 @@ pub struct GetResponse {
     pub items: HashMap<String, String>,
 }
 
-const API_URL: &str = "http://127.0.0.1:8088";
-pub struct EntClient;
+pub const API_URL_LOCALHOST: &str = "http://127.0.0.1:8088";
+pub const API_URL_REMOTE: &str = "https://multiverse-312721.nw.r.appspot.com";
+pub struct EntClient {
+    pub api_url: String,
+}
 
 impl EntClient {
     pub async fn upload_blob(&self, content: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
@@ -36,7 +39,7 @@ impl EntClient {
 
     pub async fn upload_blobs(&self, req: &PutRequest) -> Result<(), Box<dyn std::error::Error>> {
         let req_json = serde_json::to_string(&req)?;
-        reqwasm::http::Request::post(&format!("{}/api/v1/blobs/put", API_URL))
+        reqwasm::http::Request::post(&format!("{}/api/v1/blobs/put", self.api_url))
             .body(req_json)
             .send()
             .await
@@ -49,12 +52,11 @@ impl EntClient {
         req: &GetRequest,
     ) -> Result<GetResponse, Box<dyn std::error::Error>> {
         let req_json = serde_json::to_string(&req)?;
-        let res = reqwasm::http::Request::post(&format!("{}/api/v1/blobs/get", API_URL))
+        let res = reqwasm::http::Request::post(&format!("{}/api/v1/blobs/get", self.api_url))
             .body(req_json)
             .send()
-            .await
-            .unwrap();
-        let res_json = res.json().await.unwrap();
+            .await?;
+        let res_json = res.json().await?;
         Ok(res_json)
     }
 }
