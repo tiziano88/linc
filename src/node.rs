@@ -4,7 +4,7 @@ use crate::{
     schema::{
         default_renderer, Field, Kind, Schema, ValidatorContext, RUST_FUNCTION_CALL, SCHEMA, *,
     },
-    types::{parent, Cursor, Hash, Mode, Node, Selector},
+    types::{parent, Cursor, Hash, Link, LinkTarget, LinkType, Mode, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
 use web_sys::HtmlInputElement;
@@ -84,174 +84,231 @@ impl Component for NodeComponent {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let default_node = Node::default();
         let props = ctx.props();
         let global_state = &props.global_state;
         let node_store = &global_state.node_store;
         let cursor = &props.cursor;
-        let hash = &cursor.hash;
-        let node = cursor.node(&node_store).unwrap_or(&default_node);
+        let link = &cursor.link;
+        let hash = &link.hash;
         let node_path = cursor.path();
         let _oninput = props.oninput.clone();
         let selected_path = &props.selected_path;
         let selected = selected_path == &node_path;
-        let kind = SCHEMA.get_kind(&node.kind);
-        let inner = if hash.is_empty() || node.kind.is_empty() {
-            let onupdatemodel = ctx.props().updatemodel.clone();
-            let node_path = node_path.clone();
-            let entries: Vec<Entry> = props
-                .allowed_kinds
-                .iter()
-                .map(|kind_id| Entry {
-                    label: SCHEMA
-                        .get_kind(kind_id)
-                        .map(|k| &(*k.name))
-                        .unwrap_or("INVALID")
-                        .to_string(),
-                    description: "".to_string(),
-                    action: Msg::ReplaceNode(node_path.clone(), create_node(kind_id), false),
-                    valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
-                })
-                .collect();
-            let onenter = {
-                let onupdatemodel = onupdatemodel.clone();
-                Callback::from(move |()| {
-                    onupdatemodel.emit(Msg::Parent);
-                })
-            };
-            let onupdatemodel0 = onupdatemodel.clone();
-            let placeholder = if hash.is_empty() {
-                "***".to_string()
-            } else {
-                "".to_string()
-            };
-            html! {
-              <CommandLine
-                input_node_ref={ self.input_node_ref.clone() }
-                entries={ entries }
-                value={ node.value.clone() }
-                placeholder={ placeholder }
-                oninput={ Callback::from(move |v| {
-                    onupdatemodel.emit(Msg::SetNodeValue(node_path.clone(), v));
-                 }) }
-                onselect={ ctx.props().updatemodel.clone() }
-                ondelete={ Callback::from(move |()| {
-                    onupdatemodel0.emit(Msg::DeleteItem);
-                 }) }
-                onenter={ onenter }
-                enabled={ selected && global_state.mode == Mode::Edit }
-              />
-            }
-        } else {
-            let renderer = if global_state.rich_render {
-                kind.and_then(|k| k.renderer).unwrap_or(default_renderer)
-            } else {
-                default_renderer
-            };
-            let validator_context = ValidatorContext {
-                global_state: global_state.clone(),
-                selected_path: selected_path.clone(),
-                cursor: cursor.clone(),
-                onselect: props.onselect.clone(),
-                updatemodel: props.updatemodel.clone(),
-            };
-            let content = renderer(&validator_context);
-            let footer = if global_state.mode == Mode::Edit && selected {
-                let entries: Vec<Entry> = kind
-                    .map(|k| {
-                        let mut all_entries = vec![];
-                        let mut field_entries = k
-                            .get_fields()
-                            .iter()
-                            .map(|(field_id, field)| Entry {
-                                label: field.name.to_string(),
-                                description: "".to_string(),
-                                action: Msg::AddField(node_path.to_vec(), **field_id),
-                                valid_classes: FIELD_CLASSES
-                                    .iter()
-                                    .map(|v| v.to_string())
-                                    .collect(),
-                            })
-                            .collect();
-                        // TODO: macros
-                        let mut macro_entries = vec![
-                            Entry {
-                                label: "delete".to_string(),
-                                description: "".to_string(),
-                                action: Msg::DeleteItem,
-                                valid_classes: vec![],
-                            },
-                            // TODO: should apply to literals too.
-                            Entry {
-                                label: "call".to_string(),
-                                description: "".to_string(),
-                                action: Msg::ReplaceNode(
-                                    node_path.clone(),
-                                    Node {
-                                        kind: RUST_FUNCTION_CALL.to_string(),
-                                        value: "".to_string(),
-                                        links: maplit::btreemap! {
-                                            0 => vec![hash.clone()],
-                                        },
-                                    },
-                                    false,
-                                ),
-                                valid_classes: vec![],
-                            },
-                            Entry {
-                                label: "array".to_string(),
-                                description: "".to_string(),
-                                action: Msg::ReplaceNode(
-                                    node_path.clone(),
-                                    Node {
-                                        kind: RUST_ARRAY_TYPE.to_string(),
-                                        value: "".to_string(),
-                                        links: maplit::btreemap! {
-                                            0 => vec![hash.clone()],
-                                        },
-                                    },
-                                    false,
-                                ),
-                                valid_classes: vec![],
-                            },
-                            Entry {
-                                label: "move up".to_string(),
-                                description: "".to_string(),
-                                action: Msg::ReplaceNode(
-                                    parent(&node_path).to_vec(),
-                                    node.clone(),
-                                    false,
-                                ),
-                                valid_classes: vec![],
-                            },
-                        ];
-                        all_entries.append(&mut field_entries);
-                        all_entries.append(&mut macro_entries);
-                        all_entries
+        log::info!("cursor: {:?}", cursor);
+        log::info!("link: {:?}", cursor.link);
+        log::info!("target: {:?}", cursor.link.get(&node_store));
+        let inner = match cursor.link.get(&node_store) {
+            None => {
+                let onupdatemodel = ctx.props().updatemodel.clone();
+                let node_path = node_path.clone();
+                let entries: Vec<Entry> = props
+                    .allowed_kinds
+                    .iter()
+                    .map(|kind_id| Entry {
+                        label: SCHEMA
+                            .get_kind(kind_id)
+                            .map(|k| &(*k.name))
+                            .unwrap_or("INVALID")
+                            .to_string(),
+                        description: "".to_string(),
+                        action: Msg::ReplaceNode(node_path.clone(), create_node(kind_id), false),
+                        valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
                     })
-                    .unwrap_or_default();
-                // Make it look like an actual field.
-                let _onupdatemodel0 = ctx.props().updatemodel.clone();
+                    .collect();
+                let onenter = {
+                    let onupdatemodel = onupdatemodel.clone();
+                    Callback::from(move |()| {
+                        onupdatemodel.emit(Msg::Parent);
+                    })
+                };
+                let onupdatemodel0 = onupdatemodel.clone();
+                let placeholder = "***".to_string();
+                let value = "".to_string();
                 html! {
-                    <div class="pl-3 absolute bg-white">
-                        <CommandLine
-                            input_node_ref={ self.input_node_ref.clone() }
-                            entries={ entries }
-                            value={ node.value.clone() }
-                            onselect={ ctx.props().updatemodel.clone() }
-                            ondelete={ self.ondelete.clone() }
-                            enabled=true
-                        />
-                    </div>
+                  <CommandLine
+                    input_node_ref={ self.input_node_ref.clone() }
+                    entries={ entries }
+                    value={ value.clone() }
+                    placeholder={ placeholder }
+                    oninput={ Callback::from(move |v: String| {
+                        onupdatemodel.emit(Msg::SetNodeValue(node_path.clone(), v.as_bytes().to_vec()));
+                     }) }
+                    onselect={ ctx.props().updatemodel.clone() }
+                    ondelete={ Callback::from(move |()| {
+                        onupdatemodel0.emit(Msg::DeleteItem);
+                     }) }
+                    onenter={ onenter }
+                    enabled={ selected && global_state.mode == Mode::Edit }
+                  />
                 }
-            } else {
-                html! {}
-            };
-            html! {
-              <>
-                { content }
-                { footer }
-              </>
+            }
+            Some(LinkTarget::Raw(value)) => {
+                let onupdatemodel = ctx.props().updatemodel.clone();
+                let node_path = node_path.clone();
+                let entries: Vec<Entry> = props
+                    .allowed_kinds
+                    .iter()
+                    .map(|kind_id| Entry {
+                        label: SCHEMA
+                            .get_kind(kind_id)
+                            .map(|k| &(*k.name))
+                            .unwrap_or("INVALID")
+                            .to_string(),
+                        description: "".to_string(),
+                        action: Msg::ReplaceNode(node_path.clone(), create_node(kind_id), false),
+                        valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
+                    })
+                    .collect();
+                let onenter = {
+                    let onupdatemodel = onupdatemodel.clone();
+                    Callback::from(move |()| {
+                        onupdatemodel.emit(Msg::Parent);
+                    })
+                };
+                let onupdatemodel0 = onupdatemodel.clone();
+                let placeholder = if value.is_empty() {
+                    "***".to_string()
+                } else {
+                    "".to_string()
+                };
+                let value =
+                    String::from_utf8(value.to_vec()).unwrap_or("INVALID STRING".to_string());
+                html! {
+                  <CommandLine
+                    input_node_ref={ self.input_node_ref.clone() }
+                    entries={ entries }
+                    value={ value.clone() }
+                    placeholder={ placeholder }
+                    oninput={ Callback::from(move |v: String| {
+                        onupdatemodel.emit(Msg::SetNodeValue(node_path.clone(), v.as_bytes().to_vec()));
+                     }) }
+                    onselect={ ctx.props().updatemodel.clone() }
+                    ondelete={ Callback::from(move |()| {
+                        onupdatemodel0.emit(Msg::DeleteItem);
+                     }) }
+                    onenter={ onenter }
+                    enabled={ selected && global_state.mode == Mode::Edit }
+                  />
+                }
+            }
+            Some(LinkTarget::Parsed(node)) => {
+                let kind = SCHEMA.get_kind(&node.kind);
+                let renderer = if global_state.rich_render {
+                    kind.and_then(|k| k.renderer).unwrap_or(default_renderer)
+                } else {
+                    default_renderer
+                };
+                let validator_context = ValidatorContext {
+                    global_state: global_state.clone(),
+                    selected_path: selected_path.clone(),
+                    cursor: cursor.clone(),
+                    onselect: props.onselect.clone(),
+                    updatemodel: props.updatemodel.clone(),
+                };
+                let content = renderer(&validator_context);
+                let footer = if global_state.mode == Mode::Edit && selected {
+                    let entries: Vec<Entry> = kind
+                        .map(|k| {
+                            let mut all_entries = vec![];
+                            let mut field_entries = k
+                                .get_fields()
+                                .iter()
+                                .map(|(field_id, field)| Entry {
+                                    label: field.name.to_string(),
+                                    description: "".to_string(),
+                                    action: Msg::AddField(node_path.to_vec(), **field_id),
+                                    valid_classes: FIELD_CLASSES
+                                        .iter()
+                                        .map(|v| v.to_string())
+                                        .collect(),
+                                })
+                                .collect();
+                            // TODO: macros
+                            let mut macro_entries = vec![
+                                Entry {
+                                    label: "delete".to_string(),
+                                    description: "".to_string(),
+                                    action: Msg::DeleteItem,
+                                    valid_classes: vec![],
+                                },
+                                // TODO: should apply to literals too.
+                                Entry {
+                                    label: "call".to_string(),
+                                    description: "".to_string(),
+                                    action: Msg::ReplaceNode(
+                                        node_path.clone(),
+                                        Node {
+                                            kind: RUST_FUNCTION_CALL.to_string(),
+                                            links: maplit::btreemap! {
+                                                0 => vec![Link {
+                                                    type_: LinkType::Raw,
+                                                    hash: hash.clone(),
+                                                }],
+                                            },
+                                        },
+                                        false,
+                                    ),
+                                    valid_classes: vec![],
+                                },
+                                Entry {
+                                    label: "array".to_string(),
+                                    description: "".to_string(),
+                                    action: Msg::ReplaceNode(
+                                        node_path.clone(),
+                                        Node {
+                                            kind: RUST_ARRAY_TYPE.to_string(),
+                                            links: maplit::btreemap! {
+                                                0 => vec![Link {
+                                                    type_: LinkType::Raw,
+                                                    hash: hash.clone(),
+                                                }],
+                                            },
+                                        },
+                                        false,
+                                    ),
+                                    valid_classes: vec![],
+                                },
+                                Entry {
+                                    label: "move up".to_string(),
+                                    description: "".to_string(),
+                                    action: Msg::ReplaceNode(
+                                        parent(&node_path).to_vec(),
+                                        node.clone(),
+                                        false,
+                                    ),
+                                    valid_classes: vec![],
+                                },
+                            ];
+                            all_entries.append(&mut field_entries);
+                            all_entries.append(&mut macro_entries);
+                            all_entries
+                        })
+                        .unwrap_or_default();
+                    // Make it look like an actual field.
+                    let _onupdatemodel0 = ctx.props().updatemodel.clone();
+                    // TODO: What value to use?
+                    let value = "".to_string();
+                    html! {
+                        <div class="pl-3 absolute bg-white">
+                            <CommandLine
+                                input_node_ref={ self.input_node_ref.clone() }
+                                entries={ entries }
+                                value={ value.clone() }
+                                onselect={ ctx.props().updatemodel.clone() }
+                                ondelete={ self.ondelete.clone() }
+                                enabled=true
+                            />
+                        </div>
+                    }
+                } else {
+                    html! {}
+                };
+                html! {
+                  <>
+                    { content }
+                    { footer }
+                  </>
+                }
             }
         };
         let onselect = ctx.props().onselect.clone();

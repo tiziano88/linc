@@ -1,7 +1,7 @@
 use crate::{
     model::{GlobalState, Model, Msg},
     node::{NodeComponent, KIND_CLASSES},
-    types::{append, display_selector_text, Cursor, Node, Path, Selector},
+    types::{append, display_selector_text, Cursor, LinkTarget, Node, Path, Selector},
 };
 use maplit::hashmap;
 use std::{
@@ -158,6 +158,7 @@ schema! {
             0 => Field {
                 name: "item",
                 types: &[
+                    LINC_SCHEMA,
                     GIT,
                     DOCKER,
                     RUST_FRAGMENT,
@@ -1147,6 +1148,54 @@ schema! {
         },
         ..Default::default()
     },
+    "cbfa09aa-7bd9-4400-a31a-111e52677643" => LINC_SCHEMA @ Kind {
+        name: "linc_schema",
+        fields: hashmap!{
+            0 => Field {
+                name: "kind",
+                types: &[LINC_SCHEMA_KIND],
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "70640dcf-f4f0-4c5c-9e03-984c09910879" => LINC_SCHEMA_KIND @ Kind {
+        name: "linc_schema_kind",
+        fields: hashmap!{
+            0 => Field {
+                name: "name",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "field",
+                types: &[LINC_SCHEMA_FIELD],
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
+    "93f7c3de-4cb6-4d70-a540-d53324bb184c" => LINC_SCHEMA_FIELD @ Kind {
+        name: "linc_schema_field",
+        fields: hashmap!{
+            0 => Field {
+                name: "name",
+                raw: true,
+                ..Default::default()
+            },
+            1 => Field {
+                name: "raw",
+                raw: true, // TODO: make this a boolean
+                ..Default::default()
+            },
+            2 => Field {
+                name: "id",
+                raw: true,
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    },
 }
 
 pub fn create_node(kind_id: &str) -> Node {
@@ -1154,7 +1203,6 @@ pub fn create_node(kind_id: &str) -> Node {
         .get_kind(kind_id)
         .map(|kind| Node {
             kind: kind_id.to_string(),
-            value: "".to_string(),
             links: BTreeMap::new(),
         })
         .unwrap_or_else(|| panic!("Unknown kind: {}", kind_id))
@@ -1169,8 +1217,8 @@ pub struct ValidatorContext {
 }
 
 impl ValidatorContext {
-    pub fn node(&self) -> Option<&Node> {
-        self.cursor.node(&self.global_state.node_store)
+    pub fn node<'a>(&'a self) -> Option<LinkTarget<'a>> {
+        self.cursor.link.get(&self.global_state.node_store)
     }
 
     pub fn view_child(&self, field_id: usize) -> Html {
@@ -1182,7 +1230,8 @@ impl ValidatorContext {
     fn view_child_index(&self, field_id: usize, index: usize, placeholder: bool) -> Option<Html> {
         log::debug!("view_child: {:?}", field_id);
         log::debug!("cursor: {:?}", self.cursor);
-        let node = &self.node().unwrap();
+        let link_target = self.node()?;
+        let node = link_target.as_parsed()?;
         let hash = node
             .links
             .get(&field_id)
@@ -1214,21 +1263,26 @@ impl ValidatorContext {
     }
     pub fn view_children(&self, field_id: usize) -> Vec<Html> {
         log::debug!("view_child: {:?}", field_id);
-        let node = &self.node().unwrap();
-        if node.links.get(&field_id).is_none() {
-            return vec![];
+        match self.node() {
+            None => Vec::new(),
+            Some(LinkTarget::Raw(_)) => Vec::new(),
+            Some(LinkTarget::Parsed(node)) => {
+                if node.links.get(&field_id).is_none() {
+                    return vec![];
+                }
+                if node.links.get(&field_id).unwrap().is_empty() {
+                    return vec![];
+                }
+                node.links
+                    .get(&field_id)
+                    .unwrap()
+                    .iter()
+                    .enumerate()
+                    // TODO: placeholder for invalid ones?
+                    .filter_map(|(i, _h)| self.view_child_index(field_id, i, true))
+                    .collect()
+            }
         }
-        if node.links.get(&field_id).unwrap().is_empty() {
-            return vec![];
-        }
-        node.links
-            .get(&field_id)
-            .unwrap()
-            .iter()
-            .enumerate()
-            // TODO: placeholder for invalid ones?
-            .filter_map(|(i, _h)| self.view_child_index(field_id, i, true))
-            .collect()
     }
     // TODO: field / child.
 }
@@ -1238,64 +1292,71 @@ type Renderer = fn(&ValidatorContext) -> Html;
 
 pub fn default_renderer(c: &ValidatorContext) -> Html {
     let cursor = &c.cursor;
-    let node = c.node().unwrap();
     let path = cursor.path();
     log::debug!("default_renderer: {:?}", path);
-    let kind = SCHEMA.get_kind(&node.kind);
-    let _hash = "xxx";
-    let header = html! {
-        <div>
-            <div class={ KIND_CLASSES.join(" ") }>
-                { kind.map(|k| k.name).unwrap_or_default() }
+    match c.node().unwrap() {
+        LinkTarget::Raw(value) => html! {
+            <div>
+                <span>{ "Raw" }</span>
             </div>
-            // <div class="inline-block text-xs border border-black">
-            //     { hash.clone() }
-            // </div>
-        </div>
-    };
-    // Node.
-    // https://codepen.io/xotonic/pen/JRLAOR
-    let children: Vec<_> = node
-        .links
-        .iter()
-        .flat_map(|(field_id, hashes)| {
-            let field = kind.and_then(|k| k.get_field(*field_id));
-            let field_name = field.map(|f| f.name).unwrap_or("INVALID");
-            // let _validators = field_schema.map(|v| v.validators).unwrap_or_default();
-            let path = path.clone();
-            hashes.iter().enumerate().map(move |(i, _h)| {
-                let selector = Selector {
-                    field_id: *field_id,
-                    index: i,
-                };
-                let child_path = append(&path, selector.clone());
-                let updatemodel = c.updatemodel.clone();
-                let onclick = Callback::from(move |e: MouseEvent| {
-                    e.stop_propagation();
-                    updatemodel.emit(Msg::Select(child_path.clone()))
-                });
-                // TODO: Sticky field headers.
-                html! {
-                    <div class="pl-3 flex items-start">
-                        <div onclick={ onclick } >
-                            { display_selector_text(field_name, selector.index) }
-                        </div>
-                        <div class="">
-                            { ":" }
-                        </div>
-                        { c.view_child_index(*field_id, i, true).unwrap_or_default() }
+        },
+        LinkTarget::Parsed(node) => {
+            let kind = SCHEMA.get_kind(&node.kind);
+            let header = html! {
+                <div>
+                    <div class={ KIND_CLASSES.join(" ") }>
+                        { kind.map(|k| k.name).unwrap_or_default() }
                     </div>
-                }
-            })
-        })
-        .collect();
-    html! {
-        // <div class="divide-y divide-black border-t border-b border-black border-solid">
-        <>
-            { header }
-            <div class="space-y-1 my-1">
-                { for children }
-            </div>
-        </>
+                    // <div class="inline-block text-xs border border-black">
+                    //     { hash.clone() }
+                    // </div>
+                </div>
+            };
+            // Node.
+            // https://codepen.io/xotonic/pen/JRLAOR
+            let children: Vec<_> = node
+                .links
+                .iter()
+                .flat_map(|(field_id, hashes)| {
+                    let field = kind.and_then(|k| k.get_field(*field_id));
+                    let field_name = field.map(|f| f.name).unwrap_or("INVALID");
+                    // let _validators = field_schema.map(|v| v.validators).unwrap_or_default();
+                    let path = path.clone();
+                    hashes.iter().enumerate().map(move |(i, _h)| {
+                        let selector = Selector {
+                            field_id: *field_id,
+                            index: i,
+                        };
+                        let child_path = append(&path, selector.clone());
+                        let updatemodel = c.updatemodel.clone();
+                        let onclick = Callback::from(move |e: MouseEvent| {
+                            e.stop_propagation();
+                            updatemodel.emit(Msg::Select(child_path.clone()))
+                        });
+                        // TODO: Sticky field headers.
+                        html! {
+                            <div class="pl-3 flex items-start">
+                                <div onclick={ onclick } >
+                                    { display_selector_text(field_name, selector.index) }
+                                </div>
+                                <div class="">
+                                    { ":" }
+                                </div>
+                                { c.view_child_index(*field_id, i, true).unwrap_or_default() }
+                            </div>
+                        }
+                    })
+                })
+                .collect();
+            html! {
+                // <div class="divide-y divide-black border-t border-b border-black border-solid">
+                <>
+                    { header }
+                    <div class="space-y-1 my-1">
+                        { for children }
+                    </div>
+                </>
+            }
+        }
     }
 }

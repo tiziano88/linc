@@ -1,11 +1,13 @@
 use crate::{model::Msg, node::FIELD_CLASSES};
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{hash_map::Entry, BTreeMap, HashMap},
     convert::TryInto,
     ops::Deref,
     rc::Rc,
+    sync::{Arc, Mutex},
 };
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{HtmlInputElement, HtmlTextAreaElement, InputEvent};
@@ -76,33 +78,39 @@ pub struct NodeState {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct NodeStore {
     raw_nodes: HashMap<Hash, Vec<u8>>,
-    parsed_nodes: HashMap<Hash, Node>,
+    parsed_nodes: Arc<Mutex<HashMap<Hash, Node>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Cursor {
     pub parent: Option<(Box<Cursor>, Selector)>,
-    pub hash: Hash,
+    pub link: Link,
 }
 
 impl Cursor {
     pub fn next(&self, node_store: &NodeStore) -> Option<Cursor> {
         // This must work even if the current hash / reference is invalid.
-        self.node(node_store)
-            .and_then(|node| {
-                node.links.iter().next().map(|(field_id, children)| {
-                    // Depth first.
-                    Cursor {
-                        parent: Some((
-                            Box::new(self.clone()),
-                            Selector {
-                                field_id: *field_id,
-                                index: 0,
-                            },
-                        )),
-                        hash: children[0].clone(),
+        self.link
+            .get(node_store)
+            .and_then(|link_target| {
+                match link_target {
+                    LinkTarget::Raw(_) => None,
+                    LinkTarget::Parsed(node) => {
+                        node.links.iter().next().map(|(field_id, links)| {
+                            // Depth first.
+                            Cursor {
+                                parent: Some((
+                                    Box::new(self.clone()),
+                                    Selector {
+                                        field_id: *field_id,
+                                        index: 0,
+                                    },
+                                )),
+                                link: links[0].clone(),
+                            }
+                        })
                     }
-                })
+                }
             })
             .or_else(||
                 // Try one level up.
@@ -111,36 +119,39 @@ impl Cursor {
                     .and_then(|(parent, selector)| parent.child_after(node_store, &selector)))
     }
     fn child_after(&self, node_store: &NodeStore, selector: &Selector) -> Option<Cursor> {
-        self.node(node_store).and_then(|node| {
-            let children = node.links.get(&selector.field_id).unwrap();
-            if selector.index < (children.len() - 1) {
-                //  Next index.
-                let next_selector = Selector {
-                    field_id: selector.field_id,
-                    index: selector.index + 1,
-                };
-                self.traverse(node_store, &[next_selector])
-            } else if let Some((next_field_id, _next_children)) = node
-                .links
-                .range((
-                    std::ops::Bound::Excluded(selector.field_id),
-                    std::ops::Bound::Unbounded,
-                ))
-                .next()
-            {
-                // Next field.
-                let next_selector = Selector {
-                    field_id: *next_field_id,
-                    index: 0,
-                };
-                self.traverse(node_store, &[next_selector])
-            } else {
-                // Go up.
-                self.parent
-                    .as_ref()
-                    .and_then(|(parent, selector)| parent.child_after(node_store, &selector))
-            }
-        })
+        self.link
+            .get(node_store)
+            .and_then(|node| node.as_parsed().cloned())
+            .and_then(|node| {
+                let children = node.links.get(&selector.field_id).unwrap();
+                if selector.index < (children.len() - 1) {
+                    //  Next index.
+                    let next_selector = Selector {
+                        field_id: selector.field_id,
+                        index: selector.index + 1,
+                    };
+                    self.traverse(node_store, &[next_selector])
+                } else if let Some((next_field_id, _next_children)) = node
+                    .links
+                    .range((
+                        std::ops::Bound::Excluded(selector.field_id),
+                        std::ops::Bound::Unbounded,
+                    ))
+                    .next()
+                {
+                    // Next field.
+                    let next_selector = Selector {
+                        field_id: *next_field_id,
+                        index: 0,
+                    };
+                    self.traverse(node_store, &[next_selector])
+                } else {
+                    // Go up.
+                    self.parent
+                        .as_ref()
+                        .and_then(|(parent, selector)| parent.child_after(node_store, &selector))
+                }
+            })
     }
     pub fn prev(&self, node_store: &NodeStore) -> Option<Cursor> {
         // TODO: not working
@@ -154,7 +165,7 @@ impl Cursor {
             })
     }
     fn child_before(&self, node_store: &NodeStore, selector: &Selector) -> Option<Cursor> {
-        self.node(node_store).and_then(|node| {
+        self.link.get(node_store).and_then(|node| {
             if selector.index >= (0 + 1) {
                 //  Prev index.
                 let prev_selector = Selector {
@@ -163,7 +174,9 @@ impl Cursor {
                 };
                 self.traverse(node_store, &[prev_selector])
             } else if let Some((prev_field_id, _prev_children)) = node
-                .links
+                .as_parsed()
+                .map(|node| node.links.clone())
+                .unwrap_or_default()
                 .range((
                     std::ops::Bound::Unbounded,
                     std::ops::Bound::Excluded(selector.field_id),
@@ -189,20 +202,21 @@ impl Cursor {
     pub fn traverse(&self, node_store: &NodeStore, path: &[Selector]) -> Option<Cursor> {
         match path.split_first() {
             Some((selector, rest)) => {
-                let node = self.node(node_store)?;
-                // child_hash may or may not be valid at this point.
-                let child_hash = node.links.get(&selector.field_id)?.get(selector.index)?;
-                let child = Cursor {
-                    parent: Some((Box::new(self.clone()), selector.clone())),
-                    hash: child_hash.clone(),
-                };
-                child.traverse(node_store, rest)
+                match self.link.get(node_store)? {
+                    LinkTarget::Raw(_) => None,
+                    LinkTarget::Parsed(node) => {
+                        // child_hash may or may not be valid at this point.
+                        let child_link = node.links.get(&selector.field_id)?.get(selector.index)?;
+                        let child = Cursor {
+                            parent: Some((Box::new(self.clone()), selector.clone())),
+                            link: child_link.clone(),
+                        };
+                        child.traverse(node_store, rest)
+                    }
+                }
             }
             None => Some(self.clone()),
         }
-    }
-    pub fn node<'a>(&self, node_store: &'a NodeStore) -> Option<&'a Node> {
-        node_store.get_parsed(&self.hash)
     }
     pub fn path(&self) -> Vec<Selector> {
         match &self.parent {
@@ -229,15 +243,17 @@ impl NodeStore {
         self.raw_nodes.get(hash)
     }
 
-    pub fn get_parsed(&self, hash: &Hash) -> Option<&Node> {
-        match self.parsed_nodes.get(hash) {
-            Some(node) => Some(node),
-            None => {
-                // let raw_node = self.raw_nodes.get(hash)?;
-                // let node = crate::types::deserialize_node(raw_node)?;
-                // self.parsed_nodes.insert(hash.clone(), node.clone());
-                // Some(&node)
-                None
+    pub fn get_parsed(&self, hash: &Hash) -> Option<Node> {
+        let mut n = self.parsed_nodes.lock().unwrap();
+        let entry = n.entry(hash.clone());
+        match entry {
+            Entry::Occupied(o) => Some(o.get().clone()),
+            Entry::Vacant(v) => {
+                let raw_node = self.raw_nodes.get(hash)?;
+                // TODO: Put into cache.
+                let node = crate::types::deserialize_node(raw_node)?;
+                let r = v.insert(node.clone());
+                Some(node)
             }
         }
     }
@@ -257,22 +273,31 @@ impl NodeStore {
     #[must_use]
     pub fn put_parsed(&mut self, node: &Node) -> Hash {
         let h = hash_node(node);
-        self.parsed_nodes.insert(h.clone(), node.clone());
+        self.parsed_nodes
+            .lock()
+            .unwrap()
+            .insert(h.clone(), node.clone());
         self.raw_nodes
             .insert(h.clone(), crate::types::serialize_node(node));
         h
     }
 
     #[must_use]
-    pub fn put_raw(&mut self, node: &Node) -> Hash {
-        let h = hash_node(node);
-        self.parsed_nodes.insert(h.clone(), node.clone());
+    pub fn put_raw(&mut self, value: &[u8]) -> Hash {
+        let h = hash(value);
+        self.raw_nodes.insert(h.clone(), value.to_vec());
         h
     }
 
     pub fn put_many(&mut self, nodes: &[Node]) {
         for node in nodes {
             self.put_parsed(node);
+        }
+    }
+
+    pub fn put_many_raw(&mut self, nodes: &[Vec<u8>]) {
+        for node in nodes {
+            self.put_raw(node);
         }
     }
 }
@@ -283,9 +308,61 @@ impl NodeStore {
 pub struct Node {
     // UUID.
     pub kind: String,
-    pub value: String,
     // Keyed by field id.
-    pub links: BTreeMap<usize, Vec<Hash>>,
+    pub links: BTreeMap<usize, Vec<Link>>,
+}
+
+impl Node {
+    pub fn get_link(&self, selector: &Selector) -> Option<&Link> {
+        self.links
+            .get(&selector.field_id)
+            .and_then(|links| links.get(selector.index))
+    }
+    pub fn get_link_mut(&mut self, selector: &Selector) -> Option<&mut Link> {
+        self.links
+            .get_mut(&selector.field_id)
+            .and_then(|links| links.get_mut(selector.index))
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq)]
+#[repr(u8)]
+pub enum LinkType {
+    Raw = 0,
+    Parsed = 1,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct Link {
+    // 0: raw
+    // 1: parsed
+    #[serde(rename = "type")]
+    pub type_: LinkType,
+    pub hash: Hash,
+}
+
+impl Link {
+    pub fn get<'a>(&self, node_store: &'a NodeStore) -> Option<LinkTarget<'a>> {
+        match self.type_ {
+            LinkType::Raw => node_store.get_raw(&self.hash).map(LinkTarget::Raw),
+            LinkType::Parsed => node_store.get_parsed(&self.hash).map(LinkTarget::Parsed),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum LinkTarget<'a> {
+    Raw(&'a Vec<u8>),
+    Parsed(Node),
+}
+
+impl<'a> LinkTarget<'a> {
+    pub fn as_parsed(&self) -> Option<&Node> {
+        match self {
+            LinkTarget::Parsed(node) => Some(node),
+            _ => None,
+        }
+    }
 }
 
 pub fn display_selector(selector: &Selector) -> Html {

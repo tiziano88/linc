@@ -40,7 +40,7 @@ pub struct Model {
 
     pub node_state: HashMap<Path, NodeState>,
 
-    pub stack: Vec<String>,
+    pub stack: Vec<Link>,
 
     pub document_keydown_listener: EventListener,
     pub window_hashchange_listener: EventListener,
@@ -59,7 +59,7 @@ pub enum Msg {
 
     // Add nodes to the store.
     AddNodesRequest(Vec<Hash>),
-    AddNodesResponse(Vec<Node>),
+    AddNodesResponse(Vec<Vec<u8>>),
 
     // Set root node from hash fragment.
     SetRoot(String),
@@ -78,7 +78,7 @@ pub enum Msg {
     ReplaceNode(Path, Node, bool),
     AddField(Path, usize),
 
-    SetNodeValue(Path, String),
+    SetNodeValue(Path, Vec<u8>),
 
     CommandKey(Path, KeyboardEvent),
 
@@ -145,8 +145,8 @@ impl Component for Model {
                     />
                 </div>
                 <div class="h-40">
-                    <div>{ format!("Ref: {:?}", self.path(&self.selected_path).map(|c| c.hash)) }</div>
-                    <div>{ format!("Node: {:?}", self.path(&self.selected_path).and_then(|c| c.node(&self.global_state.node_store))) }</div>
+                    <div>{ format!("Ref: {:?}", self.path(&self.selected_path).map(|c| c.link)) }</div>
+                    <div>{ format!("Node: {:?}", self.path(&self.selected_path).and_then(|c| c.link.get(&self.global_state.node_store))) }</div>
                     <textarea type="text" class="border-solid border-black border" oninput={ parse } />
                     { serialized }
                 </div>
@@ -247,12 +247,12 @@ impl Component for Model {
             }
             Msg::Cut => {
                 if let Some(cursor) = self.path(&self.selected_path) {
-                    self.stack.push(cursor.hash);
+                    self.stack.push(cursor.link);
                 }
             }
             Msg::Copy => {
                 if let Some(cursor) = self.path(&self.selected_path) {
-                    self.stack.push(cursor.hash);
+                    self.stack.push(cursor.link);
                 }
             }
             Msg::Paste => if let Some(node_ref) = self.stack.last() {},
@@ -304,20 +304,21 @@ impl Component for Model {
                     Msg::AddNodesResponse(
                         res.items
                             .values()
-                            .filter_map(|v| {
-                                let b = base64::decode(&v).unwrap();
-                                crate::types::deserialize_node(&b)
-                            })
+                            .filter_map(|v| base64::decode(&v).map(|v| v.to_vec()).ok())
                             .collect(),
                     )
                 });
             }
             Msg::AddNodesResponse(nodes) => {
-                self.global_state_mut().node_store_mut().put_many(&nodes);
+                self.global_state_mut()
+                    .node_store_mut()
+                    .put_many_raw(&nodes);
                 let all_hashes: Vec<_> = nodes
                     .into_iter()
+                    .flat_map(|b| crate::types::deserialize_node(&b))
                     .flat_map(|n| n.links.into_values().flatten())
-                    .filter(|h| !self.global_state.node_store.has_raw_node(h))
+                    .filter(|link| !self.global_state.node_store.has_raw_node(&link.hash))
+                    .map(|link| link.hash)
                     .collect();
                 if !all_hashes.is_empty() {
                     ctx.link().send_message(Msg::AddNodesRequest(all_hashes));
@@ -389,13 +390,19 @@ impl Component for Model {
                 let mut node = self
                     .path(&path)
                     .unwrap()
-                    .node(&self.global_state.node_store)
+                    .link
+                    .get(&self.global_state.node_store)
+                    .unwrap()
+                    .as_parsed()
                     .unwrap()
                     .clone();
                 node.links
                     .entry(field_id)
                     .or_insert_with(Vec::new)
-                    .push("".into());
+                    .push(Link {
+                        type_: LinkType::Parsed,
+                        hash: "".into(),
+                    });
                 let n = node.links[&field_id].len();
                 self.replace_node(&path, &node);
                 self.selected_path = append(
@@ -419,14 +426,7 @@ impl Component for Model {
             }
             Msg::SetNodeValue(path, value) => {
                 self.selected_path = path.clone();
-                let mut node = self
-                    .path(&path)
-                    .unwrap()
-                    .node(&self.global_state.node_store)
-                    .cloned()
-                    .unwrap_or_default();
-                node.value = value;
-                self.replace_node(&path, &node);
+                self.set_node_value(&path, &value);
                 set_location_hash(&self.root);
             }
             Msg::AddItem => {
@@ -434,19 +434,28 @@ impl Component for Model {
                 let (selector, parent_path) = selected_path.split_last().unwrap();
                 let new_ref = self.global_state_mut().node_store_mut().put_parsed(&Node {
                     kind: "invalid".to_string(),
-                    value: "invalid".to_string(),
                     links: BTreeMap::new(),
                 });
                 let mut parent = self
                     .path(parent_path)
                     .unwrap()
-                    .node(&self.global_state.node_store)
+                    .link
+                    .get(&self.global_state.node_store)
+                    .unwrap()
+                    .as_parsed()
                     .unwrap()
                     .clone();
                 // If the field does not exist, create a default one.
                 let children = parent.links.entry(selector.field_id).or_default();
                 let new_index = selector.index + 1;
-                children.insert(new_index, new_ref);
+                children.insert(
+                    new_index,
+                    Link {
+                        // TODO: Or should this be raw?
+                        type_: LinkType::Parsed,
+                        hash: new_ref,
+                    },
+                );
                 self.replace_node(parent_path, &parent);
                 // Select newly created element.
                 self.selected_path.last_mut().unwrap().index = new_index;
@@ -457,7 +466,6 @@ impl Component for Model {
                 if selected_path.is_empty() {
                     let node = Node {
                         kind: crate::schema::ROOT.to_string(),
-                        value: "".to_string(),
                         links: BTreeMap::new(),
                     };
                     self.replace_node(&[], &node);
@@ -466,7 +474,10 @@ impl Component for Model {
                     let mut parent = self
                         .path(parent_path)
                         .unwrap()
-                        .node(&self.global_state.node_store)
+                        .link
+                        .get(&self.global_state.node_store)
+                        .unwrap()
+                        .as_parsed()
                         .unwrap()
                         .clone();
                     // If the field does not exist, create a default one.
@@ -481,12 +492,6 @@ impl Component for Model {
             Msg::CommandKey(_path, e) => {
                 log::info!("key: {}", e.key());
                 // self.selected_path = self.selected_path
-                let node = self
-                    .path(&self.selected_path)
-                    .unwrap()
-                    .node(&self.global_state.node_store)
-                    .cloned()
-                    .unwrap_or_default();
 
                 /*
                 let selection = window().unwrap().get_selection().unwrap().unwrap();
@@ -505,27 +510,40 @@ impl Component for Model {
                 match e.key().as_ref() {
                     "Enter" => {
                         self.global_state_mut().mode = Mode::Edit;
+                        e.prevent_default();
                     }
                     "Escape" => {
                         self.global_state_mut().mode = Mode::Normal;
                         // If it is a pure value, select the parent again so another field may be
                         // added.
-                        if node.kind.is_empty() {
-                            self.selected_path =
-                                self.selected_path[..self.selected_path.len() - 1].to_vec();
-                        }
+                        // TODO: re-enable
+                        // let node = self
+                        //     .path(&self.selected_path)
+                        //     .unwrap()
+                        //     .node(&self.global_state.node_store)
+                        //     .cloned()
+                        //     .unwrap_or_default();
+                        // if node.kind.is_empty() {
+                        //     self.selected_path =
+                        //         self.selected_path[..self.selected_path.len() - 1].to_vec();
+                        // }
                     }
                     // "Enter" if self.mode == Mode::Edit =>
                     // self.link.send_message(Msg::EnterCommand), "Escape" =>
                     // self.link.send_message(Msg::EscapeCommand),
-                    "ArrowUp" if self.global_state.mode == Mode::Normal => {
+                    // TODO:
+                    // h -> parent
+                    // j -> next_sibling
+                    // k -> prev_sibling
+                    // l -> child
+                    "ArrowUp" | "h" if self.global_state.mode == Mode::Normal => {
                         ctx.link().send_message(Msg::Parent)
                     }
                     "ArrowDown" => {}
-                    "ArrowLeft" if self.global_state.mode == Mode::Normal => {
+                    "ArrowLeft" | "k" if self.global_state.mode == Mode::Normal => {
                         ctx.link().send_message(Msg::Prev)
                     }
-                    "ArrowRight" if self.global_state.mode == Mode::Normal => {
+                    "ArrowRight" | "j" if self.global_state.mode == Mode::Normal => {
                         ctx.link().send_message(Msg::Next)
                     }
                     /*
@@ -571,7 +589,10 @@ impl Model {
     fn root(&self) -> Cursor {
         Cursor {
             parent: None,
-            hash: self.root.clone(),
+            link: Link {
+                type_: LinkType::Parsed,
+                hash: self.root.clone(),
+            },
         }
     }
 
@@ -579,39 +600,64 @@ impl Model {
         self.root().traverse(&self.global_state.node_store, path)
     }
 
+    pub fn set_node_value(&mut self, path: &[Selector], value: &[u8]) {
+        let target_hash = self.global_state_mut().node_store_mut().put_raw(value);
+        if let Some(root) = self.replace_node_from(
+            &self.root.clone(),
+            path,
+            &Link {
+                type_: LinkType::Raw,
+                hash: target_hash,
+            },
+        ) {
+            self.root = root.hash;
+        }
+    }
+
     pub fn replace_node(&mut self, path: &[Selector], node: &Node) {
-        if let Some(root) = self.replace_node_from(&self.root.clone(), path, node) {
-            self.root = root;
+        let target_hash = self.global_state_mut().node_store_mut().put_parsed(node);
+        if let Some(root) = self.replace_node_from(
+            &self.root.clone(),
+            path,
+            &Link {
+                type_: LinkType::Parsed,
+                hash: target_hash,
+            },
+        ) {
+            self.root = root.hash;
         }
     }
 
     #[must_use]
-    fn replace_node_from(&mut self, base: &Hash, path: &[Selector], node: &Node) -> Option<Hash> {
+    fn replace_node_from(&mut self, base: &Hash, path: &[Selector], link: &Link) -> Option<Link> {
         if path.is_empty() {
-            Some(self.global_state_mut().node_store_mut().put_parsed(node))
+            Some(link.clone())
         } else {
-            let mut base = self.global_state.node_store.get_parsed(base)?.clone();
+            let mut new_node = self.global_state.node_store.get_parsed(base)?.clone();
             let selector = path[0].clone();
-            match base
-                .links
-                .get(&selector.field_id)
-                .and_then(|v| v.get(selector.index))
-            {
-                Some(old_child_hash) => {
-                    let new_child_hash =
-                        self.replace_node_from(old_child_hash, &path[1..], node)?;
-                    base.links.get_mut(&selector.field_id)?[selector.index] = new_child_hash;
+            match new_node.get_link_mut(&selector) {
+                Some(mut old_child_link) => {
+                    let new_child_link =
+                        self.replace_node_from(&old_child_link.hash, &path[1..], link)?;
+                    *old_child_link = new_child_link;
                 }
                 None => {
                     // WARN: Only works for one level of children.
-                    let new_child_hash = self.global_state_mut().node_store_mut().put_parsed(node);
-                    base.links
+                    new_node
+                        .links
                         .entry(selector.field_id)
                         .or_default()
-                        .push(new_child_hash);
+                        .push(link.clone());
                 }
             };
-            Some(self.global_state_mut().node_store_mut().put_parsed(&base))
+            let new_node_hash = self
+                .global_state_mut()
+                .node_store_mut()
+                .put_parsed(&new_node);
+            Some(Link {
+                type_: LinkType::Parsed,
+                hash: new_node_hash,
+            })
         }
     }
 
