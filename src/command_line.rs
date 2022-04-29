@@ -1,4 +1,7 @@
-use crate::{model::Msg, types::get_value_from_input_event};
+use crate::{
+    model::{Msg, TreeMsg},
+    types::get_value_from_input_event,
+};
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
@@ -21,7 +24,7 @@ pub struct CommandLineProperties {
     #[prop_or_default]
     pub oninput: Callback<String>,
     #[prop_or_default]
-    pub onselect: Callback<Msg>,
+    pub onselect: Callback<TreeMsg>,
     #[prop_or_default]
     pub onenter: Callback<()>,
     #[prop_or_default]
@@ -32,7 +35,7 @@ pub struct CommandLineProperties {
 pub struct Entry {
     pub label: String,
     pub description: String,
-    pub action: Msg,
+    pub action: TreeMsg,
     pub valid_classes: Vec<String>,
 }
 

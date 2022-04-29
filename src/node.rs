@@ -1,6 +1,6 @@
 use crate::{
     command_line::{CommandLine, Entry},
-    model::{GlobalState, Model, Msg},
+    model::{GlobalState, Model, Msg, TreeMsg, TreeState},
     schema::{
         default_renderer, Field, Kind, Schema, ValidatorContext, RUST_FUNCTION_CALL, SCHEMA, *,
     },
@@ -21,15 +21,11 @@ pub struct NodeComponent {
 pub struct NodeProperties {
     pub global_state: Rc<GlobalState>,
     pub cursor: Cursor,
-    pub selected_path: Vec<Selector>,
     #[prop_or_default]
     pub placeholder: String,
     // When a new value is typed in the text box.
     #[prop_or_default]
     pub oninput: Callback<String>,
-    // When the node is selected (e.g. clicked).
-    #[prop_or_default]
-    pub onselect: Callback<Vec<Selector>>,
     #[prop_or_default]
     pub updatemodel: Callback<Msg>,
     #[prop_or_default]
@@ -65,19 +61,20 @@ impl Component for NodeComponent {
 
     fn create(ctx: &Context<Self>) -> Self {
         log::debug!("creating node");
-        let updatemodel = ctx.props().updatemodel.clone();
+        let updatetree = ctx.props().updatetree.clone();
         Self {
             input_node_ref: NodeRef::default(),
             old_props: None,
-            ondelete: Callback::from(move |()| updatemodel.emit(Msg::Parent)),
+            ondelete: Callback::from(move |()| updatetree.emit(TreeMsg::Parent)),
         }
     }
 
     fn rendered(&mut self, ctx: &Context<Self>, _first_render: bool) {
         let props = ctx.props();
         let global_state = &props.global_state;
+        let tree_state = &props.tree_state;
         let cursor = &props.cursor;
-        let selected = props.selected_path == cursor.path();
+        let selected = tree_state.selected_path == cursor.path();
         if selected && global_state.mode == Mode::Edit {
             self.focus_input();
         }
@@ -86,20 +83,21 @@ impl Component for NodeComponent {
     fn view(&self, ctx: &Context<Self>) -> Html {
         let props = ctx.props();
         let global_state = &props.global_state;
+        let tree_state = &props.tree_state;
         let node_store = &global_state.node_store;
         let cursor = &props.cursor;
         let link = &cursor.link;
         let hash = &link.hash;
         let node_path = cursor.path();
         let _oninput = props.oninput.clone();
-        let selected_path = &props.selected_path;
+        let selected_path = &tree_state.selected_path;
         let selected = selected_path == &node_path;
         log::info!("cursor: {:?}", cursor);
         log::info!("link: {:?}", cursor.link);
         log::info!("target: {:?}", cursor.link.get(&node_store));
         let inner = match cursor.link.get(&node_store) {
             None => {
-                let onupdatemodel = ctx.props().updatemodel.clone();
+                let onupdatetree = ctx.props().updatetree.clone();
                 let node_path = node_path.clone();
                 let entries: Vec<Entry> = props
                     .allowed_kinds
@@ -111,17 +109,21 @@ impl Component for NodeComponent {
                             .unwrap_or("INVALID")
                             .to_string(),
                         description: "".to_string(),
-                        action: Msg::ReplaceNode(node_path.clone(), create_node(kind_id), false),
+                        action: TreeMsg::ReplaceNode(
+                            node_path.clone(),
+                            create_node(kind_id),
+                            false,
+                        ),
                         valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
                     })
                     .collect();
                 let onenter = {
-                    let onupdatemodel = onupdatemodel.clone();
+                    let onupdatetree = onupdatetree.clone();
                     Callback::from(move |()| {
-                        onupdatemodel.emit(Msg::Parent);
+                        onupdatetree.emit(TreeMsg::Parent);
                     })
                 };
-                let onupdatemodel0 = onupdatemodel.clone();
+                let onupdatetree0 = onupdatetree.clone();
                 let placeholder = "***".to_string();
                 let value = "".to_string();
                 html! {
@@ -131,11 +133,11 @@ impl Component for NodeComponent {
                     value={ value.clone() }
                     placeholder={ placeholder }
                     oninput={ Callback::from(move |v: String| {
-                        onupdatemodel.emit(Msg::SetNodeValue(node_path.clone(), v.as_bytes().to_vec()));
+                        onupdatetree.emit(TreeMsg::SetNodeValue(node_path.clone(), v.as_bytes().to_vec()));
                      }) }
-                    onselect={ ctx.props().updatemodel.clone() }
+                    onselect={ ctx.props().updatetree.clone() }
                     ondelete={ Callback::from(move |()| {
-                        onupdatemodel0.emit(Msg::DeleteItem);
+                        onupdatetree0.emit(TreeMsg::DeleteItem);
                      }) }
                     onenter={ onenter }
                     enabled={ selected && global_state.mode == Mode::Edit }
@@ -143,7 +145,7 @@ impl Component for NodeComponent {
                 }
             }
             Some(LinkTarget::Raw(value)) => {
-                let onupdatemodel = ctx.props().updatemodel.clone();
+                let onupdatetree = ctx.props().updatetree.clone();
                 let node_path = node_path.clone();
                 let entries: Vec<Entry> = props
                     .allowed_kinds
@@ -155,17 +157,21 @@ impl Component for NodeComponent {
                             .unwrap_or("INVALID")
                             .to_string(),
                         description: "".to_string(),
-                        action: Msg::ReplaceNode(node_path.clone(), create_node(kind_id), false),
+                        action: TreeMsg::ReplaceNode(
+                            node_path.clone(),
+                            create_node(kind_id),
+                            false,
+                        ),
                         valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
                     })
                     .collect();
                 let onenter = {
-                    let onupdatemodel = onupdatemodel.clone();
+                    let onupdatetree = onupdatetree.clone();
                     Callback::from(move |()| {
-                        onupdatemodel.emit(Msg::Parent);
+                        onupdatetree.emit(TreeMsg::Parent);
                     })
                 };
-                let onupdatemodel0 = onupdatemodel.clone();
+                let onupdatetree0 = onupdatetree.clone();
                 let placeholder = if value.is_empty() {
                     "***".to_string()
                 } else {
@@ -180,11 +186,11 @@ impl Component for NodeComponent {
                     value={ value.clone() }
                     placeholder={ placeholder }
                     oninput={ Callback::from(move |v: String| {
-                        onupdatemodel.emit(Msg::SetNodeValue(node_path.clone(), v.as_bytes().to_vec()));
+                        onupdatetree.emit(TreeMsg::SetNodeValue(node_path.clone(), v.as_bytes().to_vec()));
                      }) }
-                    onselect={ ctx.props().updatemodel.clone() }
+                    onselect={ ctx.props().updatetree.clone() }
                     ondelete={ Callback::from(move |()| {
-                        onupdatemodel0.emit(Msg::DeleteItem);
+                        onupdatetree0.emit(TreeMsg::DeleteItem);
                      }) }
                     onenter={ onenter }
                     enabled={ selected && global_state.mode == Mode::Edit }
@@ -200,10 +206,10 @@ impl Component for NodeComponent {
                 };
                 let validator_context = ValidatorContext {
                     global_state: global_state.clone(),
-                    selected_path: selected_path.clone(),
+                    tree_state: tree_state.clone(),
                     cursor: cursor.clone(),
-                    onselect: props.onselect.clone(),
                     updatemodel: props.updatemodel.clone(),
+                    updatetree: props.updatetree.clone(),
                 };
                 let content = renderer(&validator_context);
                 let footer = if global_state.mode == Mode::Edit && selected {
@@ -216,7 +222,7 @@ impl Component for NodeComponent {
                                 .map(|(field_id, field)| Entry {
                                     label: field.name.to_string(),
                                     description: "".to_string(),
-                                    action: Msg::AddField(node_path.to_vec(), **field_id),
+                                    action: TreeMsg::AddField(node_path.to_vec(), **field_id),
                                     valid_classes: FIELD_CLASSES
                                         .iter()
                                         .map(|v| v.to_string())
@@ -228,14 +234,14 @@ impl Component for NodeComponent {
                                 Entry {
                                     label: "delete".to_string(),
                                     description: "".to_string(),
-                                    action: Msg::DeleteItem,
+                                    action: TreeMsg::DeleteItem,
                                     valid_classes: vec![],
                                 },
                                 // TODO: should apply to literals too.
                                 Entry {
                                     label: "call".to_string(),
                                     description: "".to_string(),
-                                    action: Msg::ReplaceNode(
+                                    action: TreeMsg::ReplaceNode(
                                         node_path.clone(),
                                         Node {
                                             kind: RUST_FUNCTION_CALL.to_string(),
@@ -253,7 +259,7 @@ impl Component for NodeComponent {
                                 Entry {
                                     label: "array".to_string(),
                                     description: "".to_string(),
-                                    action: Msg::ReplaceNode(
+                                    action: TreeMsg::ReplaceNode(
                                         node_path.clone(),
                                         Node {
                                             kind: RUST_ARRAY_TYPE.to_string(),
@@ -271,7 +277,7 @@ impl Component for NodeComponent {
                                 Entry {
                                     label: "move up".to_string(),
                                     description: "".to_string(),
-                                    action: Msg::ReplaceNode(
+                                    action: TreeMsg::ReplaceNode(
                                         parent(&node_path).to_vec(),
                                         node.clone(),
                                         false,
@@ -294,7 +300,7 @@ impl Component for NodeComponent {
                                 input_node_ref={ self.input_node_ref.clone() }
                                 entries={ entries }
                                 value={ value.clone() }
-                                onselect={ ctx.props().updatemodel.clone() }
+                                onselect={ ctx.props().updatetree.clone() }
                                 ondelete={ self.ondelete.clone() }
                                 enabled=true
                             />
@@ -311,12 +317,12 @@ impl Component for NodeComponent {
                 }
             }
         };
-        let onselect = ctx.props().onselect.clone();
+        let onupdatetree = ctx.props().updatetree.clone();
         let onclick = {
             let node_path = node_path;
             ctx.link().callback(move |e: MouseEvent| {
                 e.stop_propagation();
-                onselect.emit(node_path.clone());
+                onupdatetree.emit(TreeMsg::Select(node_path.clone()));
                 NodeMsg::Click
             })
         };
@@ -359,12 +365,11 @@ impl Component for NodeComponent {
                 "same global_state: {:?}",
                 old_props.global_state == new_props.global_state
             );
-            log::debug!("same cursor: {:?}", old_props.cursor == new_props.cursor);
             log::debug!(
-                "same selected_path: {:?}",
-                old_props.selected_path == new_props.selected_path
+                "same tree_state: {:?}",
+                old_props.tree_state == new_props.tree_state
             );
-            log::debug!("new selected_path: {:?}", new_props.selected_path);
+            log::debug!("same cursor: {:?}", old_props.cursor == new_props.cursor);
             log::debug!(
                 "same updatemodel: {:?}",
                 old_props.updatemodel == new_props.updatemodel
@@ -372,7 +377,7 @@ impl Component for NodeComponent {
             log::debug!("same oninput: {:?}", old_props.oninput == new_props.oninput);
             old_props.global_state == new_props.global_state
                 || old_props.cursor == new_props.cursor
-                || old_props.selected_path == new_props.selected_path
+                || old_props.tree_state == new_props.tree_state
         } else {
             false
         };

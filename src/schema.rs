@@ -1,5 +1,5 @@
 use crate::{
-    model::{GlobalState, Model, Msg},
+    model::{GlobalState, Model, Msg, TreeMsg, TreeState},
     node::{NodeComponent, KIND_CLASSES},
     types::{append, display_selector_text, Cursor, LinkTarget, Node, Path, Selector},
 };
@@ -1310,10 +1310,10 @@ pub fn create_node(kind_id: &str) -> Node {
 
 pub struct ValidatorContext {
     pub global_state: Rc<GlobalState>,
-    pub selected_path: Vec<Selector>,
+    pub tree_state: Rc<TreeState>,
     pub cursor: Cursor,
-    pub onselect: Callback<Vec<Selector>>,
     pub updatemodel: Callback<Msg>,
+    pub updatetree: Callback<TreeMsg>,
 }
 
 impl ValidatorContext {
@@ -1354,9 +1354,8 @@ impl ValidatorContext {
             <NodeComponent
                 global_state={ self.global_state.clone() }
                 cursor={ child_cursor }
-                selected_path={ self.selected_path.clone() }
-                onselect={ self.onselect.clone() }
                 updatemodel={ self.updatemodel.clone() }
+                updatetree={ self.updatetree.clone() }
                 allowed_kinds={ allowed_kinds }
             />
         })
@@ -1428,10 +1427,10 @@ pub fn default_renderer(c: &ValidatorContext) -> Html {
                             index: i,
                         };
                         let child_path = append(&path, selector.clone());
-                        let updatemodel = c.updatemodel.clone();
+                        let updatetree = c.updatetree.clone();
                         let onclick = Callback::from(move |e: MouseEvent| {
                             e.stop_propagation();
-                            updatemodel.emit(Msg::Select(child_path.clone()))
+                            updatetree.emit(TreeMsg::Select(child_path.clone()))
                         });
                         // TODO: Sticky field headers.
                         html! {

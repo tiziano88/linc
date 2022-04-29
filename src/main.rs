@@ -11,6 +11,7 @@ mod model;
 mod node;
 mod schema;
 mod transform;
+mod tree;
 mod types;
 
 fn main() {
