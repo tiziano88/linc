@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     rc::Rc,
+    str::FromStr,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{window, InputEvent, MouseEvent};
@@ -34,6 +35,7 @@ pub struct Model {
     pub global_state: Rc<GlobalState>,
 
     pub root: Hash,
+    pub schema_root: Hash,
 
     pub selected_path: Path,
     pub hover_path: Path,
@@ -44,6 +46,29 @@ pub struct Model {
 
     pub document_keydown_listener: EventListener,
     pub window_hashchange_listener: EventListener,
+}
+
+#[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
+pub struct HashState {
+    pub root: Hash,
+    pub schema_root: Hash,
+}
+
+impl FromStr for HashState {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.split('@');
+        let root = parts.next().unwrap_or_default().to_string();
+        let schema_root = parts.next().unwrap_or_default().to_string();
+        Ok(Self { root, schema_root })
+    }
+}
+
+impl std::fmt::Display for HashState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}@{}", self.root, self.schema_root)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -62,7 +87,7 @@ pub enum Msg {
     AddNodesResponse(Vec<Vec<u8>>, String),
 
     // Set root node from hash fragment.
-    SetRoot(String),
+    SetHashState(HashState),
 
     Parse(String),
 
@@ -177,13 +202,15 @@ impl Component for Model {
             },
         );
 
-        let window_listener = ctx.link().callback(move |e: String| Msg::SetRoot(e));
+        let window_listener = ctx
+            .link()
+            .callback(move |e: HashState| Msg::SetHashState(e));
         let window_hashchange_listener = gloo_events::EventListener::new(
             &gloo_utils::window(),
             "hashchange",
             move |e: &Event| {
                 e.stop_propagation();
-                window_listener.emit(get_location_hash());
+                window_listener.emit(get_location_hash().parse::<HashState>().unwrap());
             },
         );
 
@@ -197,6 +224,7 @@ impl Component for Model {
             }),
 
             root,
+            schema_root: "".to_string(),
 
             selected_path: vec![],
             hover_path: vec![],
@@ -217,7 +245,7 @@ impl Component for Model {
     fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
         if first_render {
             ctx.link().send_message_batch(vec![
-                Msg::SetRoot(get_location_hash()),
+                Msg::SetHashState(get_location_hash().parse::<HashState>().unwrap()),
                 Msg::LoadRemote(crate::ent::API_URL_LOCALHOST.to_string()),
             ]);
         }
@@ -342,11 +370,14 @@ impl Component for Model {
                         .send_message(Msg::AddNodesRequest(all_hashes, api_url));
                 }
             }
-            Msg::SetRoot(root) => {
-                if !root.is_empty() {
-                    self.root = root;
-                    set_location_hash(&self.root);
+            Msg::SetHashState(hash_state) => {
+                if !hash_state.root.is_empty() {
+                    self.root = hash_state.root;
                 }
+                if !hash_state.schema_root.is_empty() {
+                    self.schema_root = hash_state.schema_root;
+                }
+                set_location_hash(&format!("{}@{}", &self.root, &self.schema_root));
             }
             Msg::Parse(v) => {
                 /*
