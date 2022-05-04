@@ -1,4 +1,4 @@
-use crate::{model::Msg, node::FIELD_CLASSES};
+use crate::{model::Msg, node::FIELD_CLASSES, schema::Schema};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sha2::{Digest, Sha256};
@@ -23,7 +23,7 @@ pub fn new_ref() -> Ref {
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
 pub struct Selector {
-    pub field_id: usize,
+    pub field_id: u64,
     pub index: usize,
 }
 
@@ -85,10 +85,11 @@ pub struct NodeStore {
 pub struct Cursor {
     pub parent: Option<(Box<Cursor>, Selector)>,
     pub link: Link,
+    pub kind_id: u64,
 }
 
 impl Cursor {
-    pub fn next(&self, node_store: &NodeStore) -> Option<Cursor> {
+    pub fn next(&self, node_store: &NodeStore, schema: &Schema) -> Option<Cursor> {
         // This must work even if the current hash / reference is invalid.
         self.link
             .get(node_store)
@@ -107,6 +108,7 @@ impl Cursor {
                                     },
                                 )),
                                 link: links[0].clone(),
+                                kind_id: 0, // TODO
                             }
                         })
                     }
@@ -116,21 +118,26 @@ impl Cursor {
                 // Try one level up.
                 self.parent
                 .as_ref()
-                    .and_then(|(parent, selector)| parent.child_after(node_store, &selector)))
+                    .and_then(|(parent, selector)| parent.child_after(node_store, schema, &selector)))
     }
-    fn child_after(&self, node_store: &NodeStore, selector: &Selector) -> Option<Cursor> {
+    fn child_after(
+        &self,
+        node_store: &NodeStore,
+        schema: &Schema,
+        selector: &Selector,
+    ) -> Option<Cursor> {
         self.link
             .get(node_store)
             .and_then(|node| node.as_parsed().cloned())
             .and_then(|node| {
                 let children = node.links.get(&selector.field_id).unwrap();
-                if selector.index < (children.len() - 1) {
+                if selector.index < (children.len() - 1).try_into().unwrap() {
                     //  Next index.
                     let next_selector = Selector {
                         field_id: selector.field_id,
                         index: selector.index + 1,
                     };
-                    self.traverse(node_store, &[next_selector])
+                    self.traverse(node_store, schema, &[next_selector])
                 } else if let Some((next_field_id, _next_children)) = node
                     .links
                     .range((
@@ -144,27 +151,32 @@ impl Cursor {
                         field_id: *next_field_id,
                         index: 0,
                     };
-                    self.traverse(node_store, &[next_selector])
+                    self.traverse(node_store, schema, &[next_selector])
                 } else {
                     // Go up.
-                    self.parent
-                        .as_ref()
-                        .and_then(|(parent, selector)| parent.child_after(node_store, &selector))
+                    self.parent.as_ref().and_then(|(parent, selector)| {
+                        parent.child_after(node_store, schema, &selector)
+                    })
                 }
             })
     }
-    pub fn prev(&self, node_store: &NodeStore) -> Option<Cursor> {
+    pub fn prev(&self, node_store: &NodeStore, schema: &Schema) -> Option<Cursor> {
         // TODO: not working
         self.parent
             .as_ref()
-            .and_then(|(parent, selector)| parent.child_before(node_store, &selector))
+            .and_then(|(parent, selector)| parent.child_before(node_store, schema, &selector))
             .or_else(|| {
                 self.parent
                     .as_ref()
                     .map(|(parent, _selector)| (**parent).clone())
             })
     }
-    fn child_before(&self, node_store: &NodeStore, selector: &Selector) -> Option<Cursor> {
+    fn child_before(
+        &self,
+        node_store: &NodeStore,
+        schema: &Schema,
+        selector: &Selector,
+    ) -> Option<Cursor> {
         self.link.get(node_store).and_then(|node| {
             if selector.index >= (0 + 1) {
                 //  Prev index.
@@ -172,7 +184,7 @@ impl Cursor {
                     field_id: selector.field_id,
                     index: selector.index - 1,
                 };
-                self.traverse(node_store, &[prev_selector])
+                self.traverse(node_store, schema, &[prev_selector])
             } else if let Some((prev_field_id, _prev_children)) = node
                 .as_parsed()
                 .map(|node| node.links.clone())
@@ -188,7 +200,7 @@ impl Cursor {
                     field_id: *prev_field_id,
                     index: 0,
                 };
-                self.traverse(node_store, &[prev_selector])
+                self.traverse(node_store, schema, &[prev_selector])
             } else {
                 None
             }
@@ -199,7 +211,13 @@ impl Cursor {
             .as_ref()
             .map(|(parent_cursor, _selector)| (**parent_cursor).clone())
     }
-    pub fn traverse(&self, node_store: &NodeStore, path: &[Selector]) -> Option<Cursor> {
+    pub fn traverse(
+        &self,
+        node_store: &NodeStore,
+        schema: &Schema,
+        path: &[Selector],
+    ) -> Option<Cursor> {
+        let kind = schema.get_kind(self.kind_id).cloned().unwrap_or_default();
         match path.split_first() {
             Some((selector, rest)) => {
                 match self.link.get(node_store)? {
@@ -210,8 +228,13 @@ impl Cursor {
                         let child = Cursor {
                             parent: Some((Box::new(self.clone()), selector.clone())),
                             link: child_link.clone(),
+                            kind_id: kind
+                                .get_field(selector.field_id)
+                                .cloned()
+                                .unwrap_or_default()
+                                .kind_id,
                         };
-                        child.traverse(node_store, rest)
+                        child.traverse(node_store, schema, rest)
                     }
                 }
             }
@@ -306,10 +329,8 @@ impl NodeStore {
 // when navigating.
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct Node {
-    // UUID.
-    pub kind: String,
     // Keyed by field id.
-    pub links: BTreeMap<usize, Vec<Link>>,
+    pub links: BTreeMap<u64, Vec<Link>>,
 }
 
 impl Node {
@@ -329,13 +350,13 @@ impl Node {
 #[repr(u8)]
 pub enum LinkType {
     Raw = 0,
-    Parsed = 1,
+    Dag = 1,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Link {
     // 0: raw
-    // 1: parsed
+    // 1: dag
     #[serde(rename = "type")]
     pub type_: LinkType,
     pub hash: Hash,
@@ -345,7 +366,7 @@ impl Link {
     pub fn get<'a>(&self, node_store: &'a NodeStore) -> Option<LinkTarget<'a>> {
         match self.type_ {
             LinkType::Raw => node_store.get_raw(&self.hash).map(LinkTarget::Raw),
-            LinkType::Parsed => node_store.get_parsed(&self.hash).map(LinkTarget::Parsed),
+            LinkType::Dag => node_store.get_parsed(&self.hash).map(LinkTarget::Parsed),
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     node::NodeComponent,
-    schema::{Field, SCHEMA},
+    schema::{Field, Schema},
     types::*,
 };
 use gloo_events::EventListener;
@@ -18,6 +18,7 @@ use yew::{html, prelude::*, Html, KeyboardEvent};
 #[derive(PartialEq, Clone, Serialize, Deserialize)]
 pub struct GlobalState {
     pub node_store: Rc<NodeStore>,
+    pub schema: Schema,
     pub mode: Mode,
     pub show_serialized: bool,
     pub rich_render: bool,
@@ -101,7 +102,7 @@ pub enum Msg {
     SetMode(Mode),
 
     ReplaceNode(Path, Node, bool),
-    AddField(Path, usize),
+    AddField(Path, u64),
 
     SetNodeValue(Path, Vec<u8>),
 
@@ -144,6 +145,24 @@ impl Component for Model {
             Msg::CommandKey(vec![], e)
         });
 
+        let root_kind_id = self
+            .global_state
+            .schema
+            .root_kind()
+            .cloned()
+            .unwrap_or_default()
+            .kind_id;
+
+        let cursor = Cursor {
+            parent: None,
+            link: Link {
+                type_: LinkType::Dag,
+                hash: self.root.clone(),
+            },
+            kind_id: root_kind_id,
+        };
+        log::info!("root cursor: {:?}", cursor);
+
         html! {
             <div
               tabindex="0"
@@ -170,7 +189,7 @@ impl Component for Model {
                 <div class="flex">
                     <NodeComponent
                       global_state={ self.global_state.clone() }
-                      cursor={ self.root().clone() }
+                      cursor={ cursor }
                       selected_path={ self.selected_path.clone() }
                       onselect={ ctx.link().callback(Msg::Select) }
                       updatemodel={ ctx.link().callback(|m| m) }
@@ -218,6 +237,7 @@ impl Component for Model {
         Model {
             global_state: Rc::new(GlobalState {
                 node_store: Rc::new(node_store),
+                schema: super::initial::initial_schema(),
                 mode: Mode::Normal,
                 show_serialized: false,
                 rich_render: true,
@@ -451,7 +471,7 @@ impl Component for Model {
                     .entry(field_id)
                     .or_insert_with(Vec::new)
                     .push(Link {
-                        type_: LinkType::Parsed,
+                        type_: LinkType::Dag,
                         hash: "".into(),
                     });
                 let n = node.links[&field_id].len();
@@ -484,7 +504,6 @@ impl Component for Model {
                 let selected_path = self.selected_path.clone();
                 let (selector, parent_path) = selected_path.split_last().unwrap();
                 let new_ref = self.global_state_mut().node_store_mut().put_parsed(&Node {
-                    kind: "invalid".to_string(),
                     links: BTreeMap::new(),
                 });
                 let mut parent = self
@@ -503,7 +522,7 @@ impl Component for Model {
                     new_index,
                     Link {
                         // TODO: Or should this be raw?
-                        type_: LinkType::Parsed,
+                        type_: LinkType::Dag,
                         hash: new_ref,
                     },
                 );
@@ -515,11 +534,7 @@ impl Component for Model {
             Msg::DeleteItem => {
                 let selected_path = self.selected_path.clone();
                 if selected_path.is_empty() {
-                    let node = Node {
-                        kind: crate::schema::ROOT.to_string(),
-                        links: BTreeMap::new(),
-                    };
-                    self.replace_node(&[], &node);
+                    self.replace_node(&[], &Node::default());
                 } else {
                     let (selector, parent_path) = selected_path.split_last().unwrap();
                     let mut parent = self
@@ -641,14 +656,19 @@ impl Model {
         Cursor {
             parent: None,
             link: Link {
-                type_: LinkType::Parsed,
+                type_: LinkType::Dag,
                 hash: self.root.clone(),
             },
+            kind_id: 0, // TODO
         }
     }
 
     pub fn path(&self, path: &[Selector]) -> Option<Cursor> {
-        self.root().traverse(&self.global_state.node_store, path)
+        self.root().traverse(
+            &self.global_state.node_store,
+            &self.global_state.schema,
+            path,
+        )
     }
 
     pub fn set_node_value(&mut self, path: &[Selector], value: &[u8]) {
@@ -671,7 +691,7 @@ impl Model {
             &self.root.clone(),
             path,
             &Link {
-                type_: LinkType::Parsed,
+                type_: LinkType::Dag,
                 hash: target_hash,
             },
         ) {
@@ -706,7 +726,7 @@ impl Model {
                 .node_store_mut()
                 .put_parsed(&new_node);
             Some(Link {
-                type_: LinkType::Parsed,
+                type_: LinkType::Dag,
                 hash: new_node_hash,
             })
         }
@@ -723,7 +743,9 @@ impl Model {
 
     fn prev(&mut self) {
         if let Some(cursor) = self.path(&self.selected_path) {
-            if let Some(prev) = cursor.prev(&self.global_state.node_store) {
+            if let Some(prev) =
+                cursor.prev(&self.global_state.node_store, &self.global_state.schema)
+            {
                 self.selected_path = prev.path();
             }
         }
@@ -732,7 +754,9 @@ impl Model {
     fn next(&mut self) {
         log::warn!("old selected_path: {:?}", self.selected_path);
         if let Some(cursor) = self.path(&self.selected_path) {
-            if let Some(next) = cursor.next(&self.global_state.node_store) {
+            if let Some(next) =
+                cursor.next(&self.global_state.node_store, &self.global_state.schema)
+            {
                 log::warn!("new selected_path: {:?}", next.path());
                 self.selected_path = next.path();
             }

@@ -1,9 +1,7 @@
 use crate::{
     command_line::{CommandLine, Entry},
     model::{GlobalState, Model, Msg},
-    schema::{
-        default_renderer, Field, Kind, Schema, ValidatorContext, RUST_FUNCTION_CALL, SCHEMA, *,
-    },
+    schema::{default_renderer, Field, Kind, Schema, ValidatorContext, *},
     types::{parent, Cursor, Hash, Link, LinkTarget, LinkType, Mode, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
@@ -32,8 +30,6 @@ pub struct NodeProperties {
     pub onselect: Callback<Vec<Selector>>,
     #[prop_or_default]
     pub updatemodel: Callback<Msg>,
-    #[prop_or_default]
-    pub allowed_kinds: &'static [&'static str],
 }
 
 pub enum NodeMsg {
@@ -88,30 +84,36 @@ impl Component for NodeComponent {
         let global_state = &props.global_state;
         let node_store = &global_state.node_store;
         let cursor = &props.cursor;
+        let kind_id = cursor.kind_id;
         let link = &cursor.link;
         let hash = &link.hash;
         let node_path = cursor.path();
         let _oninput = props.oninput.clone();
         let selected_path = &props.selected_path;
         let selected = selected_path == &node_path;
+        let kind = global_state.schema.get_kind(kind_id);
         log::info!("cursor: {:?}", cursor);
+        log::info!("kind: {:?}", kind);
         log::info!("link: {:?}", cursor.link);
         log::info!("target: {:?}", cursor.link.get(&node_store));
         let inner = match cursor.link.get(&node_store) {
             None => {
                 let onupdatemodel = ctx.props().updatemodel.clone();
                 let node_path = node_path.clone();
-                let entries: Vec<Entry> = props
-                    .allowed_kinds
+                let entries: Vec<Entry> = kind
+                    .cloned()
+                    .unwrap_or_default()
+                    .fields
                     .iter()
-                    .map(|kind_id| Entry {
-                        label: SCHEMA
-                            .get_kind(kind_id)
+                    .map(|field| Entry {
+                        label: global_state
+                            .schema
+                            .get_kind(field.kind_id)
                             .map(|k| &(*k.name))
                             .unwrap_or("INVALID")
                             .to_string(),
                         description: "".to_string(),
-                        action: Msg::ReplaceNode(node_path.clone(), create_node(kind_id), false),
+                        action: Msg::ReplaceNode(node_path.clone(), Node::default(), false),
                         valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
                     })
                     .collect();
@@ -122,7 +124,7 @@ impl Component for NodeComponent {
                     })
                 };
                 let onupdatemodel0 = onupdatemodel.clone();
-                let placeholder = "***".to_string();
+                let placeholder = "***xx".to_string();
                 let value = "".to_string();
                 html! {
                   <CommandLine
@@ -145,17 +147,20 @@ impl Component for NodeComponent {
             Some(LinkTarget::Raw(value)) => {
                 let onupdatemodel = ctx.props().updatemodel.clone();
                 let node_path = node_path.clone();
-                let entries: Vec<Entry> = props
-                    .allowed_kinds
+                let entries: Vec<Entry> = kind
+                    .cloned()
+                    .unwrap_or_default()
+                    .fields
                     .iter()
-                    .map(|kind_id| Entry {
-                        label: SCHEMA
-                            .get_kind(kind_id)
+                    .map(|field| Entry {
+                        label: global_state
+                            .schema
+                            .get_kind(field.kind_id)
                             .map(|k| &(*k.name))
                             .unwrap_or("INVALID")
                             .to_string(),
                         description: "".to_string(),
-                        action: Msg::ReplaceNode(node_path.clone(), create_node(kind_id), false),
+                        action: Msg::ReplaceNode(node_path.clone(), Node::default(), false),
                         valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
                     })
                     .collect();
@@ -192,12 +197,7 @@ impl Component for NodeComponent {
                 }
             }
             Some(LinkTarget::Parsed(node)) => {
-                let kind = SCHEMA.get_kind(&node.kind);
-                let renderer = if global_state.rich_render {
-                    kind.and_then(|k| k.renderer).unwrap_or(default_renderer)
-                } else {
-                    default_renderer
-                };
+                let renderer = default_renderer;
                 let validator_context = ValidatorContext {
                     global_state: global_state.clone(),
                     selected_path: selected_path.clone(),
@@ -207,83 +207,81 @@ impl Component for NodeComponent {
                 };
                 let content = renderer(&validator_context);
                 let footer = if global_state.mode == Mode::Edit && selected {
-                    let entries: Vec<Entry> = kind
-                        .map(|k| {
-                            let mut all_entries = vec![];
-                            let mut field_entries = k
-                                .get_fields()
-                                .iter()
-                                .map(|(field_id, field)| Entry {
-                                    label: field.name.to_string(),
-                                    description: "".to_string(),
-                                    action: Msg::AddField(node_path.to_vec(), **field_id),
-                                    valid_classes: FIELD_CLASSES
-                                        .iter()
-                                        .map(|v| v.to_string())
-                                        .collect(),
-                                })
-                                .collect();
-                            // TODO: macros
-                            let mut macro_entries = vec![
-                                Entry {
-                                    label: "delete".to_string(),
-                                    description: "".to_string(),
-                                    action: Msg::DeleteItem,
-                                    valid_classes: vec![],
-                                },
-                                // TODO: should apply to literals too.
-                                Entry {
-                                    label: "call".to_string(),
-                                    description: "".to_string(),
-                                    action: Msg::ReplaceNode(
-                                        node_path.clone(),
-                                        Node {
-                                            kind: RUST_FUNCTION_CALL.to_string(),
-                                            links: maplit::btreemap! {
-                                                0 => vec![Link {
-                                                    type_: LinkType::Raw,
-                                                    hash: hash.clone(),
-                                                }],
-                                            },
+                    let entries: Vec<Entry> = {
+                        let mut all_entries = vec![];
+                        let mut field_entries = kind
+                            .cloned()
+                            .unwrap_or_default()
+                            .fields
+                            .iter()
+                            .map(|field| Entry {
+                                label: field.name.to_string(),
+                                description: "".to_string(),
+                                action: Msg::AddField(node_path.to_vec(), field.field_id),
+                                valid_classes: FIELD_CLASSES
+                                    .iter()
+                                    .map(|v| v.to_string())
+                                    .collect(),
+                            })
+                            .collect();
+                        // TODO: macros
+                        let mut macro_entries = vec![
+                            Entry {
+                                label: "delete".to_string(),
+                                description: "".to_string(),
+                                action: Msg::DeleteItem,
+                                valid_classes: vec![],
+                            },
+                            // TODO: should apply to literals too.
+                            Entry {
+                                label: "call".to_string(),
+                                description: "".to_string(),
+                                action: Msg::ReplaceNode(
+                                    node_path.clone(),
+                                    Node {
+                                        links: maplit::btreemap! {
+                                            0 => vec![Link {
+                                                type_: LinkType::Raw,
+                                                hash: hash.clone(),
+                                            }],
                                         },
-                                        false,
-                                    ),
-                                    valid_classes: vec![],
-                                },
-                                Entry {
-                                    label: "array".to_string(),
-                                    description: "".to_string(),
-                                    action: Msg::ReplaceNode(
-                                        node_path.clone(),
-                                        Node {
-                                            kind: RUST_ARRAY_TYPE.to_string(),
-                                            links: maplit::btreemap! {
-                                                0 => vec![Link {
-                                                    type_: LinkType::Raw,
-                                                    hash: hash.clone(),
-                                                }],
-                                            },
+                                    },
+                                    false,
+                                ),
+                                valid_classes: vec![],
+                            },
+                            Entry {
+                                label: "array".to_string(),
+                                description: "".to_string(),
+                                action: Msg::ReplaceNode(
+                                    node_path.clone(),
+                                    Node {
+                                        links: maplit::btreemap! {
+                                            0 => vec![Link {
+                                                type_: LinkType::Raw,
+                                                hash: hash.clone(),
+                                            }],
                                         },
-                                        false,
-                                    ),
-                                    valid_classes: vec![],
-                                },
-                                Entry {
-                                    label: "move up".to_string(),
-                                    description: "".to_string(),
-                                    action: Msg::ReplaceNode(
-                                        parent(&node_path).to_vec(),
-                                        node.clone(),
-                                        false,
-                                    ),
-                                    valid_classes: vec![],
-                                },
-                            ];
-                            all_entries.append(&mut field_entries);
-                            all_entries.append(&mut macro_entries);
-                            all_entries
-                        })
-                        .unwrap_or_default();
+                                    },
+                                    false,
+                                ),
+                                valid_classes: vec![],
+                            },
+                            Entry {
+                                label: "move up".to_string(),
+                                description: "".to_string(),
+                                action: Msg::ReplaceNode(
+                                    parent(&node_path).to_vec(),
+                                    node.clone(),
+                                    false,
+                                ),
+                                valid_classes: vec![],
+                            },
+                        ];
+                        all_entries.append(&mut field_entries);
+                        all_entries.append(&mut macro_entries);
+                        all_entries
+                    };
                     // Make it look like an actual field.
                     let _onupdatemodel0 = ctx.props().updatemodel.clone();
                     // TODO: What value to use?

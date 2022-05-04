@@ -1,19 +1,18 @@
 use crate::{schema::*, types::Node};
 
 pub struct Transform {
-    from_kind: &'static str,
-    to_kind: &'static str,
+    from_kind: u32,
+    to_kind: u32,
     transform: fn(&Node) -> Node,
 }
 
 // TODO: could field additions be modelled as a transform?
 
 pub static TRANSFORMS: &[Transform] = &[Transform {
-    from_kind: RUST_PRIMITIVE_TYPE_STR,
-    to_kind: RUST_ARRAY_TYPE,
+    from_kind: 10,
+    to_kind: 11,
     transform: |node| {
         let mut node = node.clone();
-        node.kind = RUST_ARRAY_TYPE.to_string();
         node
     },
 }];
