@@ -3,7 +3,7 @@ use crate::{
     schema::{Field, Schema},
     types::*,
 };
-use gloo_events::EventListener;
+use gloo_events::{EventListener, EventListenerOptions};
 use gloo_storage::{LocalStorage, Storage};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -210,11 +210,11 @@ impl Component for Model {
             .link()
             .callback(move |e: KeyboardEvent| Msg::CommandKey(vec![], e));
 
-        let document_keydown_listener = gloo_events::EventListener::new(
+        let document_keydown_listener = gloo_events::EventListener::new_with_options(
             &gloo_utils::document(),
             "keydown",
+            EventListenerOptions::enable_prevent_default(),
             move |e: &Event| {
-                e.stop_propagation();
                 e.prevent_default();
                 e.dyn_ref::<KeyboardEvent>().map(|e| {
                     document_callback.emit(e.clone());
@@ -577,9 +577,10 @@ impl Component for Model {
 
                 // See https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
                 match e.key().as_ref() {
-                    "Enter" => {
+                    "Enter" | "o" => {
                         self.global_state_mut().mode = Mode::Edit;
                         e.stop_propagation();
+                        e.prevent_default();
                     }
                     "Escape" => {
                         self.global_state_mut().mode = Mode::Normal;
