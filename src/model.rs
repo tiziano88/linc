@@ -35,8 +35,8 @@ impl GlobalState {
 pub struct Model {
     pub global_state: Rc<GlobalState>,
 
-    pub root: Hash,
-    pub schema_root: Hash,
+    pub root: Digest,
+    pub schema_root: Digest,
 
     pub selected_path: Path,
     pub hover_path: Path,
@@ -51,8 +51,8 @@ pub struct Model {
 
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct HashState {
-    pub root: Hash,
-    pub schema_root: Hash,
+    pub root: Digest,
+    pub schema_root: Digest,
 }
 
 impl FromStr for HashState {
