@@ -7,10 +7,10 @@ pub struct Node {
     pub kind: String,
     pub value: String,
     // Keyed by field id.
-    pub links: BTreeMap<usize, Vec<Hash>>,
+    pub links: BTreeMap<usize, Vec<Digest>>,
 }
 
-type Hash = String;
+type Digest = String;
 
 #[derive(Serialize, Deserialize)]
 pub struct PutRequest {
@@ -30,7 +30,7 @@ pub struct GetItem {
 
 #[derive(Serialize, Deserialize)]
 pub struct GetResponse {
-    pub items: HashMap<String, String>,
+    pub items: HashMap<Digest, String>,
 }
 
 pub fn deserialize_node(raw: &[u8]) -> Option<Node> {

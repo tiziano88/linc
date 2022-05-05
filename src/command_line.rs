@@ -185,7 +185,9 @@ impl Component for CommandLine {
 
         let onclick = ctx.link().callback(|_| CommandLineMsg::Click);
         let onfocus = ctx.link().callback(|_| CommandLineMsg::Click);
-        let onkeydown = ctx.link().callback(CommandLineMsg::Key);
+        let onkeydown = ctx
+            .link()
+            .callback(move |e: KeyboardEvent| CommandLineMsg::Key(e));
 
         html! {
             <span

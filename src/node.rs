@@ -2,7 +2,7 @@ use crate::{
     command_line::{CommandLine, Entry},
     model::{GlobalState, Model, Msg},
     schema::{default_renderer, Field, Kind, Schema, ValidatorContext, *},
-    types::{parent, Cursor, Hash, Link, LinkTarget, LinkType, Mode, Node, Selector},
+    types::{parent, Cursor, Link, LinkTarget, LinkType, Mode, Node, Selector},
 };
 use std::{collections::BTreeMap, rc::Rc};
 use web_sys::HtmlInputElement;
@@ -60,7 +60,6 @@ impl Component for NodeComponent {
     type Properties = NodeProperties;
 
     fn create(ctx: &Context<Self>) -> Self {
-        log::debug!("creating node");
         let updatemodel = ctx.props().updatemodel.clone();
         Self {
             input_node_ref: NodeRef::default(),
@@ -86,16 +85,12 @@ impl Component for NodeComponent {
         let cursor = &props.cursor;
         let kind_id = cursor.kind_id;
         let link = &cursor.link;
-        let hash = &link.hash;
+        let digest = &link.digest;
         let node_path = cursor.path();
         let _oninput = props.oninput.clone();
         let selected_path = &props.selected_path;
         let selected = selected_path == &node_path;
         let kind = global_state.schema.get_kind(kind_id);
-        log::info!("cursor: {:?}", cursor);
-        log::info!("kind: {:?}", kind);
-        log::info!("link: {:?}", cursor.link);
-        log::info!("target: {:?}", cursor.link.get(&node_store));
         let inner = match cursor.link.get(&node_store) {
             None => {
                 let onupdatemodel = ctx.props().updatemodel.clone();
@@ -124,7 +119,7 @@ impl Component for NodeComponent {
                     })
                 };
                 let onupdatemodel0 = onupdatemodel.clone();
-                let placeholder = "***xx".to_string();
+                let placeholder = "<invalid>".to_string();
                 let value = "".to_string();
                 html! {
                   <CommandLine
@@ -242,7 +237,7 @@ impl Component for NodeComponent {
                                         links: maplit::btreemap! {
                                             0 => vec![Link {
                                                 type_: LinkType::Raw,
-                                                hash: hash.clone(),
+                                                digest: digest.clone(),
                                             }],
                                         },
                                     },
@@ -259,7 +254,7 @@ impl Component for NodeComponent {
                                         links: maplit::btreemap! {
                                             0 => vec![Link {
                                                 type_: LinkType::Raw,
-                                                hash: hash.clone(),
+                                                digest: digest.clone(),
                                             }],
                                         },
                                     },
@@ -353,6 +348,7 @@ impl Component for NodeComponent {
         let new_props = ctx.props();
         log::debug!("Node changed {:?}", new_props.cursor);
         let same = if let Some(old_props) = &self.old_props {
+            /*
             log::debug!(
                 "same global_state: {:?}",
                 old_props.global_state == new_props.global_state
@@ -368,6 +364,7 @@ impl Component for NodeComponent {
                 old_props.updatemodel == new_props.updatemodel
             );
             log::debug!("same oninput: {:?}", old_props.oninput == new_props.oninput);
+            */
             old_props.global_state == new_props.global_state
                 || old_props.cursor == new_props.cursor
                 || old_props.selected_path == new_props.selected_path

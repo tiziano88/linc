@@ -1,7 +1,7 @@
 use crate::{model::Msg, node::FIELD_CLASSES, schema::Schema};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 use std::{
     collections::{hash_map::Entry, BTreeMap, HashMap},
     convert::TryInto,
@@ -13,20 +13,13 @@ use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{HtmlInputElement, HtmlTextAreaElement, InputEvent};
 use yew::{html, prelude::*, Html};
 
-pub type Ref = String;
-
-pub type Hash = String;
-
-pub fn new_ref() -> Ref {
-    uuid::Uuid::new_v4().to_hyphenated().to_string()
-}
-
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
 pub struct Selector {
     pub field_id: u64,
     pub index: usize,
 }
 
+pub type Digest = String;
 pub type Path = Vec<Selector>;
 
 pub fn append(path: &[Selector], selector: Selector) -> Path {
@@ -49,7 +42,8 @@ pub enum Mode {
     Edit,
 }
 
-pub fn hash(value: &[u8]) -> Hash {
+pub fn digest(value: &[u8]) -> Digest {
+    use sha2::Digest;
     let bytes: [u8; 32] = Sha256::digest(value).try_into().unwrap();
     "sha256:".to_string() + &hex::encode(bytes)
 }
@@ -65,9 +59,9 @@ pub fn deserialize_node(raw: &[u8]) -> Option<Node> {
     serde_json::from_slice(raw).ok()
 }
 
-pub fn hash_node(node: &Node) -> Hash {
+pub fn node_digest(node: &Node) -> Digest {
     let node_bytes = serialize_node(node);
-    hash(&node_bytes)
+    digest(&node_bytes)
 }
 
 #[derive(Default, PartialEq, Clone)]
@@ -77,8 +71,8 @@ pub struct NodeState {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct NodeStore {
-    raw_nodes: HashMap<Hash, Vec<u8>>,
-    parsed_nodes: Arc<Mutex<HashMap<Hash, Node>>>,
+    raw_nodes: HashMap<Digest, Vec<u8>>,
+    parsed_nodes: Arc<Mutex<HashMap<Digest, Node>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -262,17 +256,17 @@ impl PartialEq for NodeStore {
 
 impl NodeStore {
     // TODO: remove.
-    pub fn get_raw(&self, hash: &Hash) -> Option<&Vec<u8>> {
-        self.raw_nodes.get(hash)
+    pub fn get_raw(&self, digest: &str) -> Option<&Vec<u8>> {
+        self.raw_nodes.get(digest)
     }
 
-    pub fn get_parsed(&self, hash: &Hash) -> Option<Node> {
+    pub fn get_dag(&self, digest: &str) -> Option<Node> {
         let mut n = self.parsed_nodes.lock().unwrap();
-        let entry = n.entry(hash.clone());
+        let entry = n.entry(digest.to_string());
         match entry {
             Entry::Occupied(o) => Some(o.get().clone()),
             Entry::Vacant(v) => {
-                let raw_node = self.raw_nodes.get(hash)?;
+                let raw_node = self.raw_nodes.get(digest)?;
                 // TODO: Put into cache.
                 let node = crate::types::deserialize_node(raw_node)?;
                 let r = v.insert(node.clone());
@@ -281,11 +275,11 @@ impl NodeStore {
         }
     }
 
-    pub fn has_raw_node(&self, hash: &Hash) -> bool {
-        self.raw_nodes.contains_key(hash)
+    pub fn has_raw_node(&self, digest: &str) -> bool {
+        self.raw_nodes.contains_key(digest)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Hash, &Vec<u8>)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&Digest, &Vec<u8>)> {
         self.raw_nodes.iter()
     }
 
@@ -294,22 +288,22 @@ impl NodeStore {
     }
 
     #[must_use]
-    pub fn put_parsed(&mut self, node: &Node) -> Hash {
-        let h = hash_node(node);
+    pub fn put_parsed(&mut self, node: &Node) -> Digest {
+        let d = node_digest(node);
         self.parsed_nodes
             .lock()
             .unwrap()
-            .insert(h.clone(), node.clone());
+            .insert(d.clone(), node.clone());
         self.raw_nodes
-            .insert(h.clone(), crate::types::serialize_node(node));
-        h
+            .insert(d.clone(), crate::types::serialize_node(node));
+        d
     }
 
     #[must_use]
-    pub fn put_raw(&mut self, value: &[u8]) -> Hash {
-        let h = hash(value);
-        self.raw_nodes.insert(h.clone(), value.to_vec());
-        h
+    pub fn put_raw(&mut self, value: &[u8]) -> Digest {
+        let d = digest(value);
+        self.raw_nodes.insert(d.clone(), value.to_vec());
+        d
     }
 
     pub fn put_many(&mut self, nodes: &[Node]) {
@@ -359,14 +353,14 @@ pub struct Link {
     // 1: dag
     #[serde(rename = "type")]
     pub type_: LinkType,
-    pub hash: Hash,
+    pub digest: Digest,
 }
 
 impl Link {
     pub fn get<'a>(&self, node_store: &'a NodeStore) -> Option<LinkTarget<'a>> {
         match self.type_ {
-            LinkType::Raw => node_store.get_raw(&self.hash).map(LinkTarget::Raw),
-            LinkType::Dag => node_store.get_parsed(&self.hash).map(LinkTarget::Parsed),
+            LinkType::Raw => node_store.get_raw(&self.digest).map(LinkTarget::Raw),
+            LinkType::Dag => node_store.get_dag(&self.digest).map(LinkTarget::Parsed),
         }
     }
 }

@@ -8,13 +8,25 @@ pub struct PutRequest {
 
 #[derive(Serialize, Deserialize)]
 pub struct GetRequest {
-    pub items: Vec<GetItem>,
+    pub items: Vec<GetRequestItem>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct GetItem {
-    pub root: String,
-    // pub path: Vec<Selector>,
+pub struct GetRequestItem {
+    pub node_id: NodeID,
+    pub depth: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NodeID {
+    pub root: Link,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Link {
+    #[serde(rename = "type")]
+    pub type_: u32,
+    pub digest: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -22,10 +34,22 @@ pub struct GetResponse {
     pub items: HashMap<String, String>,
 }
 
-pub const API_URL_LOCALHOST: &str = "http://127.0.0.1:8088";
+pub const API_URL_LOCALHOST: &str = "http://127.0.0.1:27333";
 pub const API_URL_REMOTE: &str = "https://multiverse-312721.nw.r.appspot.com";
 pub struct EntClient {
     pub api_url: String,
+}
+
+pub fn get_request_item(digest: &str) -> GetRequestItem {
+    GetRequestItem {
+        node_id: NodeID {
+            root: Link {
+                type_: 0,
+                digest: digest.to_string(),
+            },
+        },
+        depth: 0,
+    }
 }
 
 impl EntClient {

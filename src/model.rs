@@ -84,7 +84,7 @@ pub enum Msg {
     LoadRemote(String),
 
     // Add nodes to the store.
-    AddNodesRequest(Vec<Hash>, String), // API_URL
+    AddNodesRequest(Vec<Digest>, String), // API_URL
     AddNodesResponse(Vec<Vec<u8>>, String),
 
     // Set root node from hash fragment.
@@ -157,7 +157,7 @@ impl Component for Model {
             parent: None,
             link: Link {
                 type_: LinkType::Dag,
-                hash: self.root.clone(),
+                digest: self.root.clone(),
             },
             kind_id: root_kind_id,
         };
@@ -166,7 +166,7 @@ impl Component for Model {
         html! {
             <div
               tabindex="0"
-              onkeydown={ onkeypress }
+            //   onkeydown={ onkeypress }
               onmouseover={ onmouseover }
               >
                 <div class="sticky top-0 bg-white">
@@ -215,6 +215,7 @@ impl Component for Model {
             "keydown",
             move |e: &Event| {
                 e.stop_propagation();
+                e.prevent_default();
                 e.dyn_ref::<KeyboardEvent>().map(|e| {
                     document_callback.emit(e.clone());
                 });
@@ -348,11 +349,11 @@ impl Component for Model {
                 ctx.link()
                     .send_message(Msg::AddNodesRequest(vec![self.root.clone()], api_url));
             }
-            Msg::AddNodesRequest(hashes, api_url) => {
+            Msg::AddNodesRequest(digests, api_url) => {
                 let req = crate::ent::GetRequest {
-                    items: hashes
+                    items: digests
                         .into_iter()
-                        .map(|hash| crate::ent::GetItem { root: hash })
+                        .map(|digest| crate::ent::get_request_item(&digest))
                         .collect(),
                 };
                 ctx.link().send_future(async move {
@@ -382,8 +383,8 @@ impl Component for Model {
                     .into_iter()
                     .flat_map(|b| crate::types::deserialize_node(&b))
                     .flat_map(|n| n.links.into_values().flatten())
-                    .filter(|link| !self.global_state.node_store.has_raw_node(&link.hash))
-                    .map(|link| link.hash)
+                    .filter(|link| !self.global_state.node_store.has_raw_node(&link.digest))
+                    .map(|link| link.digest)
                     .collect();
                 if !all_hashes.is_empty() {
                     ctx.link()
@@ -472,7 +473,7 @@ impl Component for Model {
                     .or_insert_with(Vec::new)
                     .push(Link {
                         type_: LinkType::Dag,
-                        hash: "".into(),
+                        digest: "".into(),
                     });
                 let n = node.links[&field_id].len();
                 self.replace_node(&path, &node);
@@ -523,13 +524,14 @@ impl Component for Model {
                     Link {
                         // TODO: Or should this be raw?
                         type_: LinkType::Dag,
-                        hash: new_ref,
+                        digest: new_ref,
                     },
                 );
                 self.replace_node(parent_path, &parent);
                 // Select newly created element.
                 self.selected_path.last_mut().unwrap().index = new_index;
                 // self.next();
+                set_location_hash(&self.root);
             }
             Msg::DeleteItem => {
                 let selected_path = self.selected_path.clone();
@@ -554,6 +556,7 @@ impl Component for Model {
                     self.selected_path =
                         self.selected_path[..self.selected_path.len() - 1].to_vec();
                 }
+                set_location_hash(&self.root);
             }
             Msg::CommandKey(_path, e) => {
                 log::info!("key: {}", e.key());
@@ -576,7 +579,7 @@ impl Component for Model {
                 match e.key().as_ref() {
                     "Enter" => {
                         self.global_state_mut().mode = Mode::Edit;
-                        e.prevent_default();
+                        e.stop_propagation();
                     }
                     "Escape" => {
                         self.global_state_mut().mode = Mode::Normal;
@@ -657,7 +660,7 @@ impl Model {
             parent: None,
             link: Link {
                 type_: LinkType::Dag,
-                hash: self.root.clone(),
+                digest: self.root.clone(),
             },
             kind_id: 0, // TODO
         }
@@ -672,44 +675,49 @@ impl Model {
     }
 
     pub fn set_node_value(&mut self, path: &[Selector], value: &[u8]) {
-        let target_hash = self.global_state_mut().node_store_mut().put_raw(value);
+        let target_digest = self.global_state_mut().node_store_mut().put_raw(value);
         if let Some(root) = self.replace_node_from(
             &self.root.clone(),
             path,
             &Link {
                 type_: LinkType::Raw,
-                hash: target_hash,
+                digest: target_digest,
             },
         ) {
-            self.root = root.hash;
+            self.root = root.digest;
         }
     }
 
     pub fn replace_node(&mut self, path: &[Selector], node: &Node) {
-        let target_hash = self.global_state_mut().node_store_mut().put_parsed(node);
+        let target_digest = self.global_state_mut().node_store_mut().put_parsed(node);
         if let Some(root) = self.replace_node_from(
             &self.root.clone(),
             path,
             &Link {
                 type_: LinkType::Dag,
-                hash: target_hash,
+                digest: target_digest,
             },
         ) {
-            self.root = root.hash;
+            self.root = root.digest;
         }
     }
 
     #[must_use]
-    fn replace_node_from(&mut self, base: &Hash, path: &[Selector], link: &Link) -> Option<Link> {
+    fn replace_node_from(
+        &mut self,
+        base_digest: &str,
+        path: &[Selector],
+        link: &Link,
+    ) -> Option<Link> {
         if path.is_empty() {
             Some(link.clone())
         } else {
-            let mut new_node = self.global_state.node_store.get_parsed(base)?.clone();
+            let mut new_node = self.global_state.node_store.get_dag(base_digest)?.clone();
             let selector = path[0].clone();
             match new_node.get_link_mut(&selector) {
                 Some(mut old_child_link) => {
                     let new_child_link =
-                        self.replace_node_from(&old_child_link.hash, &path[1..], link)?;
+                        self.replace_node_from(&old_child_link.digest, &path[1..], link)?;
                     *old_child_link = new_child_link;
                 }
                 None => {
@@ -721,13 +729,13 @@ impl Model {
                         .push(link.clone());
                 }
             };
-            let new_node_hash = self
+            let new_node_digest = self
                 .global_state_mut()
                 .node_store_mut()
                 .put_parsed(&new_node);
             Some(Link {
                 type_: LinkType::Dag,
-                hash: new_node_hash,
+                digest: new_node_digest,
             })
         }
     }

@@ -2,19 +2,19 @@ use crate::{schema, types::Node};
 use std::marker::PhantomData;
 
 trait NodeStore {
-    fn get(&self, hash: &str) -> Option<&Node>;
+    fn get(&self, digest: &str) -> Option<&Node>;
 }
 
 struct Link<'s, S: NodeStore, T: FromRawNode> {
     _marker: PhantomData<T>,
-    hash: String,
+    digest: Digest,
     node_store: &'s S,
 }
 
 impl<'s, S: NodeStore, T: FromRawNode> Link<'s, S, T> {
     fn get(&self) -> Option<T> {
         self.node_store
-            .get(&self.hash)
+            .get(&self.digest)
             .and_then(|node| T::from_raw_node(node))
     }
 }
@@ -32,9 +32,9 @@ impl<'s, S: NodeStore> Root<'s, S> {
     fn item_vec(&self) -> Vec<Link<'s, S, RootItem>> {
         self.raw_node.links[&0]
             .iter()
-            .map(|hash| Link {
+            .map(|digest| Link {
                 _marker: PhantomData,
-                hash: hash.clone(),
+                digest: digest.clone(),
                 node_store: self.node_store.clone(),
             })
             .collect()

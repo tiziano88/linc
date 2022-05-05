@@ -26,7 +26,7 @@ pub fn initial_schema() -> Schema {
                     Field {
                         field_id: 3021732,
                         name: "docker_command".to_string(),
-                        kind_id: 23427,
+                        kind_id: 23428,
                         raw: 0,
                     },
                 ],
