@@ -38,7 +38,7 @@ pub fn initial_schema() -> Schema {
                     Field {
                         field_id: 131987,
                         name: "git_add".to_string(),
-                        kind_id: 2188123,
+                        kind_id: 231849732984,
                         raw: 0,
                     },
                     Field {
@@ -50,12 +50,12 @@ pub fn initial_schema() -> Schema {
                 ],
             },
             Kind {
-                kind_id: 131987,
+                kind_id: 231849732984,
                 name: "git_add".to_string(),
                 fields: vec![],
             },
             Kind {
-                kind_id: 2429447,
+                kind_id: 349872,
                 name: "git_push".to_string(),
                 fields: vec![],
             },

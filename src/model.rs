@@ -468,12 +468,16 @@ impl Component for Model {
                     .as_parsed()
                     .unwrap()
                     .clone();
+                let new_digest = self
+                    .global_state_mut()
+                    .node_store_mut()
+                    .put_parsed(&Node::default());
                 node.links
                     .entry(field_id)
                     .or_insert_with(Vec::new)
                     .push(Link {
                         type_: LinkType::Dag,
-                        digest: "".into(),
+                        digest: new_digest,
                     });
                 let n = node.links[&field_id].len();
                 self.replace_node(&path, &node);
