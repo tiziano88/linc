@@ -10,3 +10,4 @@ elm.js
 
 target/
 /dist/
+/.direnv

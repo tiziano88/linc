@@ -14,11 +14,8 @@
     devShell.x86_64-linux =
         pkgs.mkShell { 
           buildInputs = [
-            pkgs.go
-            pkgs.gopls
-
-            pkgs.docker
-            pkgs.python3
+            pkgs.cargo
+            pkgs.protobuf
           ]; 
         };
     };
