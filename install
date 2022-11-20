@@ -1,4 +1,0 @@
-{
-  cd proto
-  protoc --go_out=../server/proto --elm_out=../client *.proto
-}
