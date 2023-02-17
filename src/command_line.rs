@@ -58,7 +58,7 @@ impl Component for CommandLine {
         c
     }
 
-    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, ctx: &Context<Self>, _old_props: &CommandLineProperties) -> bool {
         self.all_entries = ctx.props().entries.clone();
         self.value = ctx.props().value.clone();
         self.update_valid_entries();

@@ -344,7 +344,7 @@ impl Component for NodeComponent {
         }
     }
 
-    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, ctx: &Context<Self>, _old_props: &NodeProperties) -> bool {
         let new_props = ctx.props();
         log::debug!("Node changed {:?}", new_props.cursor);
         let same = if let Some(old_props) = &self.old_props {

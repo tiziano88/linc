@@ -30,4 +30,4 @@ web-sys = { version = "*", features = [
     "MouseEvent",
     "Selection",
     ]}
-yew = "*"
+yew = {version="*", features=["csr"]}

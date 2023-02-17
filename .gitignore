@@ -11,3 +11,5 @@ elm.js
 target/
 /dist/
 /.direnv
+
+/bazel-vscode-target
