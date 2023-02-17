@@ -1,4 +1,8 @@
-use crate::{model::Msg, node::FIELD_CLASSES, schema::Schema};
+use crate::{
+    model::Msg,
+    node::FIELD_CLASSES,
+    schema::{FieldType, Schema},
+};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sha2::Sha256;
@@ -219,16 +223,21 @@ impl Cursor {
                     LinkTarget::Parsed(node) => {
                         // child_hash may or may not be valid at this point.
                         let child_link = node.links.get(&selector.field_id)?.get(selector.index)?;
-                        let child = Cursor {
-                            parent: Some((Box::new(self.clone()), selector.clone())),
-                            link: child_link.clone(),
-                            kind_id: todo!(), /* kind
-                                               *     .get_field(selector.field_id)
-                                               *     .cloned()
-                                               *     .unwrap_or_default()
-                                               *     .kind_id, */
-                        };
-                        child.traverse(node_store, schema, rest)
+                        let child_type = kind
+                            .get_field(selector.field_id)
+                            .cloned()
+                            .unwrap_or_default()
+                            .type_;
+                        if let FieldType::Object { kind_id } = child_type {
+                            let child = Cursor {
+                                parent: Some((Box::new(self.clone()), selector.clone())),
+                                link: child_link.clone(),
+                                kind_id,
+                            };
+                            child.traverse(node_store, schema, rest)
+                        } else {
+                            None
+                        }
                     }
                 }
             }

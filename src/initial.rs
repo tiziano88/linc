@@ -60,6 +60,27 @@ pub fn initial_schema() -> Schema {
             Kind {
                 kind_id: 23428,
                 name: "docker_command".to_string(),
+                fields: vec![
+                    Field {
+                        field_id: 13091823090,
+                        name: "docker_run".to_string(),
+                        type_: FieldType::Object { kind_id: 130 },
+                    },
+                    Field {
+                        field_id: 2309471,
+                        name: "docker_build".to_string(),
+                        type_: FieldType::Object { kind_id: 349872 },
+                    },
+                ],
+            },
+            Kind {
+                kind_id: 13091823090,
+                name: "docker_run".to_string(),
+                fields: vec![],
+            },
+            Kind {
+                kind_id: 2309471,
+                name: "docker_build".to_string(),
                 fields: vec![],
             },
         ],

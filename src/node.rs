@@ -101,12 +101,7 @@ impl Component for NodeComponent {
                     .fields
                     .iter()
                     .map(|field| Entry {
-                        label: global_state
-                            .schema
-                            .get_kind(todo!() /* field.type_ */)
-                            .map(|k| &(*k.name))
-                            .unwrap_or("INVALID")
-                            .to_string(),
+                        label: field.name.to_string(),
                         description: "".to_string(),
                         action: Msg::ReplaceNode(node_path.clone(), Node::default(), false),
                         valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
@@ -142,23 +137,24 @@ impl Component for NodeComponent {
             Some(LinkTarget::Raw(value)) => {
                 let onupdatemodel = ctx.props().updatemodel.clone();
                 let node_path = node_path.clone();
-                let entries: Vec<Entry> = kind
-                    .cloned()
-                    .unwrap_or_default()
-                    .fields
-                    .iter()
-                    .map(|field| Entry {
-                        label: global_state
-                            .schema
-                            .get_kind(todo!() /* field.kind_id */)
-                            .map(|k| &(*k.name))
-                            .unwrap_or("INVALID")
-                            .to_string(),
-                        description: "".to_string(),
-                        action: Msg::ReplaceNode(node_path.clone(), Node::default(), false),
-                        valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
-                    })
-                    .collect();
+                let entries: Vec<Entry> = vec![];
+                // kind
+                //     .cloned()
+                //     .unwrap_or_default()
+                //     .fields
+                //     .iter()
+                //     .map(|field| Entry {
+                //         label: global_state
+                //             .schema
+                //             .get_kind(todo!() /* field.kind_id */)
+                //             .map(|k| &(*k.name))
+                //             .unwrap_or("INVALID")
+                //             .to_string(),
+                //         description: "".to_string(),
+                //         action: Msg::ReplaceNode(node_path.clone(), Node::default(), false),
+                //         valid_classes: KIND_CLASSES.iter().map(|v| v.to_string()).collect(),
+                //     })
+                //     .collect();
                 let onenter = {
                     let onupdatemodel = onupdatemodel.clone();
                     Callback::from(move |()| {
