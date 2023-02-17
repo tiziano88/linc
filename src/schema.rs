@@ -46,9 +46,40 @@ impl Kind {
 pub struct Field {
     pub field_id: u64,
     pub name: String,
-    pub kind_id: u64,
+    // pub kind_id: u64,
+    pub type_: FieldType,
     // TODO: Use type id.
     pub raw: u64,
+}
+
+#[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
+pub enum FieldType {
+    String,
+    Bytes,
+    Bool,
+    Int,
+    Float,
+    Object { kind_id: u64 },
+}
+
+impl Default for FieldType {
+    fn default() -> Self {
+        FieldType::String
+    }
+}
+
+pub enum FieldValue {
+    String(String),
+    Bytes(Vec<u8>),
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    Object(Object),
+}
+
+pub struct Object {
+    pub kind_id: u64,
+    pub fields: Vec<(u64, FieldValue)>,
 }
 
 fn comma() -> Html {

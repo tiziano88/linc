@@ -103,7 +103,7 @@ impl Component for NodeComponent {
                     .map(|field| Entry {
                         label: global_state
                             .schema
-                            .get_kind(field.kind_id)
+                            .get_kind(todo!() /* field.type_ */)
                             .map(|k| &(*k.name))
                             .unwrap_or("INVALID")
                             .to_string(),
@@ -150,7 +150,7 @@ impl Component for NodeComponent {
                     .map(|field| Entry {
                         label: global_state
                             .schema
-                            .get_kind(field.kind_id)
+                            .get_kind(todo!() /* field.kind_id */)
                             .map(|k| &(*k.name))
                             .unwrap_or("INVALID")
                             .to_string(),

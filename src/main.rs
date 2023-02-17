@@ -1,7 +1,6 @@
 #![recursion_limit = "512"]
 #![feature(iter_intersperse)]
 #![feature(once_cell)]
-#![feature(bool_to_option)]
 
 // mod generated;
 mod command_line;
@@ -9,9 +8,12 @@ mod ent;
 mod initial;
 mod model;
 mod node;
+mod pretty_print;
 mod schema;
 mod transform;
 mod types;
+
+mod tests;
 
 fn main() {
     // web_logger::init();

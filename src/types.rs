@@ -222,11 +222,11 @@ impl Cursor {
                         let child = Cursor {
                             parent: Some((Box::new(self.clone()), selector.clone())),
                             link: child_link.clone(),
-                            kind_id: kind
-                                .get_field(selector.field_id)
-                                .cloned()
-                                .unwrap_or_default()
-                                .kind_id,
+                            kind_id: todo!(), /* kind
+                                               *     .get_field(selector.field_id)
+                                               *     .cloned()
+                                               *     .unwrap_or_default()
+                                               *     .kind_id, */
                         };
                         child.traverse(node_store, schema, rest)
                     }

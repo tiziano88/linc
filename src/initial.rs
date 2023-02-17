@@ -1,4 +1,4 @@
-use crate::schema::{Field, Kind, Schema};
+use crate::schema::{Field, FieldType, Kind, Schema};
 
 use super::types::*;
 use std::collections::{BTreeMap, HashMap};
@@ -20,13 +20,13 @@ pub fn initial_schema() -> Schema {
                     Field {
                         field_id: 3021731,
                         name: "git_command".to_string(),
-                        kind_id: 23427,
+                        type_: FieldType::Object { kind_id: 23427 },
                         raw: 0,
                     },
                     Field {
                         field_id: 3021732,
                         name: "docker_command".to_string(),
-                        kind_id: 23428,
+                        type_: FieldType::Object { kind_id: 23428 },
                         raw: 0,
                     },
                 ],
@@ -38,13 +38,15 @@ pub fn initial_schema() -> Schema {
                     Field {
                         field_id: 131987,
                         name: "git_add".to_string(),
-                        kind_id: 231849732984,
+                        type_: FieldType::Object {
+                            kind_id: 231849732984,
+                        },
                         raw: 0,
                     },
                     Field {
                         field_id: 2429447,
                         name: "git_push".to_string(),
-                        kind_id: 349872,
+                        type_: FieldType::Object { kind_id: 349872 },
                         raw: 0,
                     },
                 ],
