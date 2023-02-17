@@ -48,8 +48,6 @@ pub struct Field {
     pub name: String,
     // pub kind_id: u64,
     pub type_: FieldType,
-    // TODO: Use type id.
-    pub raw: u64,
 }
 
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
